@@ -204,11 +204,17 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         else Path.home() / "rekordbox-toolkit" / "duplicate_report.csv"
     )
 
-    log.info("Scanning for duplicates under: %s", root)
-    log.info("This may take a while for large libraries — progress logged every %d files", 100)
+    workers = max(1, args.workers)
+    pause = max(0.0, args.pause)
+
+    log.info(
+        "Scanning for duplicates under: %s  (workers=%d pause=%.1fs)",
+        root, workers, pause,
+    )
+    log.info("Progress logged every 100 files — this may take 10–30 min for large libraries")
 
     try:
-        groups = scan_duplicates(root)
+        groups = scan_duplicates(root, max_workers=workers, pause_seconds=pause)
     except Exception:
         log.exception("Duplicate scan failed")
         sys.exit(1)
@@ -246,11 +252,15 @@ def cmd_process(args: argparse.Namespace) -> None:
     detect_bpm = not args.no_bpm
     detect_key = not args.no_key
     normalise = not args.no_normalize and not args.dry_run
+    workers = max(1, args.workers)
+    pause = max(0.0, args.pause)
 
     log.info(
-        "Processing %s — BPM:%s KEY:%s NORMALIZE:%s FORCE:%s DRY_RUN:%s",
+        "Processing %s — BPM:%s KEY:%s NORMALIZE:%s FORCE:%s DRY_RUN:%s "
+        "workers=%d pause=%.1fs",
         root,
         detect_bpm, detect_key, normalise, args.force, args.dry_run,
+        workers, pause,
     )
 
     if args.dry_run:
@@ -273,6 +283,8 @@ def cmd_process(args: argparse.Namespace) -> None:
             detect_key=detect_key,
             normalise=normalise,
             force=args.force,
+            max_workers=workers,
+            pause_seconds=pause,
         )
     except Exception:
         log.exception("Processing failed")
@@ -359,8 +371,10 @@ Examples:
   python3 cli.py link "/Volumes/DJMT/DJMT PRIMARY"
   python3 cli.py relocate /old/path /new/path
   python3 cli.py duplicates "/Volumes/DJMT/DJMT PRIMARY" --output ~/Desktop/dupes.csv
+  python3 cli.py duplicates "/Volumes/DJMT/DJMT PRIMARY" --workers 4
   python3 cli.py process "/Volumes/DJMT/DJMT PRIMARY" --no-normalize
   python3 cli.py process "/Volumes/DJMT/DJMT PRIMARY" --dry-run --no-bpm --no-key
+  python3 cli.py process "/Volumes/DJMT/DJMT PRIMARY" --workers 4 --pause 0.1
         """,
     )
     parser.add_argument(
@@ -458,6 +472,27 @@ Examples:
         metavar="FILE",
         help="CSV output path (default: ~/rekordbox-toolkit/duplicate_report.csv)",
     )
+    p_dupes.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "Number of parallel fpcalc processes (default: 1). "
+            "Values > 1 speed up fingerprinting but increase CPU load — "
+            "avoid on machines with limited cores or while DJing."
+        ),
+    )
+    p_dupes.add_argument(
+        "--pause",
+        type=float,
+        default=0.0,
+        metavar="SECS",
+        help=(
+            "Seconds to sleep between files in sequential mode (default: 0.0). "
+            "Use 0.1–0.5 on older drives to reduce I/O pressure."
+        ),
+    )
     p_dupes.set_defaults(func=cmd_duplicates)
 
     # ── process ──
@@ -492,6 +527,27 @@ Examples:
         help=(
             "Suppress loudness normalisation. "
             "BPM/key tag writes still occur unless --no-bpm/--no-key are also set."
+        ),
+    )
+    p_process.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "Number of parallel processing threads (default: 1). "
+            "Values > 1 speed up BPM/key detection but increase CPU load — "
+            "avoid while DJing or on machines with limited cores."
+        ),
+    )
+    p_process.add_argument(
+        "--pause",
+        type=float,
+        default=0.0,
+        metavar="SECS",
+        help=(
+            "Seconds to sleep between files in sequential mode (default: 0.0). "
+            "Use 0.1–0.5 on older drives to reduce I/O pressure."
         ),
     )
     p_process.set_defaults(func=cmd_process)
