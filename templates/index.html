@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SuperBox — rekordbox-toolkit</title>
+<style>
+/* ── Design tokens ─────────────────────────────────────────────────────── */
+:root {
+  --bg:            #07070f;
+  --surface:       #0d0d1a;
+  --surface-hi:    #13132a;
+  --border:        #1a1a30;
+  --border-hi:     #252540;
+
+  --text:          #dde3f0;
+  --text-muted:    #5a6280;
+  --text-dim:      #3a4060;
+
+  --safe:          #34d399;
+  --safe-dim:      rgba(52,211,153,.12);
+  --safe-border:   rgba(52,211,153,.25);
+
+  --caution:       #fbbf24;
+  --caution-dim:   rgba(251,191,36,.1);
+  --caution-border:rgba(251,191,36,.25);
+
+  --warn:          #f97316;
+  --warn-dim:      rgba(249,115,22,.1);
+  --warn-border:   rgba(249,115,22,.25);
+
+  --danger:        #f87171;
+  --danger-dim:    rgba(248,113,113,.1);
+  --danger-border: rgba(248,113,113,.25);
+
+  --accent:        #818cf8;
+  --accent-dim:    rgba(129,140,248,.1);
+
+  --mono: 'JetBrains Mono','Fira Code','Cascadia Code',ui-monospace,monospace;
+  --sans: system-ui,-apple-system,'Segoe UI',sans-serif;
+
+  --radius: 8px;
+  --log-h: 340px;
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.6;
+  min-height: 100vh;
+  padding-bottom: calc(var(--log-h) + 48px);
+}
+a { color: var(--accent); text-decoration: none; }
+button { cursor: pointer; font-family: inherit; }
+input, select {
+  font-family: var(--mono);
+  font-size: .85rem;
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-radius: 5px;
+  color: var(--text);
+  padding: 7px 10px;
+  width: 100%;
+  transition: border-color .15s;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+input::placeholder { color: var(--text-dim); }
+label { display: block; color: var(--text-muted); font-size: .78rem;
+        letter-spacing: .04em; text-transform: uppercase; margin-bottom: 5px; }
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  height: 58px;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.1rem; font-weight: 700; letter-spacing: .06em;
+  color: var(--text);
+}
+.brand span { color: var(--accent); }
+.brand-logo {
+  width: 36px; height: 36px; object-fit: contain;
+  mix-blend-mode: screen;         /* white bg disappears on dark surface */
+  filter: brightness(1.1);
+}
+.brand-divider {
+  width: 1px; height: 22px;
+  background: var(--border-hi);
+  margin: 0 2px;
+}
+.brand-sub {
+  font-size: .68rem; font-weight: 400; letter-spacing: .04em;
+  color: var(--text-dim); text-transform: uppercase;
+  line-height: 1.2;
+}
+.brand-sub strong { display: block; color: var(--text-muted); font-weight: 600; }
+.status-bar { display: flex; align-items: center; gap: 20px; }
+.status-pill {
+  display: flex; align-items: center; gap: 7px;
+  font-size: .78rem; color: var(--text-muted);
+}
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.dot.safe  { background: var(--safe);   box-shadow: 0 0 6px var(--safe); }
+.dot.danger{ background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+.dot.pulse { animation: pulse 2s infinite; }
+@keyframes pulse {
+  0%,100% { opacity: 1; } 50% { opacity: .35; }
+}
+
+/* ── Workflow rail ─────────────────────────────────────────────────────── */
+.workflow-rail {
+  position: sticky; top: 54px; z-index: 90;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  display: flex; align-items: stretch; gap: 0;
+  overflow-x: auto;
+}
+.workflow-rail::-webkit-scrollbar { display: none; }
+.step-tab {
+  display: flex; align-items: center; gap: 9px;
+  padding: 12px 18px;
+  color: var(--text-muted);
+  font-size: .8rem;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.step-tab:hover { color: var(--text); }
+.step-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.step-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--border-hi);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 700; flex-shrink: 0;
+}
+.step-tab.active .step-num { background: var(--accent); color: #fff; }
+
+/* ── Main layout ───────────────────────────────────────────────────────── */
+main { max-width: 860px; margin: 0 auto; padding: 32px 28px; }
+.section-title {
+  font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 20px; margin-top: 40px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+
+/* ── Tool cards ────────────────────────────────────────────────────────── */
+.card {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.card-head {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 20px 22px;
+}
+.card-icon {
+  width: 40px; height: 40px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.card-icon.safe   { background: var(--safe-dim);   }
+.card-icon.caution{ background: var(--caution-dim); }
+.card-icon.warn   { background: var(--warn-dim);    }
+.card-icon.danger { background: var(--danger-dim);  }
+
+.card-meta { flex: 1; }
+.card-title { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+.card-blurb { color: var(--text-muted); font-size: .88rem; line-height: 1.5; }
+
+.risk-badge {
+  flex-shrink: 0;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: .7rem; font-weight: 600; letter-spacing: .05em;
+  text-transform: uppercase; margin-top: 2px;
+}
+.risk-badge.safe   { background: var(--safe-dim);   color: var(--safe);   border: 1px solid var(--safe-border); }
+.risk-badge.caution{ background: var(--caution-dim); color: var(--caution); border: 1px solid var(--caution-border); }
+.risk-badge.warn   { background: var(--warn-dim);   color: var(--warn);   border: 1px solid var(--warn-border); }
+.risk-badge.danger { background: var(--danger-dim); color: var(--danger); border: 1px solid var(--danger-border); }
+
+/* ── Expandable explanations ───────────────────────────────────────────── */
+.explainers { border-top: 1px solid var(--border); }
+details { border-bottom: 1px solid var(--border); }
+details:last-child { border-bottom: none; }
+summary {
+  list-style: none;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 22px;
+  font-size: .8rem; color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s;
+}
+summary:hover { color: var(--text); }
+summary::after {
+  content: '▸'; margin-left: auto;
+  transition: transform .2s;
+  font-size: .7rem;
+}
+details[open] > summary::after { transform: rotate(90deg); }
+details[open] > summary { color: var(--text); }
+.explain-body {
+  padding: 12px 22px 16px;
+  font-size: .85rem; color: var(--text-muted);
+  line-height: 1.65;
+  background: var(--surface-hi);
+}
+.explain-body p { margin-bottom: 8px; }
+.explain-body p:last-child { margin-bottom: 0; }
+.explain-body ul { margin: 8px 0 8px 18px; }
+.explain-body li { margin-bottom: 4px; }
+.explain-body strong { color: var(--text); }
+.explain-body code {
+  font-family: var(--mono); font-size: .82em;
+  background: var(--border); padding: 1px 5px; border-radius: 3px;
+  color: var(--accent);
+}
+
+/* ── Card form body ────────────────────────────────────────────────────── */
+.card-form {
+  padding: 18px 22px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-hi);
+}
+.field { margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.checkbox-row {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  padding: 6px 0;
+}
+.checkbox-label {
+  display: flex; align-items: center; gap: 7px;
+  font-size: .82rem; color: var(--text-muted);
+  cursor: pointer; text-transform: none; letter-spacing: 0;
+  margin-bottom: 0;
+}
+.checkbox-label input[type=checkbox] {
+  width: auto; padding: 0;
+  accent-color: var(--accent);
+}
+.checkbox-label:hover { color: var(--text); }
+
+/* ── Buttons ───────────────────────────────────────────────────────────── */
+.btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: none; border-radius: 6px;
+  padding: 8px 16px;
+  font-size: .83rem; font-weight: 600;
+  transition: opacity .15s, transform .1s;
+}
+.btn:hover:not(:disabled) { opacity: .85; }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn:disabled { opacity: .35; cursor: not-allowed; }
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  color: var(--text-muted);
+}
+.btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--text-muted); }
+.btn-danger-action {
+  background: var(--danger-dim);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+}
+.btn-warn-action {
+  background: var(--warn-dim);
+  border: 1px solid var(--warn-border);
+  color: var(--warn);
+}
+
+/* rb-blocked message */
+.rb-block-msg {
+  display: none;
+  align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 6px;
+  background: var(--danger-dim); border: 1px solid var(--danger-border);
+  color: var(--danger); font-size: .82rem;
+  margin-top: 12px;
+}
+.rb-block-msg.visible { display: flex; }
+
+/* ── Log panel ─────────────────────────────────────────────────────────── */
+#log-panel {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+  height: var(--log-h);
+  background: #050508;
+  border-top: 1px solid var(--border-hi);
+  display: flex; flex-direction: column;
+  transform: translateY(100%);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+}
+#log-panel.open { transform: translateY(0); }
+.log-bar {
+  display: flex; align-items: center;
+  padding: 0 18px;
+  height: 38px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 10px;
+}
+.log-bar-title { font-size: .78rem; color: var(--text-muted); flex: 1; }
+.log-bar-title strong { color: var(--text); }
+#log-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid var(--border-hi);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: none;
+}
+#log-spinner.active { display: block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.log-close-btn {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1rem; padding: 4px 6px;
+  transition: color .15s;
+}
+.log-close-btn:hover { color: var(--text); }
+#log-output {
+  flex: 1; overflow-y: auto;
+  padding: 12px 18px;
+  font-family: var(--mono); font-size: .8rem;
+  line-height: 1.6;
+}
+#log-output::-webkit-scrollbar { width: 4px; }
+#log-output::-webkit-scrollbar-track { background: transparent; }
+#log-output::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+.log-line { white-space: pre-wrap; word-break: break-all; }
+.log-line.warn    { color: var(--caution); }
+.log-line.error   { color: var(--danger); }
+.log-line.success { color: var(--safe); }
+.log-line.header  { color: var(--accent); font-weight: 600; }
+.log-line.dim     { color: var(--text-dim); }
+.log-line.normal  { color: #9aa5c0; }
+.log-exit-ok    { color: var(--safe);   margin-top: 8px; font-weight: 600; }
+.log-exit-fail  { color: var(--danger); margin-top: 8px; font-weight: 600; }
+
+/* ── Misc ──────────────────────────────────────────────────────────────── */
+.divider-label {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--text-dim); font-size: .75rem;
+  letter-spacing: .08em; text-transform: uppercase;
+  margin: 28px 0 16px;
+}
+.divider-label::before, .divider-label::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* ── Prune duplicates UI ───────────────────────────────────────────────── */
+.prune-toolbar {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; margin-bottom: 4px;
+}
+.prune-selectall-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.prune-selectall-btn {
+  display: flex; align-items: center; gap: 7px;
+  background: transparent;
+  border: 1px solid var(--border-hi);
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-size: .78rem; color: var(--text-muted);
+  transition: all .15s; cursor: pointer;
+}
+.prune-selectall-btn:hover { color: var(--text); border-color: var(--text-muted); }
+.prune-selectall-btn.active-keep   { background:var(--safe-dim);    color:var(--safe);    border-color:var(--safe-border); }
+.prune-selectall-btn.active-lower  { background:var(--danger-dim);  color:var(--danger);  border-color:var(--danger-border); }
+.prune-selectall-btn .sa-dot {
+  width:8px; height:8px; border-radius:50%;
+  background: currentColor; opacity:.6; flex-shrink:0;
+}
+.prune-count-label {
+  margin-left: auto; font-size: .78rem; color: var(--text-dim);
+}
+
+/* groups list */
+#prune-groups { margin-top: 4px; }
+.prune-group {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.prune-group-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface-hi);
+  border-bottom: 1px solid var(--border);
+  font-size: .78rem;
+}
+.prune-group-title { color: var(--text-muted); font-family: var(--mono); }
+.prune-group-count {
+  font-size: .7rem; color: var(--text-dim);
+  background: var(--border); padding: 1px 7px; border-radius: 10px;
+}
+
+/* entry rows */
+.prune-row-keep, .prune-row-lower {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  transition: background .1s;
+}
+.prune-row-keep  { background: rgba(52,211,153,.03); }
+.prune-row-lower { background: transparent; padding-left: 32px; border-top: 1px solid var(--border); }
+.prune-row-keep:hover  { background: rgba(52,211,153,.06); }
+.prune-row-lower:hover { background: rgba(248,113,113,.04); }
+
+.prune-cb { width:15px; height:15px; accent-color:var(--danger); flex-shrink:0; cursor:pointer; }
+.prune-cb.keep-cb { accent-color: var(--safe); }
+.prune-star { color: var(--safe); font-size:.8rem; flex-shrink:0; width:14px; }
+
+.prune-fname {
+  font-family: var(--mono); font-size: .78rem; color: var(--text);
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.prune-row-lower .prune-fname { color: var(--text-muted); }
+
+.fmt-badge {
+  font-size:.65rem; font-weight:700; padding:1px 6px; border-radius:3px;
+  flex-shrink:0; letter-spacing:.04em;
+}
+.fmt-lossless { background:rgba(52,211,153,.15); color:var(--safe); }
+.fmt-lossy    { background:rgba(251,191,36,.1);  color:var(--caution); }
+.prune-meta { font-size:.72rem; color:var(--text-dim); flex-shrink:0; white-space:nowrap; }
+.rank-badge {
+  font-size:.65rem; font-weight:700; padding:1px 5px; border-radius:3px;
+  flex-shrink:0; letter-spacing:.03em;
+}
+.rank-pn  { background:rgba(129,140,248,.12); color:var(--accent); }
+.rank-mik { background:rgba(251,191,36,.1);   color:var(--caution); }
+.rank-raw { background:var(--border);          color:var(--text-dim); }
+.prune-indb { font-size:.65rem; color:var(--accent); background:var(--accent-dim);
+              padding:1px 5px; border-radius:3px; flex-shrink:0; }
+.prune-missing { font-size:.65rem; color:var(--danger); flex-shrink:0; }
+
+.prune-preview-btn {
+  background:none; border:1px solid var(--border-hi); border-radius:4px;
+  color:var(--text-dim); font-size:.7rem; padding:2px 7px;
+  cursor:pointer; flex-shrink:0; transition:all .12s;
+}
+.prune-preview-btn:hover { color:var(--safe); border-color:var(--safe-border); }
+
+/* action bar */
+.prune-action-bar {
+  display:flex; align-items:center; gap:10px;
+  padding: 12px 0 0; border-top: 1px solid var(--border);
+  margin-top: 12px;
+}
+.prune-selected-count { font-size:.82rem; color:var(--text-muted); flex:1; }
+.prune-selected-count strong { color:var(--danger); }
+
+/* ── Confirmation panels — positioned at different screen corners ─────── */
+/* Each step is a fixed-position panel. Deliberately NOT overlapping.     */
+/* The action button in each panel is in a different corner so the user   */
+/* must move the cursor to proceed — no muscle-memory clicking through.   */
+.confirm-panel {
+  position: fixed;
+  z-index: 8000;
+  width: 360px;
+  background: #0d0d22;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 48px rgba(0,0,0,.8);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  animation: cardIn .2s cubic-bezier(.4,0,.2,1);
+}
+.confirm-panel.open { display: flex; }
+
+/* Step 1 — bottom-right. Action button at BOTTOM-RIGHT. */
+#confirm-step1 { bottom: 48px; right: 28px; }
+/* Step 2 — top-left. Action button at TOP-RIGHT of panel. */
+#confirm-step2 { top: 100px; left: 28px; width: 440px; max-height: 60vh; }
+/* Step 3 — center-top. Action button at BOTTOM-LEFT of panel. */
+#confirm-step3 { top: 100px; left: 50%; transform: translateX(-50%); }
+
+.confirm-panel-head {
+  display:flex; align-items:center; gap:8px;
+  padding: 11px 14px;
+  background: var(--surface-hi);
+  border-bottom: 1px solid var(--border);
+  flex-shrink:0;
+}
+.confirm-step-num {
+  width:22px; height:22px; border-radius:50%;
+  background: var(--danger-dim); border:1px solid var(--danger-border);
+  color:var(--danger); font-size:.72rem; font-weight:700;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.confirm-panel-title { font-size:.85rem; font-weight:600; flex:1; }
+.confirm-panel-cancel {
+  background:none; border:none; color:var(--text-dim);
+  font-size:.85rem; cursor:pointer; padding:0 3px;
+}
+.confirm-panel-cancel:hover { color:var(--text); }
+
+.confirm-panel-body { padding:13px 15px; font-size:.83rem; color:var(--text-muted); line-height:1.6; }
+.confirm-panel-body strong { color:var(--text); }
+.confirm-panel-body .confirm-detail { font-size:.78rem; color:var(--text-dim); margin-top:8px; }
+
+.confirm-file-list {
+  flex:1; overflow-y:auto; padding:8px 14px;
+  font-family:var(--mono); font-size:.75rem; color:var(--text-dim);
+  border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+  max-height:240px;
+}
+.confirm-file-list::-webkit-scrollbar { width:3px; }
+.confirm-file-list::-webkit-scrollbar-thumb { background:var(--border-hi); }
+.confirm-file-item { padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.confirm-file-item::before { content:"→ "; color:var(--danger); }
+
+.confirm-panel-footer { padding:10px 14px; flex-shrink:0; }
+
+/* footer layouts vary per step so cursor must travel */
+#confirm-step1 .confirm-panel-footer { display:flex; justify-content:flex-end; gap:8px; }
+#confirm-step2 .confirm-panel-footer { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+#confirm-step3 .confirm-panel-footer { display:flex; justify-content:flex-start; gap:8px; }
+
+/* overlay backdrop */
+#confirm-backdrop {
+  position:fixed; inset:0; z-index:7999;
+  background:rgba(0,0,0,.45);
+  display:none;
+}
+#confirm-backdrop.open { display:block; }
+
+/* ── Owl / Glossary key system ─────────────────────────────────────────── */
+#owl-btn {
+  position: fixed;
+  bottom: 28px; right: 28px;
+  z-index: 9999;
+  display: flex; align-items: center; gap: 7px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border-hi);
+  border-radius: 24px;
+  padding: 8px 13px 8px 10px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: .78rem; font-weight: 600; letter-spacing: .05em;
+  transition: background .2s, border-color .2s, color .2s, bottom .25s;
+  user-select: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,.55);
+}
+#owl-btn:hover, #owl-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.owl-icon { font-size: 1.1rem; line-height: 1; }
+/* shift up when log panel is open */
+body.log-open #owl-btn       { bottom: calc(var(--log-h) + 28px); }
+body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
+
+/* hover panel */
+#owl-hover-panel {
+  position: fixed;
+  bottom: 74px; right: 28px;
+  z-index: 9998;
+  width: 290px;
+  max-height: 440px;
+  background: #0d0d20;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 36px rgba(0,0,0,.65);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  opacity: 0; pointer-events: none;
+  transform: translateY(10px) scale(.97);
+  transition: opacity .2s, transform .2s, bottom .25s;
+}
+#owl-hover-panel.visible {
+  opacity: 1; pointer-events: all;
+  transform: translateY(0) scale(1);
+}
+.owl-panel-head {
+  padding: 10px 14px 8px;
+  font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-dim); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.owl-panel-head em {
+  font-style: normal; font-size: .67rem; color: var(--text-dim);
+}
+.owl-panel-list { overflow-y: auto; flex: 1; padding: 6px 0; }
+.owl-panel-list::-webkit-scrollbar { width: 3px; }
+.owl-panel-list::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
+.owl-group-label {
+  padding: 8px 14px 3px;
+  font-size: .63rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.owl-item {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 5px 14px; margin: 1px 4px;
+  cursor: pointer; border-radius: 4px;
+  transition: background .1s;
+}
+.owl-item:hover { background: var(--accent-dim); }
+.owl-item.pinned .owl-term { color: var(--accent); }
+.owl-term {
+  font-family: var(--mono); font-size: .79rem; font-weight: 600;
+  color: var(--text); white-space: nowrap; flex-shrink: 0;
+  min-width: 80px;
+}
+.owl-short { font-size: .74rem; color: var(--text-muted);
+             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* floating definition cards */
+.gls-card {
+  position: fixed;
+  z-index: 1000;
+  width: 288px;
+  background: #0a0a1e;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 40px rgba(0,0,0,.72);
+  overflow: hidden;
+  animation: cardIn .18s cubic-bezier(.4,0,.2,1);
+  cursor: default;
+}
+@keyframes cardIn {
+  from { opacity:0; transform:scale(.93) translateY(8px); }
+  to   { opacity:1; transform:scale(1)  translateY(0); }
+}
+.gls-card:hover { z-index: 9997 !important;
+                  border-color: rgba(129,140,248,.35); }
+.gls-card-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 11px 8px;
+  background: var(--surface-hi);
+  border-bottom: 1px solid var(--border);
+}
+.gls-card-term {
+  font-family: var(--mono); font-size: .87rem; font-weight: 700;
+  color: var(--accent); flex: 1;
+}
+.gls-card-cat {
+  font-size: .63rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-dim); flex-shrink: 0;
+}
+.gls-card-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: .88rem; padding: 0 2px; cursor: pointer; line-height: 1;
+  flex-shrink: 0;
+}
+.gls-card-close:hover { color: var(--text); }
+.gls-card-body {
+  padding: 11px 13px 13px;
+  font-size: .81rem; line-height: 1.65; color: var(--text-muted);
+}
+.gls-card-body p { margin-bottom: 6px; }
+.gls-card-body p:last-child { margin-bottom: 0; }
+.gls-card-body strong { color: var(--text); }
+.gls-card-body code {
+  font-family: var(--mono); font-size: .78em;
+  background: var(--border); padding: 1px 4px; border-radius: 3px;
+  color: var(--accent);
+}
+.gls-card-body ul { margin: 5px 0 5px 15px; }
+.gls-card-body li { margin-bottom: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ══ Header ══════════════════════════════════════════════════════════════ -->
+<header>
+  <div class="brand">
+    <img class="brand-logo" src="/static/logo-guthrie.png" alt="Guthrie Entertainment">
+    <div class="brand-divider"></div>
+    <div>
+      Super<span>Box</span>
+      <div class="brand-sub"><strong>Guthrie Entertainment LLC</strong>rekordbox-toolkit</div>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="status-pill">
+      <div class="dot" id="rb-dot"></div>
+      <span id="rb-label">Checking…</span>
+    </div>
+    <div class="status-pill" id="backup-pill" style="display:none">
+      <div class="dot" style="background:var(--text-dim)"></div>
+      <span id="backup-label"></span>
+    </div>
+  </div>
+</header>
+
+<!-- ══ Workflow rail ════════════════════════════════════════════════════════ -->
+<nav class="workflow-rail" id="workflow-rail">
+  <button class="step-tab active" data-target="step-audit">
+    <span class="step-num">1</span> Audit
+  </button>
+  <button class="step-tab" data-target="step-process">
+    <span class="step-num">2</span> Tag Tracks
+  </button>
+  <button class="step-tab" data-target="step-import-dry">
+    <span class="step-num">3</span> Preview Import
+  </button>
+  <button class="step-tab" data-target="step-import">
+    <span class="step-num">4</span> Import
+  </button>
+  <button class="step-tab" data-target="step-link">
+    <span class="step-num">5</span> Link Playlists
+  </button>
+  <button class="step-tab" data-target="step-audit2">
+    <span class="step-num">6</span> Confirm
+  </button>
+  <button class="step-tab" data-target="step-normalize">
+    <span class="step-num">7</span> Normalize
+  </button>
+  <button class="step-tab" data-target="step-duplicates">
+    <span class="step-num">⊕</span> Duplicates
+  </button>
+  <button class="step-tab" data-target="step-prune">
+    <span class="step-num">⊕</span> Prune
+  </button>
+  <button class="step-tab" data-target="step-relocate">
+    <span class="step-num">⊕</span> Relocate
+  </button>
+</nav>
+
+<!-- ══ Main ════════════════════════════════════════════════════════════════ -->
+<main>
+
+  <p class="section-title">Recommended Workflow — run in order when adding new music</p>
+
+  <!-- ── Step 1: Audit ──────────────────────────────────────────────────── -->
+  <div class="card" id="step-audit">
+    <div class="card-head">
+      <div class="card-icon safe">🔍</div>
+      <div class="card-meta">
+        <div class="card-title">Step 1 — Audit Your Library</div>
+        <div class="card-blurb">Before touching anything, get a snapshot of what's already broken. This is read-only — safe to run even with RekordBox open.</div>
+      </div>
+      <span class="risk-badge safe">Read-Only</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>What does Audit actually check?</summary>
+        <div class="explain-body">
+          <p>It opens the database in <strong>read-only mode</strong> and runs three passes:</p>
+          <ul>
+            <li><strong>Snapshot</strong> — how many tracks, playlists, cue points, and how many are missing BPM, key, artist, album, or genre tags.</li>
+            <li><strong>Path check</strong> — every file path stored in the database is verified to still exist on disk. Missing files show up here.</li>
+            <li><strong>Orphan scan</strong> — files on disk that RekordBox doesn't know about yet.</li>
+          </ul>
+          <p>Nothing is written. You get a clean report and a baseline to compare against after you're done.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Can anything go wrong?</summary>
+        <div class="explain-body">
+          <p><strong>No.</strong> Audit is the one command that cannot hurt you. It only reads. The only thing that can go wrong is if the database path in <code>config.py</code> is wrong — in that case it will error with a clear message before touching anything.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Root (optional — for orphan scan)</label>
+        <input type="text" id="audit-root" placeholder="Leave blank to use default from config.py">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="runAudit()">Execute Audit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 2: Process (tags only) ────────────────────────────────────── -->
+  <div class="card" id="step-process">
+    <div class="card-head">
+      <div class="card-icon caution">🏷</div>
+      <div class="card-meta">
+        <div class="card-title">Step 2 — Detect BPM &amp; Musical Key</div>
+        <div class="card-blurb">Reads each audio file and writes BPM and musical key into the file's tags. Skips files that already have tags — won't overwrite your Mix In Key work unless you ask it to.</div>
+      </div>
+      <span class="risk-badge caution">Writes Tags</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>How does it detect BPM and key?</summary>
+        <div class="explain-body">
+          <p><strong>BPM</strong> is calculated by aubio, which analyzes the actual audio waveform for beat onset patterns — not guessing from the filename. Result is sanity-checked (must be between 30–300 BPM).</p>
+          <p><strong>Key</strong> uses the Krumhansl-Schmuckler algorithm on the audio's chroma features via librosa. The result is translated to whichever notation RekordBox uses (Camelot, Open Key, or standard — whatever's already in your database).</p>
+          <p>Files that already have a BPM or key tag are <strong>skipped by default</strong>. Use <em>Force Overwrite</em> only if you want to replace existing values.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What could go wrong?</summary>
+        <div class="explain-body">
+          <p>This modifies the <strong>file tags</strong> (ID3, AIFF metadata etc.) — not the audio itself. Your audio waveform is untouched.</p>
+          <p>Edge cases to know about:</p>
+          <ul>
+            <li>BPM detection can be fooled by very long intros or unusual time signatures. Review results in RekordBox afterward.</li>
+            <li>Key detection is an estimate — it works well on most house, techno, and disco, but can struggle with atonal or heavily processed tracks.</li>
+            <li>If a file can't be read (corrupt, DRM, unsupported format), it's logged as an error and skipped — it does not stop the rest of the batch.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder Path</label>
+        <input type="text" id="process-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="field">
+        <label>Options</label>
+        <div class="checkbox-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="process-no-bpm"> Skip BPM detection
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="process-no-key"> Skip key detection
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="process-force"> Force overwrite existing tags
+          </label>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="runProcess()">Detect BPM &amp; Key</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 3: Import dry-run ──────────────────────────────────────────── -->
+  <div class="card" id="step-import-dry">
+    <div class="card-head">
+      <div class="card-icon safe">👁</div>
+      <div class="card-meta">
+        <div class="card-title">Step 3 — Preview What Will Be Imported</div>
+        <div class="card-blurb">See the exact list of tracks that would be added to the database — without actually adding them. Always do this before the real import.</div>
+      </div>
+      <span class="risk-badge safe">Read-Only</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>What does the preview show?</summary>
+        <div class="explain-body">
+          <p>It walks your music folder and checks each file against what's already in the database. You'll see:</p>
+          <ul>
+            <li>How many tracks are new (will be imported)</li>
+            <li>How many are already in the DB (will be skipped)</li>
+            <li>Any files it can't read or extract metadata from</li>
+          </ul>
+          <p>Nothing is written. This is the sanity check before Step 4.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder Path</label>
+        <input type="text" id="import-dry-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="runImportDry()">Preview Import</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 4: Import ─────────────────────────────────────────────────── -->
+  <div class="card" id="step-import">
+    <div class="card-head">
+      <div class="card-icon warn">📥</div>
+      <div class="card-meta">
+        <div class="card-title">Step 4 — Import Tracks into RekordBox</div>
+        <div class="card-blurb">Writes the new tracks into RekordBox's database. <strong>RekordBox must be closed.</strong> A timestamped backup is created automatically before anything is written.</div>
+      </div>
+      <span class="risk-badge warn">Writes DB</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>What exactly gets written to the database?</summary>
+        <div class="explain-body">
+          <p>For each new track, it creates a row in <code>DjmdContent</code> with the metadata extracted from the file's tags:</p>
+          <ul>
+            <li>Title, artist, album, genre, year, track number</li>
+            <li>BPM (stored as BPM × 100 — that's how RekordBox expects it)</li>
+            <li>Musical key (translated to RekordBox's internal key ID)</li>
+            <li>Duration, bitrate, sample rate, bit depth, file path</li>
+          </ul>
+          <p>Tracks already in the database are <strong>skipped entirely</strong> — no duplicates created, no overwriting.</p>
+          <p>The operation commits in batches of 250. If anything fails mid-batch, the entire batch rolls back automatically. You won't get half-imported tracks.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What if something goes wrong?</summary>
+        <div class="explain-body">
+          <p>Before the first write, a timestamped copy of <code>master.db</code> is saved to <code>~/rekordbox-toolkit/backups/</code>. If the import fails or something looks wrong afterward, you can restore from that file.</p>
+          <p><strong>RekordBox must be closed</strong> — the server checks this before starting. If it's open, the import will be blocked here before anything is touched.</p>
+          <p>A single bad file will not abort the batch — errors are captured per-file and logged, and the rest of the import continues.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder Path</label>
+        <input type="text" id="import-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-import" onclick="runImport()">Import Tracks</button>
+      </div>
+      <div class="rb-block-msg" id="import-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before importing.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 5: Link playlists ──────────────────────────────────────────── -->
+  <div class="card" id="step-link">
+    <div class="card-head">
+      <div class="card-icon warn">🔗</div>
+      <div class="card-meta">
+        <div class="card-title">Step 5 — Link Tracks to Their Playlists</div>
+        <div class="card-blurb">Matches imported tracks to RekordBox playlists based on the folder they live in. If your playlists were built from your folder structure, this connects them automatically.</div>
+      </div>
+      <span class="risk-badge warn">Writes DB</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>How does the matching work?</summary>
+        <div class="explain-body">
+          <p>For each track, it walks up the folder path toward your music root and compares folder names against playlist names in the database:</p>
+          <ul>
+            <li><strong>Exact match first</strong> — folder name equals playlist name exactly.</li>
+            <li><strong>Fuzzy match second</strong> — if no exact match, it tries similarity scoring. Threshold is 85% similarity. Only applied to names 4 characters or longer (to avoid false positives on short names).</li>
+          </ul>
+          <p>If no match is found, the track is left unlinked and a warning is logged. No track is ever removed from a playlist it was already in.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What if my folder names don't match my playlist names?</summary>
+        <div class="explain-body">
+          <p>Tracks that can't be matched are logged and left alone — they stay in the database, just not assigned to a playlist. You'll see the count in the output.</p>
+          <p>The fuzzy match handles common differences like trailing spaces, slight spelling variations, or accented characters. If the mismatch is large (e.g. completely different naming conventions), you may need to manually link those tracks in RekordBox.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder Path</label>
+        <input type="text" id="link-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-link" onclick="runLink()">Link Playlists</button>
+      </div>
+      <div class="rb-block-msg" id="link-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before linking.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 6: Audit again ─────────────────────────────────────────────── -->
+  <div class="card" id="step-audit2">
+    <div class="card-head">
+      <div class="card-icon safe">✅</div>
+      <div class="card-meta">
+        <div class="card-title">Step 6 — Confirm Everything Worked</div>
+        <div class="card-blurb">Run Audit again to verify the import landed cleanly. Track count should be up, orphaned files should be down, path integrity should be 100%.</div>
+      </div>
+      <span class="risk-badge safe">Read-Only</span>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Root (optional)</label>
+        <input type="text" id="audit2-root" placeholder="Leave blank to use default from config.py">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="runAudit2()">Execute Confirmation Audit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 7: Normalize ───────────────────────────────────────────────── -->
+  <div class="card" id="step-normalize">
+    <div class="card-head">
+      <div class="card-icon danger">🔊</div>
+      <div class="card-meta">
+        <div class="card-title">Step 7 — Normalize Loudness <em style="font-weight:400;color:var(--text-muted)">(Optional)</em></div>
+        <div class="card-blurb">Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard. <strong>This rewrites the actual audio file.</strong></div>
+      </div>
+      <span class="risk-badge danger">Rewrites Audio</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>What exactly happens to my files?</summary>
+        <div class="explain-body">
+          <p>Each file is analyzed for integrated loudness (EBU R128 standard). If it's outside −8.0 LUFS ± 0.5 LUFS, the file is re-encoded:</p>
+          <ul>
+            <li><strong>MP3</strong> → re-encoded at 320 kbps CBR</li>
+            <li><strong>AIFF/WAV</strong> → re-encoded losslessly at the same bit depth as the original</li>
+          </ul>
+          <p>Files already within the tolerance window are <strong>left untouched</strong>.</p>
+          <p>The process: original is renamed to <code>.bak</code>, new file is written, <code>soundfile</code> validates the new file is readable, then — and only then — the <code>.bak</code> is deleted. If validation fails, the <code>.bak</code> is kept and you still have your original.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Should I normalize my files?</summary>
+        <div class="explain-body">
+          <p><strong>Only if inconsistent levels are a real problem for you.</strong> −8.0 LUFS is the correct target for DJ use — it leaves headroom for the mixer and matches what most commercial releases already land at.</p>
+          <p>Things to know before you run this:</p>
+          <ul>
+            <li>This is the highest-risk operation in the toolkit. Back up your drive first.</li>
+            <li>MP3 re-encoding is a lossy process — even at 320 kbps, you're going through an encode cycle. For AIFF/WAV files, re-encoding is lossless.</li>
+            <li>Tracks that are already at the right level are skipped entirely — this will not process your whole library unnecessarily.</li>
+            <li>Do not run this while the drive is in use by RekordBox or during a gig.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder Path</label>
+        <input type="text" id="normalize-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-danger-action" onclick="runNormalize()">Normalize Loudness</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Standalone tools ──────────────────────────────────────────────── -->
+  <p class="section-title" style="margin-top:48px">Standalone Tools — run any time, independent of the workflow</p>
+
+  <!-- Duplicate detector -->
+  <div class="card" id="step-duplicates">
+    <div class="card-head">
+      <div class="card-icon safe">👯</div>
+      <div class="card-meta">
+        <div class="card-title">Find Duplicate Tracks</div>
+        <div class="card-blurb">Acoustically fingerprints every file and groups the ones that are actually the same song — even if they have different filenames, formats, or bitrates. Outputs a CSV report. Never deletes anything.</div>
+      </div>
+      <span class="risk-badge safe">Read-Only</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>How does it know two files are the same song?</summary>
+        <div class="explain-body">
+          <p>It uses <strong>Chromaprint</strong> (the same fingerprinting engine behind AcoustID / MusicBrainz). It analyzes the actual audio waveform — not the filename or tags — and produces a fingerprint unique to that recording.</p>
+          <p>Two files with an identical fingerprint are the same recording. This catches: same file in two formats (MP3 + AIFF), same file named differently, files with different tags but identical audio.</p>
+          <p>Within each group of duplicates, files are ranked using the <strong>RARP hierarchy</strong> to suggest which to keep:</p>
+          <ul>
+            <li><strong>PN (Pioneer Numbered)</strong> — filename starts with digits and a separator, e.g. <code>01 - Title</code>. Suggests it came from a curated source.</li>
+            <li><strong>MIK (Mixed In Key tagged)</strong> — has a <code>TKEY</code>/<code>initialkey</code> tag already written by Mix In Key.</li>
+            <li><strong>RAW</strong> — neither of the above.</li>
+          </ul>
+          <p>The CSV is yours to review. Nothing is deleted or moved.</p>
+        </div>
+      </details>
+      <details>
+        <summary>How long does this take?</summary>
+        <div class="explain-body">
+          <p>Chromaprint analyzes the first 120 seconds of each file. For a large library (10,000+ tracks), expect 30–90 minutes depending on your drive speed. Progress is logged every 100 files.</p>
+          <p>You can run this with RekordBox open — it never touches the database.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder Path</label>
+        <input type="text" id="dupes-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="field">
+        <label>Save Report To (optional)</label>
+        <input type="text" id="dupes-output" placeholder="~/Desktop/duplicates.csv  (default: ~/rekordbox-toolkit/duplicate_report.csv)">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="runDuplicates()">Find Duplicates</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Prune Duplicates ──────────────────────────────────────────────── -->
+  <div class="card" id="step-prune">
+    <div class="card-head">
+      <div class="card-icon danger">🗑</div>
+      <div class="card-meta">
+        <div class="card-title">Prune Duplicates — Review &amp; Remove</div>
+        <div class="card-blurb">Load a duplicate report, review each group side-by-side, pick what to keep, and move the rest to a labeled recovery folder in Trash. <strong>Nothing is permanently deleted.</strong> RekordBox must be closed.</div>
+      </div>
+      <span class="risk-badge danger">Writes DB + Files</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>How does the review work?</summary>
+        <div class="explain-body">
+          <p>Each duplicate group shows the <strong>best quality copy</strong> at the top — ranked by format (AIFF/WAV over MP3), then file size, then RARP tier. Lower-quality copies are listed indented beneath it.</p>
+          <p>You get two <strong>Select All</strong> controls:</p>
+          <ul>
+            <li><strong>Select All Best</strong> — checks every top-ranked copy (the ones to keep)</li>
+            <li><strong>Select All Lower Quality</strong> — checks all the duplicates below them</li>
+          </ul>
+          <p>These two are mutually exclusive. You can also override any individual checkbox.</p>
+          <p>The <strong>▶ Preview</strong> button opens each file in your default audio player so you can listen before deciding.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What actually happens when I prune?</summary>
+        <div class="explain-body">
+          <p><strong>Step 1 — Database:</strong> Selected tracks are removed from RekordBox's database. A timestamped backup is created before anything is touched.</p>
+          <p><strong>Step 2 — Files:</strong> Selected audio files are moved to <code>~/.Trash/SuperBox_Pruned_[timestamp]/</code> — a labeled folder inside Trash. They are <strong>not deleted</strong>. They sit in Trash until you empty it yourself.</p>
+          <p>If you realize you made a mistake, open Trash, find the <code>SuperBox_Pruned_</code> folder, and move the files back.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Why so many confirmation steps?</summary>
+        <div class="explain-body">
+          <p>Because this operation touches both the database and the files, and there's no single-step undo. Each confirmation panel appears in a <strong>different position on screen</strong> so you have to move your cursor to proceed — you can't click through by accident.</p>
+          <ul>
+            <li>Step 1 confirms <em>what</em> you're removing (count + summary)</li>
+            <li>Step 2 shows the <em>exact file list</em> for a final read-through</li>
+            <li>Step 3 is the live execute — requires RekordBox to be closed</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <!-- Load report -->
+      <div class="prune-toolbar">
+        <div class="field" style="flex:1;margin-bottom:0">
+          <label>Duplicate Report CSV</label>
+          <input type="text" id="prune-csv-path"
+                 placeholder="Leave blank for default: ~/rekordbox-toolkit/duplicate_report.csv">
+        </div>
+        <button class="btn btn-ghost" style="margin-top:19px;flex-shrink:0"
+                onclick="loadPruneReport()">Load Report</button>
+      </div>
+
+      <!-- Review area — hidden until report is loaded -->
+      <div id="prune-review-area" style="display:none;margin-top:16px">
+
+        <!-- Select All controls -->
+        <div class="prune-selectall-row">
+          <button class="prune-selectall-btn" id="sa-best-btn" onclick="selectAllBest()">
+            <span class="sa-dot" style="background:var(--safe)"></span>
+            Select All Best Copies
+          </button>
+          <button class="prune-selectall-btn" id="sa-lower-btn" onclick="selectAllLower()">
+            <span class="sa-dot" style="background:var(--danger)"></span>
+            Select All Lower Quality
+          </button>
+          <span class="prune-count-label" id="prune-count-label">0 files selected</span>
+        </div>
+
+        <!-- Groups list -->
+        <div id="prune-groups"></div>
+
+        <!-- Action bar -->
+        <div class="prune-action-bar">
+          <span class="prune-selected-count" id="prune-selected-summary">Select files above to continue.</span>
+          <button class="btn btn-danger-action" id="btn-prune-start"
+                  onclick="pruneStep1()" disabled>
+            Move to Trash →
+          </button>
+        </div>
+      </div>
+
+      <div class="rb-block-msg" id="prune-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before pruning.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Confirmation panels (spatially separated, no overlapping) ───── -->
+  <div id="confirm-backdrop"></div>
+
+  <!-- Step 1 — bottom-right. "What you're doing." Proceed button bottom-right. -->
+  <div class="confirm-panel" id="confirm-step1">
+    <div class="confirm-panel-head">
+      <div class="confirm-step-num">1</div>
+      <div class="confirm-panel-title">Confirm Selection</div>
+      <button class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
+    </div>
+    <div class="confirm-panel-body">
+      <p>You're about to move <strong id="c1-count">—</strong> files to a recovery folder in Trash and remove them from the RekordBox database.</p>
+      <p class="confirm-detail">Nothing is permanently deleted. Files land in <code>~/.Trash/SuperBox_Pruned_[timestamp]/</code> and stay there until you empty Trash yourself.</p>
+    </div>
+    <div class="confirm-panel-footer">
+      <button class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
+      <button class="btn btn-warn-action" onclick="pruneStep2()">Review the file list →</button>
+    </div>
+  </div>
+
+  <!-- Step 2 — top-left. "Exact file list." Proceed button top-right of footer. -->
+  <div class="confirm-panel" id="confirm-step2">
+    <div class="confirm-panel-head">
+      <div class="confirm-step-num">2</div>
+      <div class="confirm-panel-title">Review Files to Remove</div>
+      <button class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
+    </div>
+    <div class="confirm-file-list" id="c2-file-list"></div>
+    <div class="confirm-panel-body" style="padding-top:10px;padding-bottom:6px">
+      <p class="confirm-detail">These files will be moved to Trash. Their database entries will be removed. Scroll through and confirm this is the right list.</p>
+    </div>
+    <div class="confirm-panel-footer">
+      <button class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-danger-action" onclick="pruneStep3()">This is correct — final step →</button>
+    </div>
+  </div>
+
+  <!-- Step 3 — center-top. "Execute." Proceed button bottom-left. -->
+  <div class="confirm-panel" id="confirm-step3">
+    <div class="confirm-panel-head">
+      <div class="confirm-step-num">3</div>
+      <div class="confirm-panel-title">Final Confirmation — Execute Prune</div>
+      <button class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
+    </div>
+    <div class="confirm-panel-body">
+      <p>This is the last step. Clicking <strong>Execute</strong> will:</p>
+      <ul style="margin:8px 0 8px 16px;font-size:.82rem">
+        <li>Back up <code>master.db</code> with a timestamp</li>
+        <li>Remove <strong id="c3-count">—</strong> tracks from the RekordBox database</li>
+        <li>Move those files to a labeled recovery folder in Trash</li>
+      </ul>
+      <p class="confirm-detail">RekordBox must be closed. If it's open, the operation will be blocked automatically.</p>
+    </div>
+    <div class="confirm-panel-footer">
+      <button class="btn btn-danger-action" id="btn-execute-prune" onclick="executePrune()">Execute — Move to Trash</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
+    </div>
+    <div class="rb-block-msg" id="prune-final-rb-block" style="margin:0 14px 10px">
+      <span>⚠</span> RekordBox is open. Close it to proceed.
+    </div>
+  </div>
+
+  <!-- Relocate -->
+  <div class="card" id="step-relocate">
+    <div class="card-head">
+      <div class="card-icon warn">📦</div>
+      <div class="card-meta">
+        <div class="card-title">Relocate — Fix Broken File Paths</div>
+        <div class="card-blurb">When you move or rename your music folders, RekordBox loses the tracks. This updates the database to point to where the files actually are now. <strong>RekordBox must be closed.</strong></div>
+      </div>
+      <span class="risk-badge warn">Writes DB</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>How does it find files that have moved?</summary>
+        <div class="explain-body">
+          <p>For each track whose old path no longer exists, it tries three strategies in order:</p>
+          <ul>
+            <li><strong>Exact</strong> — the same relative path exists under the new root.</li>
+            <li><strong>Hash</strong> — SHA256 of the first 64 KB matches a file under the new root. Catches files that were renamed but have identical content.</li>
+            <li><strong>Fuzzy</strong> — filename similarity ≥ 90%. Catches minor edits, encoding fixes, format changes (e.g. <code>.aif</code> → <code>.aiff</code>).</li>
+          </ul>
+          <p>Tracks that can't be matched by any strategy are logged as warnings and left unchanged — they are not deleted or broken further.</p>
+          <p>The <strong>old root does not need to exist on disk</strong> — it's matched as a text prefix against the paths stored in the database. If you renamed a drive or moved everything to a new mount point, just enter what the old path was.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What if I type the old root wrong?</summary>
+        <div class="explain-body">
+          <p>If the old root doesn't match any paths in the database, zero tracks will be processed and you'll see a warning in the output. Nothing will be changed. Run Audit first to confirm what paths the database actually contains.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field-row">
+        <div class="field">
+          <label>Old Path Prefix (where files used to be)</label>
+          <input type="text" id="relocate-old" placeholder="/Volumes/OLD_DRIVE/Music">
+        </div>
+        <div class="field">
+          <label>New Path (where files are now)</label>
+          <input type="text" id="relocate-new" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-warn-action" id="btn-relocate" onclick="runRelocate()">Relocate Paths</button>
+      </div>
+      <div class="rb-block-msg" id="relocate-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before relocating.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══ Footer ════════════════════════════════════════════════════════════════ -->
+<footer style="
+  max-width:860px; margin:48px auto 0; padding:24px 28px 32px;
+  border-top:1px solid var(--border);
+  display:flex; align-items:center; gap:14px;
+">
+  <img src="/static/logo-guthrie.png" alt="Guthrie Entertainment"
+       style="width:28px;height:28px;object-fit:contain;mix-blend-mode:screen;opacity:.7;">
+  <span style="font-size:.75rem;color:var(--text-dim);letter-spacing:.04em;">
+    Designed by <strong style="color:var(--text-muted);">Guthrie Entertainment LLC</strong>
+    &nbsp;·&nbsp; rekordbox-toolkit &nbsp;·&nbsp; Osos Discos
+  </span>
+</footer>
+
+<!-- ══ Owl / Glossary ════════════════════════════════════════════════════════ -->
+<div id="owl-btn"
+     onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()"
+     onclick="owlClick()">
+  <span class="owl-icon">🦉</span>
+  <span>KEY</span>
+</div>
+
+<div id="owl-hover-panel"
+     onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()">
+  <div class="owl-panel-head">
+    Glossary &amp; Concepts
+    <em>click term to pin</em>
+  </div>
+  <div class="owl-panel-list" id="owl-panel-list"></div>
+</div>
+
+<!-- ══ Log panel ════════════════════════════════════════════════════════════ -->
+<div id="log-panel">
+  <div class="log-bar">
+    <div class="log-bar-title"><strong id="log-cmd-label">Output</strong></div>
+    <div id="log-spinner"></div>
+    <button class="log-close-btn" onclick="closeLog()" title="Close output">✕</button>
+  </div>
+  <div id="log-output"></div>
+</div>
+
+<script>
+/* ── State ─────────────────────────────────────────────────────────────────── */
+let activeSource = null;
+let isRunning    = false;
+let rbRunning    = false;
+
+/* ── Status polling ────────────────────────────────────────────────────────── */
+async function refreshStatus() {
+  try {
+    const res  = await fetch('/api/status');
+    const data = await res.json();
+    rbRunning = data.rb_running;
+
+    const dot   = document.getElementById('rb-dot');
+    const label = document.getElementById('rb-label');
+    if (rbRunning) {
+      dot.className = 'dot danger pulse';
+      label.textContent = 'RekordBox is OPEN — close before writing';
+      label.style.color = 'var(--danger)';
+    } else {
+      dot.className = 'dot safe';
+      label.textContent = 'RekordBox is closed — safe to write';
+      label.style.color = 'var(--safe)';
+    }
+
+    if (data.backup?.exists) {
+      const bp = document.getElementById('backup-pill');
+      const bl = document.getElementById('backup-label');
+      bp.style.display = 'flex';
+      bl.textContent = `Last backup: ${data.backup.age}`;
+    }
+  } catch (_) {}
+}
+refreshStatus();
+setInterval(refreshStatus, 6000);
+
+/* ── Config prefill ────────────────────────────────────────────────────────── */
+async function prefillDefaults() {
+  try {
+    const res    = await fetch('/api/config');
+    const config = await res.json();
+    const root   = config.music_root;
+    const ids = [
+      'audit-root','process-path','import-dry-path','import-path',
+      'link-path','audit2-root','normalize-path','dupes-path'
+    ];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.value) el.placeholder = root;
+    });
+  } catch (_) {}
+}
+prefillDefaults();
+
+/* ── Workflow rail scroll ───────────────────────────────────────────────────── */
+document.querySelectorAll('.step-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.step-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = document.getElementById(btn.dataset.target);
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+/* ── Log panel ─────────────────────────────────────────────────────────────── */
+function openLog(title) {
+  document.getElementById('log-panel').classList.add('open');
+  document.getElementById('log-cmd-label').textContent = title;
+  document.getElementById('log-output').innerHTML = '';
+}
+function closeLog() {
+  if (isRunning && activeSource) {
+    activeSource.close();
+    activeSource = null;
+    isRunning = false;
+    setSpinner(false);
+  }
+  document.getElementById('log-panel').classList.remove('open');
+}
+function setSpinner(on) {
+  document.getElementById('log-spinner').classList.toggle('active', on);
+}
+function appendLog(text, cls = '') {
+  const out  = document.getElementById('log-output');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + cls;
+  line.textContent = text;
+  out.appendChild(line);
+  out.scrollTop = out.scrollHeight;
+}
+function classifyLine(text) {
+  const t = text.toLowerCase();
+  if (/^═+/.test(text) || /^─+/.test(text)) return 'header';
+  if (t.includes('error') || t.includes('failed') || t.includes('exception')) return 'error';
+  if (t.includes('warning') || t.includes('warn')) return 'warn';
+  if (t.includes('✓') || t.includes('success') || t.includes('complete') || t.includes('ok')) return 'success';
+  if (t.startsWith('  ')) return 'dim';
+  return 'normal';
+}
+
+/* ── SSE runner ────────────────────────────────────────────────────────────── */
+function runCommand(url, logTitle, onDone) {
+  if (isRunning) return;
+  openLog(logTitle);
+  isRunning = true;
+  setSpinner(true);
+  setAllButtons(true);
+
+  appendLog(`▸ ${logTitle}`, 'dim');
+  appendLog('', 'dim');
+
+  activeSource = new EventSource(url);
+
+  activeSource.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.line !== undefined) {
+      appendLog(data.line, classifyLine(data.line));
+    }
+    if (data.done) {
+      activeSource.close();
+      activeSource = null;
+      isRunning = false;
+      setSpinner(false);
+      setAllButtons(false);
+      appendLog('', '');
+      if (data.exit_code === 0) {
+        appendLog('✓ Finished successfully', 'log-exit-ok');
+      } else {
+        appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
+      }
+      if (onDone) onDone(data.exit_code);
+    }
+  };
+
+  activeSource.onerror = () => {
+    // Server returned a non-SSE response (e.g. 409 RB-open error)
+    activeSource.close();
+    activeSource = null;
+    isRunning = false;
+    setSpinner(false);
+    setAllButtons(false);
+    appendLog('Connection error — check the server is running.', 'error');
+    refreshStatus();
+  };
+}
+
+/* ── Block helper ──────────────────────────────────────────────────────────── */
+function checkRbBlock(msgId) {
+  const msg = document.getElementById(msgId);
+  if (rbRunning) {
+    if (msg) msg.classList.add('visible');
+    return true;
+  }
+  if (msg) msg.classList.remove('visible');
+  return false;
+}
+
+/* ── Button disable / enable ───────────────────────────────────────────────── */
+function setAllButtons(disabled) {
+  document.querySelectorAll('.btn').forEach(b => b.disabled = disabled);
+}
+
+/* ── Individual command runners ────────────────────────────────────────────── */
+function runAudit() {
+  const root = document.getElementById('audit-root').value.trim();
+  const params = root ? `?root=${encodeURIComponent(root)}` : '';
+  runCommand(`/api/run/audit${params}`, 'Audit — Library Health Check');
+}
+
+function runAudit2() {
+  const root = document.getElementById('audit2-root').value.trim();
+  const params = root ? `?root=${encodeURIComponent(root)}` : '';
+  runCommand(`/api/run/audit${params}`, 'Audit — Confirmation Check');
+}
+
+function runProcess() {
+  const path = document.getElementById('process-path').value.trim();
+  if (!path) { alert('Enter a music folder path first.'); return; }
+  const p = new URLSearchParams({ path });
+  if (document.getElementById('process-no-bpm').checked)  p.set('no_bpm', '1');
+  if (document.getElementById('process-no-key').checked)  p.set('no_key', '1');
+  if (document.getElementById('process-force').checked)   p.set('force',  '1');
+  p.set('no_normalize', '1');  // Step 2 is tags-only; normalize is Step 7
+  runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection');
+}
+
+function runNormalize() {
+  const path = document.getElementById('normalize-path').value.trim();
+  if (!path) { alert('Enter a music folder path first.'); return; }
+  const confirmed = confirm(
+    'This will rewrite audio files.\n\n' +
+    'Originals are renamed .bak during the operation and deleted only after the new file is verified.\n\n' +
+    'Make sure you have an independent backup of your drive before proceeding.\n\n' +
+    'Continue?'
+  );
+  if (!confirmed) return;
+  const p = new URLSearchParams({ path });
+  runCommand(`/api/run/process?${p}`, 'Normalize — Loudness to −8.0 LUFS');
+}
+
+function runImportDry() {
+  const path = document.getElementById('import-dry-path').value.trim();
+  if (!path) { alert('Enter a music folder path first.'); return; }
+  const p = new URLSearchParams({ path, dry_run: '1' });
+  runCommand(`/api/run/import?${p}`, 'Preview Import — Dry Run');
+}
+
+function runImport() {
+  if (checkRbBlock('import-rb-block')) return;
+  const path = document.getElementById('import-path').value.trim();
+  if (!path) { alert('Enter a music folder path first.'); return; }
+  const p = new URLSearchParams({ path });
+  runCommand(`/api/run/import?${p}`, 'Import — Writing Tracks to Database');
+}
+
+function runLink() {
+  if (checkRbBlock('link-rb-block')) return;
+  const path = document.getElementById('link-path').value.trim();
+  if (!path) { alert('Enter a music folder path first.'); return; }
+  const p = new URLSearchParams({ path });
+  runCommand(`/api/run/link?${p}`, 'Link Playlists — Matching Tracks to Folders');
+}
+
+function runRelocate() {
+  if (checkRbBlock('relocate-rb-block')) return;
+  const old_ = document.getElementById('relocate-old').value.trim();
+  const new_ = document.getElementById('relocate-new').value.trim();
+  if (!old_ || !new_) { alert('Both old and new paths are required.'); return; }
+  const p = new URLSearchParams({ old_root: old_, new_root: new_ });
+  runCommand(`/api/run/relocate?${p}`, 'Relocate — Updating File Paths in Database');
+}
+
+function runDuplicates() {
+  const path = document.getElementById('dupes-path').value.trim();
+  if (!path) { alert('Enter a music folder path first.'); return; }
+  const p = new URLSearchParams({ path });
+  const out = document.getElementById('dupes-output').value.trim();
+  if (out) p.set('output', out);
+  runCommand(`/api/run/duplicates?${p}`, 'Find Duplicates — Acoustic Fingerprinting');
+}
+
+/* ── Prune Duplicates ──────────────────────────────────────────────────────── */
+let pruneGroups    = [];          // loaded from CSV
+let pruneSelected  = new Set();   // file_paths checked for removal
+let saState        = null;        // 'best' | 'lower' | null
+
+async function loadPruneReport() {
+  const csvPath = document.getElementById('prune-csv-path').value.trim();
+  const url = '/api/duplicates/load' + (csvPath ? '?csv_path=' + encodeURIComponent(csvPath) : '');
+
+  const btn = document.querySelector('[onclick="loadPruneReport()"]');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) { alert('Could not load report:\n' + data.error); return; }
+
+    pruneGroups   = data.groups;
+    pruneSelected = new Set();
+    saState       = null;
+
+    // Default: pre-select all lower-quality copies
+    pruneGroups.forEach(g =>
+      g.entries.filter(e => e.action === 'REVIEW_REMOVE')
+               .forEach(e => pruneSelected.add(e.file_path))
+    );
+    saState = 'lower';
+
+    _renderPruneGroups();
+    document.getElementById('prune-review-area').style.display = 'block';
+    _updateSaButtons();
+    _updatePruneSummary();
+  } catch (err) {
+    alert('Error loading report: ' + err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Load Report';
+  }
+}
+
+function _renderPruneGroups() {
+  const container = document.getElementById('prune-groups');
+  container.innerHTML = '';
+
+  pruneGroups.forEach(g => {
+    const wrap = document.createElement('div');
+    wrap.className = 'prune-group';
+
+    const keep    = g.entries.find(e => e.action === 'KEEP');
+    const lowers  = g.entries.filter(e => e.action === 'REVIEW_REMOVE');
+    const title   = keep ? keep.filename : ('Group ' + g.group_id);
+
+    wrap.innerHTML = `<div class="prune-group-head">
+      <span class="prune-group-title">${_esc(title)}</span>
+      <span class="prune-group-count">${g.entries.length} copies</span>
+    </div>`;
+
+    if (keep)   wrap.appendChild(_makeRow(keep,  false));
+    lowers.forEach(e => wrap.appendChild(_makeRow(e, true)));
+    container.appendChild(wrap);
+  });
+}
+
+function _makeRow(entry, isLower) {
+  const row   = document.createElement('div');
+  row.className = isLower ? 'prune-row-lower' : 'prune-row-keep';
+
+  const ext   = (entry.format_ext || '').replace('.','').toUpperCase();
+  const lossless = ['AIFF','AIF','WAV','FLAC'].includes(ext);
+  const fmtCls = lossless ? 'fmt-lossless' : 'fmt-lossy';
+
+  const rankCls = { PN:'rank-pn', MIK:'rank-mik', RAW:'rank-raw' }[entry.rank] || 'rank-raw';
+  const checked = pruneSelected.has(entry.file_path);
+  const cbCls   = isLower ? 'prune-cb' : 'prune-cb keep-cb';
+  const safePath = entry.file_path.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+
+  row.innerHTML = `
+    <input type="checkbox" class="${cbCls}" ${checked ? 'checked' : ''}
+           onchange="togglePruneFile('${safePath}', this.checked)">
+    <span class="prune-star">${isLower ? '' : '★'}</span>
+    <span class="prune-fname" title="${_esc(entry.file_path)}">${_esc(entry.filename)}</span>
+    <span class="fmt-badge ${fmtCls}">${ext || '?'}</span>
+    <span class="prune-meta">${entry.file_size_mb.toFixed(1)} MB</span>
+    ${entry.bpm  ? `<span class="prune-meta">${entry.bpm} BPM</span>`  : ''}
+    ${entry.key  ? `<span class="prune-meta">${entry.key}</span>` : ''}
+    <span class="rank-badge ${rankCls}">${entry.rank}</span>
+    ${entry.in_db         ? '<span class="prune-indb">in DB</span>'    : ''}
+    ${!entry.exists_on_disk ? '<span class="prune-missing">missing</span>' : ''}
+    <button class="prune-preview-btn"
+            onclick="previewFile('${safePath}')">▶</button>`;
+  return row;
+}
+
+function togglePruneFile(path, checked) {
+  checked ? pruneSelected.add(path) : pruneSelected.delete(path);
+  saState = null;
+  _updateSaButtons();
+  _updatePruneSummary();
+}
+
+function selectAllBest() {
+  pruneSelected.clear();
+  pruneGroups.forEach(g =>
+    g.entries.filter(e => e.action === 'KEEP')
+             .forEach(e => pruneSelected.add(e.file_path))
+  );
+  saState = 'best';
+  _syncCheckboxes();
+  _updateSaButtons();
+  _updatePruneSummary();
+}
+
+function selectAllLower() {
+  pruneSelected.clear();
+  pruneGroups.forEach(g =>
+    g.entries.filter(e => e.action === 'REVIEW_REMOVE')
+             .forEach(e => pruneSelected.add(e.file_path))
+  );
+  saState = 'lower';
+  _syncCheckboxes();
+  _updateSaButtons();
+  _updatePruneSummary();
+}
+
+function _syncCheckboxes() {
+  document.querySelectorAll('#prune-groups input[type=checkbox]').forEach(cb => {
+    const row  = cb.closest('[class^="prune-row"]');
+    const path = row ? _rowPath(row) : null;
+    if (path) cb.checked = pruneSelected.has(path);
+  });
+}
+
+function _rowPath(row) {
+  // extract path from the title attribute of .prune-fname
+  const fname = row.querySelector('.prune-fname');
+  return fname ? fname.title : null;
+}
+
+function _updateSaButtons() {
+  document.getElementById('sa-best-btn') .classList.toggle('active-keep',  saState === 'best');
+  document.getElementById('sa-lower-btn').classList.toggle('active-lower', saState === 'lower');
+}
+
+function _updatePruneSummary() {
+  const n   = pruneSelected.size;
+  const lbl = document.getElementById('prune-count-label');
+  const sum = document.getElementById('prune-selected-summary');
+  const btn = document.getElementById('btn-prune-start');
+
+  lbl.textContent = n === 0 ? '0 files selected' : `${n} file${n > 1 ? 's' : ''} selected`;
+
+  if (n === 0) {
+    sum.innerHTML = 'Select files above to continue.';
+    btn.disabled  = true;
+  } else {
+    sum.innerHTML = `<strong>${n}</strong> file${n > 1 ? 's' : ''} queued for removal`;
+    btn.disabled  = false;
+  }
+}
+
+async function previewFile(path) {
+  try {
+    await fetch('/api/open-file?path=' + encodeURIComponent(path));
+  } catch(e) { alert('Could not open file: ' + e); }
+}
+
+/* ── Confirmation flow — 3 spatially separated steps ──────────────────────── */
+// Each panel is at a different screen position.
+// Each action button is at a different corner within its panel.
+// User must physically move cursor between each step — no click-through.
+
+function pruneStep1() {
+  if (pruneSelected.size === 0) return;
+  const n = pruneSelected.size;
+  document.getElementById('c1-count').textContent =
+    `${n} file${n > 1 ? 's' : ''}`;
+  _openConfirm('confirm-step1');
+}
+
+function pruneStep2() {
+  _closeConfirm('confirm-step1');
+  const list = document.getElementById('c2-file-list');
+  list.innerHTML = '';
+  [...pruneSelected].sort().forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'confirm-file-item';
+    div.textContent = p;
+    list.appendChild(div);
+  });
+  _openConfirm('confirm-step2');
+}
+
+function pruneStep3() {
+  _closeConfirm('confirm-step2');
+  const n = pruneSelected.size;
+  document.getElementById('c3-count').textContent =
+    `${n} file${n > 1 ? 's' : ''}`;
+  document.getElementById('prune-final-rb-block').classList.toggle('visible', rbRunning);
+  _openConfirm('confirm-step3');
+}
+
+async function executePrune() {
+  // Final RB check — if open, surface the warning and block
+  await refreshStatus();
+  if (rbRunning) {
+    document.getElementById('prune-final-rb-block').classList.add('visible');
+    return;
+  }
+
+  cancelPrune();   // close all confirm panels
+
+  const paths = [...pruneSelected];
+  const url   = '/api/run/prune?paths=' + encodeURIComponent(JSON.stringify(paths));
+  runCommand(url, `Pruning ${paths.length} duplicate${paths.length > 1 ? 's' : ''} — moving to Trash`, () => {
+    // Clear state after successful prune so the UI doesn't show stale data
+    pruneSelected.clear();
+    _updatePruneSummary();
+  });
+}
+
+function cancelPrune() {
+  ['confirm-step1','confirm-step2','confirm-step3'].forEach(_closeConfirm);
+  document.getElementById('confirm-backdrop').classList.remove('open');
+}
+
+function _openConfirm(id) {
+  document.getElementById(id).classList.add('open');
+  document.getElementById('confirm-backdrop').classList.add('open');
+}
+function _closeConfirm(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function _esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Owl / Glossary system ─────────────────────────────────────────────────── */
+const GLOSSARY = [
+  // ── Tech ──────────────────────────────────────────────────────────────────
+  { id:'db',  cat:'Tech', term:'DB',
+    short:'Database — where RekordBox stores everything',
+    body:`<p><strong>Database</strong> — a structured file that stores information in organized tables, like a very powerful spreadsheet that the computer reads and writes directly.</p>
+<p>RekordBox uses one file called <code>master.db</code> to remember your entire library: track names, BPM, key, playlists, cue points, loops — all of it lives in there.</p>
+<p>Every write operation in SuperBox creates a timestamped backup of this file before touching it.</p>`},
+
+  { id:'cli', cat:'Tech', term:'CLI',
+    short:'Command-Line Interface — terminal window',
+    body:`<p><strong>Command-Line Interface</strong> — the text window (Terminal on Mac) where you type instructions directly to the computer instead of clicking buttons in an app.</p>
+<p>SuperBox's CLI is the actual engine doing the work. This web dashboard is just a control panel that talks to the engine so you never have to type commands yourself.</p>`},
+
+  { id:'py',  cat:'Tech', term:'.py / Python',
+    short:'The programming language SuperBox is built in',
+    body:`<p><strong>Python</strong> — the programming language SuperBox is written in. You don't need to know it or read it.</p>
+<p>What you do need: <strong>Python 3.12 or later</strong> installed on your Mac. If something won't start, a wrong Python version is usually the reason. Check with <code>python3 --version</code> in Terminal.</p>`},
+
+  { id:'csv', cat:'Tech', term:'CSV',
+    short:'Spreadsheet file — opens in Excel or Numbers',
+    body:`<p><strong>Comma-Separated Values</strong> — a plain text file that any spreadsheet app (Excel, Numbers, Google Sheets) can open as a table.</p>
+<p>The duplicate detector writes its results to a CSV so you can sort, filter, and decide what to remove at your own pace. SuperBox never deletes files — that decision is always yours.</p>`},
+
+  { id:'sha', cat:'Tech', term:'SHA-256',
+    short:'Content fingerprint — proves two files are identical',
+    body:`<p>A mathematical fingerprint of a file's content. If two files have the same SHA-256, they are byte-for-byte identical — regardless of filename, location, or metadata.</p>
+<p>The Relocate tool uses this to find files you moved and renamed. Even if you changed the filename completely, if the audio content is the same, it gets matched and the database path gets updated.</p>`},
+
+  { id:'sse', cat:'Tech', term:'SSE',
+    short:'How live output streams to your browser',
+    body:`<p><strong>Server-Sent Events</strong> — the mechanism this app uses to send command output to your browser in real time as it happens.</p>
+<p>When you click Execute and see lines appearing live in the output panel, that's SSE at work. The command is running on your computer; the results are being pushed to the page line by line.</p>`},
+
+  { id:'path', cat:'Tech', term:'File Path',
+    short:'The full address of a file on your computer',
+    body:`<p>The exact location of a file on your drive, written out as a chain of folders.</p>
+<p>Example: <code>/Volumes/DJMT/DJMT PRIMARY/House/Track.aiff</code></p>
+<p>RekordBox stores the path of every track in its database. If you move a file without telling RekordBox, the path in the database points to nowhere — the track shows as missing. The Relocate tool fixes this.</p>`},
+
+  // ── Audio ──────────────────────────────────────────────────────────────────
+  { id:'bpm', cat:'Audio', term:'BPM',
+    short:'Beats Per Minute — how fast a track is',
+    body:`<p><strong>Beats Per Minute</strong> — the tempo of a track. A kick drum at 128 BPM fires 128 times per minute.</p>
+<p>RekordBox stores BPM internally as BPM × 100 (so 128.0 BPM is stored as 12800). SuperBox handles that conversion automatically so you never see raw database values.</p>
+<p>Detection uses <strong>aubio</strong>, which analyzes the actual audio waveform for beat patterns — not guessing from the filename.</p>`},
+
+  { id:'key', cat:'Audio', term:'Musical Key',
+    short:'The harmonic "home base" of a track',
+    body:`<p>The musical scale a track is built around — determines which other tracks it will sound harmonically compatible with when mixed.</p>
+<p>SuperBox detects key using the <strong>Krumhansl-Schmuckler algorithm</strong> on the audio's chroma features. It understands all three common notations and stores whichever format your database already uses:</p>
+<ul><li><strong>Standard</strong> — Am, C, F#m, Bb…</li>
+<li><strong>Camelot</strong> — 1A, 8B, 11A…</li>
+<li><strong>Open Key</strong> — 1m, 8d, 11m…</li></ul>`},
+
+  { id:'lufs', cat:'Audio', term:'LUFS',
+    short:'How loud audio actually sounds — the real measure',
+    body:`<p><strong>Loudness Units relative to Full Scale</strong> — the correct way to measure perceived loudness, accounting for how human ears hear different frequencies.</p>
+<p><strong>−8.0 LUFS</strong> is the DJ standard — it leaves headroom for the mixer and matches most commercial releases. A track at −14 LUFS will sound noticeably quieter at the same channel level on a CDJ.</p>
+<p>Peak levels (waveform height) are a different, less useful measurement. LUFS is what your ears actually hear.</p>`},
+
+  { id:'ebu', cat:'Audio', term:'EBU R128',
+    short:'The international loudness measurement standard',
+    body:`<p><strong>European Broadcasting Union Recommendation R128</strong> — the international standard defining how to measure integrated loudness correctly.</p>
+<p>The same standard Spotify, YouTube, Apple Music, and broadcast TV use for their loudness normalization. SuperBox uses R128 analysis to measure your tracks and target them to −8.0 LUFS.</p>`},
+
+  { id:'cbr', cat:'Audio', term:'CBR 320',
+    short:'Highest-quality MP3 encoding setting',
+    body:`<p><strong>Constant Bitrate at 320 kbps</strong> — the highest quality setting for MP3 encoding. Every second of audio uses the same amount of data.</p>
+<p>When SuperBox normalizes an MP3, it re-encodes at 320 kbps CBR. This is still a lossy process — any re-encode of a lossy file costs some quality — which is why normalization is optional and having a backup first is strongly recommended.</p>
+<p>AIFF and WAV files are re-encoded losslessly, so no quality loss at all.</p>`},
+
+  { id:'aiff', cat:'Audio', term:'AIFF / AIF',
+    short:'Lossless audio format — full quality, larger file',
+    body:`<p><strong>Audio Interchange File Format</strong> — Apple's lossless audio format. Common in professional DJ libraries because it preserves full recording quality and supports embedded cue points that survive a drive wipe.</p>
+<p>When SuperBox normalizes an AIFF it re-encodes losslessly at the same bit depth as your original — no generation loss whatsoever.</p>`},
+
+  { id:'id3', cat:'Audio', term:'ID3 Tags',
+    short:'Metadata embedded inside the audio file itself',
+    body:`<p>The format used to store metadata <em>inside</em> audio files — title, artist, album, BPM, key, year, track number, and more.</p>
+<p>When you see track info in RekordBox, Finder, or iTunes, you're reading ID3 tags. SuperBox writes BPM and key into these tags so the data <strong>travels with the file</strong>, not just in the database. If you ever re-import, the tags are already there.</p>`},
+
+  { id:'fp', cat:'Audio', term:'Chromaprint / fpcalc',
+    short:'Acoustic fingerprinting — identifies songs by sound',
+    body:`<p><strong>Chromaprint</strong> is the fingerprinting library (used by AcoustID and MusicBrainz) that identifies recordings by their acoustic content — not their metadata.</p>
+<p><code>fpcalc</code> is the command-line tool it ships with. SuperBox calls it to analyze the first 120 seconds of each file and generate a fingerprint. Two identical fingerprints = same recording, no matter what the files are named or what format they're in.</p>
+<p>Requires <code>fpcalc</code> installed on your system: <code>brew install chromaprint</code></p>`},
+
+  // ── RekordBox ──────────────────────────────────────────────────────────────
+  { id:'mdb', cat:'RekordBox', term:'master.db',
+    short:'RekordBox\'s main database file — back this up',
+    body:`<p>The single SQLite file where RekordBox stores your entire library — every track, playlist, cue point, loop, hot cue color, and rating.</p>
+<p>Locations:<br>
+<code>~/Library/Pioneer/rekordbox/master.db</code> — your Mac<br>
+<code>/Volumes/[drive]/PIONEER/Master/master.db</code> — your export drive</p>
+<p><strong>Every SuperBox write operation creates a timestamped copy of this file in <code>~/rekordbox-toolkit/backups/</code> before touching it.</strong> The backup header in this app shows you when the last one was made.</p>`},
+
+  { id:'cont', cat:'RekordBox', term:'DjmdContent',
+    short:'The track table inside master.db',
+    body:`<p>The database table where each track gets one row. Every attribute RekordBox knows about a track — title, artist, BPM, key, file path, bit depth, sample rate, cue points — lives here.</p>
+<p>When you import, SuperBox writes rows to this table. When you relocate, it updates the <code>FolderPath</code> column. It's the heart of your library.</p>`},
+
+  { id:'fp2', cat:'RekordBox', term:'FolderPath',
+    short:'The stored file path in the database',
+    body:`<p>The exact file path stored in <code>DjmdContent</code> pointing to where a track lives on disk.</p>
+<p>When you move files to a new folder or drive, the old path no longer resolves — RekordBox shows a broken link icon. The Relocate tool fixes this by updating <code>FolderPath</code> values to where the files actually are now.</p>`},
+
+  { id:'cdj', cat:'RekordBox', term:'CDJ / XDJ',
+    short:'Pioneer hardware DJ players used in clubs',
+    body:`<p>Pioneer's professional media players — the industry standard hardware in most clubs, festivals, and touring setups.</p>
+<p>These players read directly from the exported <code>master.db</code> on your USB drive or rekordbox link. A corrupt or broken database means tracks won't load mid-set. This is why the backup-before-every-write rule is not negotiable.</p>`},
+
+  { id:'cam', cat:'RekordBox', term:'Camelot / Open Key',
+    short:'Harmonic mixing notation systems',
+    body:`<p>Two notation systems for musical keys designed to make harmonic mixing easy by replacing key names with numbers and letters.</p>
+<p><strong>Camelot</strong> — 1A through 12B. Adjacent numbers are harmonically compatible.<br>
+<strong>Open Key</strong> — 1m through 12d. Same concept, different notation.</p>
+<p>SuperBox maps all notations — including standard (Am, C#, F#m, etc.) — to whichever format your database already uses.</p>`},
+
+  // ── SuperBox ───────────────────────────────────────────────────────────────
+  { id:'dry', cat:'SuperBox', term:'Dry Run',
+    short:'Preview mode — shows what would happen, writes nothing',
+    body:`<p>Running a command with dry run enabled shows you exactly what <em>would</em> happen — how many tracks would be imported, what paths would change — without writing a single byte to the database.</p>
+<p><strong>Always run the Preview Import step before the real import.</strong> If the track count looks wrong, you haven't broken anything yet. The dry run is free.</p>`},
+
+  { id:'bat', cat:'SuperBox', term:'Batch Commit',
+    short:'Writing changes in chunks of 250',
+    body:`<p>Instead of writing one track at a time (slow) or all tracks at once (risky), SuperBox collects 250 changes and writes them as a single transaction.</p>
+<p>If that transaction fails, the entire chunk rolls back — you never end up with 137 tracks written and 113 missing in a half-finished state.</p>`},
+
+  { id:'rol', cat:'SuperBox', term:'Rollback',
+    short:'Auto-undo on failure — prevents partial writes',
+    body:`<p>If any unhandled error occurs during a write operation, the database transaction is automatically cancelled — every pending change in that session is undone as if it never started.</p>
+<p>This is the mechanism that prevents partial imports. Either a full batch of 250 tracks lands cleanly, or none of them do. You will never have a half-imported library.</p>`},
+
+  { id:'orp', cat:'SuperBox', term:'Orphan File',
+    short:'File on disk that RekordBox doesn\'t know about',
+    body:`<p>An audio file that exists in your music folder but has no matching row in the RekordBox database — RekordBox doesn't know it's there.</p>
+<p>Orphans appear in the Audit report. Common causes: files copied directly into the folder without going through an import, or leftovers from a failed previous import. The import step is how you bring them in.</p>`},
+
+  { id:'fuz', cat:'SuperBox', term:'Fuzzy Match',
+    short:'Approximate name matching — catches near-misses',
+    body:`<p>Instead of requiring an exact string match, fuzzy matching scores text similarity and accepts anything above a threshold.</p>
+<p>SuperBox uses it in two places:</p>
+<ul><li><strong>Playlist linking</strong> — folder name vs. playlist name, 85% threshold</li>
+<li><strong>File relocation</strong> — filename stem similarity, 90% threshold</li></ul>
+<p>Higher threshold = stricter = fewer false positives, but more unmatched items. The defaults are tuned for DJ library naming conventions.</p>`},
+
+  { id:'rarp', cat:'SuperBox', term:'RARP',
+    short:'Duplicate ranking: Pioneer Numbered → MIK → Raw',
+    body:`<p>The hierarchy used to recommend which copy to keep when duplicate tracks are found:</p>
+<ul>
+<li><strong>PN (Pioneer Numbered)</strong> — filename starts with digits + separator, e.g. <code>01 - Title</code>. Suggests it came from a curated, numbered source.</li>
+<li><strong>MIK (Mixed In Key tagged)</strong> — has a <code>TKEY</code>/<code>initialkey</code> tag already written by Mix In Key.</li>
+<li><strong>RAW</strong> — neither. Likely an unprocessed download.</li>
+</ul>
+<p>The CSV marks the top-ranked file in each group as KEEP. You review and make the final call — SuperBox never deletes anything.</p>`},
+
+  { id:'bak', cat:'SuperBox', term:'.bak File',
+    short:'Temporary safety copy kept during audio processing',
+    body:`<p>When normalizing loudness, the original file is renamed to <code>filename.mp3.bak</code> before the replacement is written.</p>
+<p>The <code>.bak</code> is only deleted after SuperBox confirms the new file is valid and readable using <code>soundfile</code>. If anything fails, your original is still there — just rename it to remove <code>.bak</code>.</p>
+<p>If you see leftover <code>.bak</code> files after an interrupted run, treat them as your originals. Verify the non-<code>.bak</code> version is intact before removing them.</p>`},
+
+  { id:'norm', cat:'SuperBox', term:'Normalization',
+    short:'Matching loudness levels across your library',
+    body:`<p>The process of analyzing each track's integrated loudness (LUFS) and re-encoding it so every track hits the same target level — <strong>−8.0 LUFS</strong>.</p>
+<p>Why it matters: without normalization, different tracks have different volumes. On CDJs you end up riding the channel gain between tracks during a mix. Normalized libraries let you keep gain at unity and focus on the mix.</p>
+<p>This is the highest-risk operation in the toolkit because it rewrites audio files. The <code>.bak</code> safety system means your originals are protected, but an independent drive backup first is strongly recommended.</p>`},
+];
+
+/* ── Owl interaction ──────────────────────────────────────────────────────── */
+let owlHoverTimer  = null;
+let owlCardsActive = false;
+const pinnedCards  = new Map();   // id → DOM element
+let cardZ          = 1000;
+
+function _buildOwlList() {
+  const list = document.getElementById('owl-panel-list');
+  if (list.children.length) return;
+  const groups = ['Tech','Audio','RekordBox','SuperBox'];
+  groups.forEach(g => {
+    const lbl = document.createElement('div');
+    lbl.className = 'owl-group-label';
+    lbl.textContent = g;
+    list.appendChild(lbl);
+    GLOSSARY.filter(t => t.cat === g).forEach(t => {
+      const row = document.createElement('div');
+      row.className = 'owl-item';
+      row.id = `owl-item-${t.id}`;
+      row.innerHTML = `<span class="owl-term">${t.term}</span><span class="owl-short">${t.short}</span>`;
+      row.onclick = e => { e.stopPropagation(); toggleCard(t.id); };
+      list.appendChild(row);
+    });
+  });
+}
+
+function owlHoverIn() {
+  clearTimeout(owlHoverTimer);
+  _buildOwlList();
+  document.getElementById('owl-hover-panel').classList.add('visible');
+}
+function owlHoverOut() {
+  owlHoverTimer = setTimeout(() =>
+    document.getElementById('owl-hover-panel').classList.remove('visible'), 220);
+}
+
+function owlClick() {
+  document.getElementById('owl-hover-panel').classList.remove('visible');
+  if (pinnedCards.size > 0) {
+    // dismiss all cards
+    pinnedCards.forEach(c => c.remove());
+    pinnedCards.clear();
+    document.querySelectorAll('.owl-item').forEach(i => i.classList.remove('pinned'));
+    document.getElementById('owl-btn').classList.remove('active');
+    owlCardsActive = false;
+  }
+}
+
+function toggleCard(id) {
+  pinnedCards.has(id) ? closeCard(id) : openCard(id);
+}
+
+function openCard(id) {
+  const t = GLOSSARY.find(x => x.id === id);
+  if (!t) return;
+
+  // cascading spawn positions — stays inside viewport, avoids top nav bars
+  const col  = pinnedCards.size % 3;
+  const row  = Math.floor(pinnedCards.size / 3) % 4;
+  const top  = 130 + row  * 44;
+  const left =  20 + col  * 308;
+
+  const card = document.createElement('div');
+  card.className = 'gls-card';
+  card.style.cssText = `top:${top}px;left:${left}px;z-index:${++cardZ}`;
+  card.innerHTML = `
+    <div class="gls-card-head">
+      <span class="gls-card-term">${t.term}</span>
+      <span class="gls-card-cat">${t.cat}</span>
+      <button class="gls-card-close" onclick="closeCard('${id}')">✕</button>
+    </div>
+    <div class="gls-card-body">${t.body}</div>`;
+  card.addEventListener('mouseenter', () => { card.style.zIndex = ++cardZ; });
+  document.body.appendChild(card);
+  pinnedCards.set(id, card);
+
+  const item = document.getElementById(`owl-item-${id}`);
+  if (item) item.classList.add('pinned');
+  document.getElementById('owl-btn').classList.add('active');
+  owlCardsActive = true;
+}
+
+function closeCard(id) {
+  const c = pinnedCards.get(id);
+  if (c) { c.remove(); pinnedCards.delete(id); }
+  const item = document.getElementById(`owl-item-${id}`);
+  if (item) item.classList.remove('pinned');
+  if (pinnedCards.size === 0) {
+    document.getElementById('owl-btn').classList.remove('active');
+    owlCardsActive = false;
+  }
+}
+
+/* patch openLog / closeLog to shift owl button above the log panel */
+const _origOpenLog  = openLog;
+const _origCloseLog = closeLog;
+openLog  = function(t) { _origOpenLog(t);  document.body.classList.add('log-open');    };
+closeLog = function()   { _origCloseLog();  document.body.classList.remove('log-open'); };
+</script>
+</body>
+</html>
