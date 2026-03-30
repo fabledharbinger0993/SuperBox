@@ -98,8 +98,7 @@ def load_report(csv_path: Path, db=None) -> list[DupeGroup]:
     db_paths: set[str] = set()
     if db is not None:
         try:
-            cursor = db.execute("SELECT FolderPath FROM DjmdContent")
-            db_paths = {row[0] for row in cursor.fetchall()}
+            db_paths = {row.FolderPath for row in db.get_content()}
         except Exception:
             pass  # DB unavailable — just skip in_db flagging
 
@@ -181,12 +180,10 @@ def prune_files(
     emit("  Removing from RekordBox database…")
     for path in file_paths:
         try:
-            cursor = db.execute(
-                "SELECT ID FROM DjmdContent WHERE FolderPath = ?", (path,)
-            )
-            row = cursor.fetchone()
-            if row:
-                db.execute("DELETE FROM DjmdContent WHERE ID = ?", (row[0],))
+            rows = db.get_content(FolderPath=path)
+            if rows:
+                for row in rows:
+                    db.session.delete(row)
                 db_removed += 1
                 emit(f"    DB ✓  {Path(path).name}")
             else:

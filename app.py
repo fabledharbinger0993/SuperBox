@@ -9,11 +9,8 @@ The UI runs all CLI commands via subprocess and streams output live.
 Rekordbox must be closed for any write operation — the server checks this
 before spawning write commands and refuses if the process is found running.
 
-Import note:
-  cli.py uses `from SuperBox.config import ...`, which requires the *parent*
-  of this repo to be on PYTHONPATH. The server sets this automatically in the
-  subprocess environment. If you cloned the repo under a different name than
-  "SuperBox", update REPO_NAME below.
+All modules (config, db_connection, pruner, etc.) are imported directly
+from this file's parent directory — no PYTHONPATH manipulation required.
 """
 
 import json
@@ -28,39 +25,49 @@ from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request
 
+# Ensure the toolkit modules are importable when app.py is run directly
+_REPO_ROOT = Path(__file__).parent.resolve()
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 app = Flask(__name__)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 
-REPO_ROOT   = Path(__file__).parent.resolve()
-REPO_PARENT = REPO_ROOT.parent          # parent dir must be in PYTHONPATH
-CLI_PATH    = REPO_ROOT / "cli.py"
-BACKUP_DIR  = Path.home() / "rekordbox-toolkit" / "backups"
+REPO_ROOT = _REPO_ROOT
+CLI_PATH  = REPO_ROOT / "cli.py"
+
+
+def _backup_dir() -> Path:
+    """Return the configured backup directory, with a sensible fallback."""
+    try:
+        from config import BACKUP_DIR  # noqa: PLC0415
+        return BACKUP_DIR
+    except Exception:
+        return Path.home() / "rekordbox-toolkit" / "backups"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _rb_is_running() -> bool:
-    """Return True if a Rekordbox process is currently active."""
-    if platform.system() == "Darwin":
-        result = subprocess.run(
-            ["pgrep", "-i", "rekordbox"],
-            capture_output=True, text=True,
-        )
-        return result.returncode == 0
-    # Windows fallback
-    result = subprocess.run(
-        ["tasklist", "/FI", "IMAGENAME eq rekordbox.exe"],
-        capture_output=True, text=True, shell=True,
-    )
-    return "rekordbox.exe" in result.stdout.lower()
+    """
+    Return True if a Rekordbox process is currently active.
+    Delegates to db_connection.rekordbox_is_running() so the logic stays
+    in one place (platform-aware, FileNotFoundError-safe).
+    """
+    try:
+        from db_connection import rekordbox_is_running  # noqa: PLC0415
+        return rekordbox_is_running()
+    except Exception:
+        return False
 
 
 def _backup_info() -> dict:
     """Return the age of the most recent timestamped backup, if any."""
-    if not BACKUP_DIR.exists():
+    backup_dir = _backup_dir()
+    if not backup_dir.exists():
         return {"exists": False, "name": None, "age": None}
-    backups = sorted(BACKUP_DIR.glob("master_*.db"), reverse=True)
+    backups = sorted(backup_dir.glob("master.backup_*.db"), reverse=True)
     if not backups:
         return {"exists": False, "name": None, "age": None}
     latest = backups[0]
@@ -72,13 +79,8 @@ def _backup_info() -> dict:
 
 
 def _subprocess_env() -> dict:
-    """Build an environment dict that puts REPO_PARENT on PYTHONPATH."""
-    env = os.environ.copy()
-    existing = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = (
-        str(REPO_PARENT) + os.pathsep + existing if existing else str(REPO_PARENT)
-    )
-    return env
+    """Return an environment dict for subprocesses running cli.py."""
+    return os.environ.copy()
 
 
 def _stream(cmd: list[str]):
@@ -142,18 +144,19 @@ def api_status():
 def api_config():
     """Expose the configured default paths so the UI can pre-fill forms."""
     try:
-        sys.path.insert(0, str(REPO_ROOT))
         from config import DJMT_DB, MUSIC_ROOT  # noqa: PLC0415
         return jsonify({
             "music_root": str(MUSIC_ROOT),
             "djmt_db": str(DJMT_DB),
-            "backup_dir": str(BACKUP_DIR),
+            "backup_dir": str(_backup_dir()),
+            "configured": True,
         })
     except Exception:
         return jsonify({
-            "music_root": "/Volumes/DJMT/DJMT PRIMARY",
-            "djmt_db": "/Volumes/DJMT/PIONEER/Master/master.db",
-            "backup_dir": str(BACKUP_DIR),
+            "music_root": "",
+            "djmt_db": "",
+            "backup_dir": str(_backup_dir()),
+            "configured": False,
         })
 
 
@@ -174,9 +177,6 @@ def api_process():
     if not path:
         return jsonify({"error": "path is required"}), 400
 
-    # process touches audio files — no Rekordbox check needed, but normalise
-    # requires a note. The safety check is informational only here.
-
     cmd = [sys.executable, str(CLI_PATH), "process", path]
     if request.args.get("no_bpm") == "1":
         cmd.append("--no-bpm")
@@ -188,6 +188,16 @@ def api_process():
         cmd.append("--force")
     if request.args.get("dry_run") == "1":
         cmd.append("--dry-run")
+    workers = request.args.get("workers", "").strip()
+    if workers and workers.isdigit() and int(workers) > 1:
+        cmd += ["--workers", workers]
+    pause = request.args.get("pause", "").strip()
+    if pause:
+        try:
+            if float(pause) > 0:
+                cmd += ["--pause", pause]
+        except ValueError:
+            pass
     return _sse_response(cmd)
 
 
@@ -206,6 +216,8 @@ def api_import():
     cmd = [sys.executable, str(CLI_PATH), "import", path]
     if dry_run:
         cmd.append("--dry-run")
+    if request.args.get("resume") == "1" and not dry_run:
+        cmd.append("--resume")
     return _sse_response(cmd)
 
 
@@ -219,7 +231,10 @@ def api_link():
     if not path:
         return jsonify({"error": "path is required"}), 400
 
+    dry_run_link = request.args.get("dry_run") == "1"
     cmd = [sys.executable, str(CLI_PATH), "link", path]
+    if dry_run_link:
+        cmd.append("--dry-run")
     return _sse_response(cmd)
 
 
@@ -248,6 +263,16 @@ def api_duplicates():
     output = request.args.get("output", "").strip()
     if output:
         cmd += ["--output", output]
+    workers = request.args.get("workers", "").strip()
+    if workers and workers.isdigit() and int(workers) > 1:
+        cmd += ["--workers", workers]
+    pause = request.args.get("pause", "").strip()
+    if pause:
+        try:
+            if float(pause) > 0:
+                cmd += ["--pause", pause]
+        except ValueError:
+            pass
     return _sse_response(cmd)
 
 
@@ -271,7 +296,6 @@ def api_duplicates_load():
         return jsonify({"error": f"Report not found: {csv_path}"}), 404
 
     try:
-        sys.path.insert(0, str(REPO_ROOT))
         from pruner import load_report          # noqa: PLC0415
         from db_connection import read_db       # noqa: PLC0415
         from config import DJMT_DB as _DB      # noqa: PLC0415
@@ -317,8 +341,13 @@ def api_open_file():
     if not p.exists():
         return jsonify({"error": f"File not found: {path}"}), 404
     try:
-        # macOS: `open` uses the default app per file type
-        subprocess.Popen(["open", str(p)])
+        _sys = platform.system()
+        if _sys == "Darwin":
+            subprocess.Popen(["open", str(p)])
+        elif _sys == "Windows":
+            os.startfile(str(p))  # type: ignore[attr-defined]
+        else:
+            subprocess.Popen(["xdg-open", str(p)])
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
@@ -347,7 +376,6 @@ def api_run_prune():
 
     def _worker() -> None:
         try:
-            sys.path.insert(0, str(REPO_ROOT))
             from pruner import prune_files          # noqa: PLC0415
             from db_connection import write_db      # noqa: PLC0415
             from config import DJMT_DB as _DB      # noqa: PLC0415
