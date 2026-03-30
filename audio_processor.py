@@ -21,6 +21,7 @@ Tolerance: 0.5 LUFS (skip normalisation if within this window)
 """
 
 
+import json
 import logging
 import os
 import shutil
@@ -408,6 +409,44 @@ def process_directory(
         total, max_workers, pause_seconds,
     )
 
+    # Running counters for live progress ticker
+    done = 0
+    clean = 0
+    errors = 0
+    edited = 0
+    tags_written = 0
+    bpm_key_written = 0
+
+    def _emit_progress() -> None:
+        print(
+            "SUPERBOX_PROGRESS: " + json.dumps({
+                "done":          done,
+                "total":         total,
+                "remaining":     total - done,
+                "clean":         clean,
+                "errors":        errors,
+                "edited":        edited,
+                "tags_written":  tags_written,
+                "bpm_key_written": bpm_key_written,
+            }),
+            flush=True,
+        )
+
+    def _tally(r: ProcessResult) -> None:
+        nonlocal done, clean, errors, edited, tags_written, bpm_key_written
+        done += 1
+        if r.errors:
+            errors += 1
+        any_edit = r.bpm_written or r.key_written or r.normalised
+        if any_edit:
+            edited += 1
+            if r.bpm_written or r.key_written:
+                bpm_key_written += 1
+            if r.bpm_written or r.key_written:
+                tags_written += 1
+        elif r.ok:
+            clean += 1
+
     def _process_one(track, index: int) -> ProcessResult:
         r = process_file(
             track.path,
@@ -429,13 +468,22 @@ def process_directory(
             }
             for future in concurrent.futures.as_completed(futures):
                 try:
-                    results.append(future.result())
+                    r = future.result()
+                    results.append(r)
+                    _tally(r)
+                    _emit_progress()
                 except Exception as exc:
                     idx = futures[future]
                     log.error("Unexpected error processing file %d: %s", idx + 1, exc)
+                    done += 1
+                    errors += 1
+                    _emit_progress()
     else:
         for i, track in enumerate(tracks):
-            results.append(_process_one(track, i + 1))
+            r = _process_one(track, i + 1)
+            results.append(r)
+            _tally(r)
+            _emit_progress()
             if pause_seconds > 0 and i < total - 1:
                 time.sleep(pause_seconds)
 

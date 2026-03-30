@@ -1372,6 +1372,23 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
     <div id="log-spinner"></div>
     <button class="log-close-btn" onclick="closeLog()" title="Close output">✕</button>
   </div>
+
+  <!-- Ticker view — shown during process/normalize runs -->
+  <div id="log-ticker" style="display:none; padding: 14px 24px; font-family: var(--mono); font-size:.85rem; line-height:2;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 4px 40px;">
+      <div>Remaining to scan: <strong id="tk-remaining">—</strong></div>
+      <div>Complete — no change: <strong id="tk-clean">0</strong></div>
+      <div style="color:var(--danger)">Errors <span style="color:var(--text-muted);font-size:.75rem">(file could not be read or processed)</span>: <strong id="tk-errors">0</strong></div>
+      <div style="color:var(--caution)">Warnings <span style="color:var(--text-muted);font-size:.75rem">(bad tag data, skipped)</span>: <strong id="tk-warnings">0</strong></div>
+      <div style="color:var(--safe)">Edited — tags updated: <strong id="tk-edited">0</strong>
+        <div style="padding-left:20px; font-size:.8rem; color:var(--text-muted)">
+          BPM / Key written: <strong id="tk-bpmkey" style="color:var(--safe)">0</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Standard scrolling log — shown for all other commands -->
   <div id="log-output"></div>
 </div>
 
@@ -1470,10 +1487,21 @@ document.querySelectorAll('.step-tab').forEach(btn => {
 });
 
 /* ── Log panel ─────────────────────────────────────────────────────────────── */
-function openLog(title) {
+let tickerMode = false;
+let tickerWarnings = 0;
+
+function openLog(title, useTicker = false) {
+  tickerMode = useTicker;
+  tickerWarnings = 0;
   document.getElementById('log-panel').classList.add('open');
   document.getElementById('log-cmd-label').textContent = title;
   document.getElementById('log-output').innerHTML = '';
+  document.getElementById('log-ticker').style.display = useTicker ? 'block' : 'none';
+  document.getElementById('log-output').style.display  = useTicker ? 'none'  : 'block';
+  if (useTicker) {
+    ['tk-remaining','tk-clean','tk-errors','tk-warnings','tk-edited','tk-bpmkey']
+      .forEach(id => document.getElementById(id).textContent = '—');
+  }
 }
 function closeLog() {
   if (isRunning && activeSource) {
@@ -1483,6 +1511,7 @@ function closeLog() {
     setSpinner(false);
   }
   document.getElementById('log-panel').classList.remove('open');
+  tickerMode = false;
 }
 function setSpinner(on) {
   document.getElementById('log-spinner').classList.toggle('active', on);
@@ -1504,24 +1533,57 @@ function classifyLine(text) {
   if (t.startsWith('  ')) return 'dim';
   return 'normal';
 }
+function updateTicker(p) {
+  document.getElementById('tk-remaining').textContent = p.remaining;
+  document.getElementById('tk-clean').textContent     = p.clean;
+  document.getElementById('tk-errors').textContent    = p.errors;
+  document.getElementById('tk-warnings').textContent  = tickerWarnings;
+  document.getElementById('tk-edited').textContent    = p.edited;
+  document.getElementById('tk-bpmkey').textContent    = p.bpm_key_written;
+}
+function finishTicker(exit_code) {
+  // Switch from ticker to final report in the scroll log
+  document.getElementById('log-ticker').style.display = 'none';
+  document.getElementById('log-output').style.display = 'block';
+  if (exit_code === 0) {
+    appendLog('✓ Finished successfully', 'log-exit-ok');
+  } else {
+    appendLog(`✗ Exited with code ${exit_code}`, 'log-exit-fail');
+  }
+}
 
 /* ── SSE runner ────────────────────────────────────────────────────────────── */
-function runCommand(url, logTitle, onDone) {
+function runCommand(url, logTitle, onDone, useTicker = false) {
   if (isRunning) return;
-  openLog(logTitle);
+  openLog(logTitle, useTicker);
   isRunning = true;
   setSpinner(true);
   setAllButtons(true);
 
-  appendLog(`▸ ${logTitle}`, 'dim');
-  appendLog('', 'dim');
+  if (!useTicker) {
+    appendLog(`▸ ${logTitle}`, 'dim');
+    appendLog('', 'dim');
+  }
 
   activeSource = new EventSource(url);
 
   activeSource.onmessage = (e) => {
     const data = JSON.parse(e.data);
     if (data.line !== undefined) {
-      appendLog(data.line, classifyLine(data.line));
+      const line = data.line;
+      if (tickerMode && line.startsWith('SUPERBOX_PROGRESS: ')) {
+        try { updateTicker(JSON.parse(line.slice(19))); } catch(_) {}
+      } else if (tickerMode) {
+        // Count warnings silently; show summary lines in scroll log at the end
+        const t = line.toLowerCase();
+        if (t.includes('warning') || t.includes('warn')) tickerWarnings++;
+        // Buffer report lines (═══ blocks) to show after ticker
+        if (/^═/.test(line) || document.getElementById('log-output').children.length > 0) {
+          appendLog(line, classifyLine(line));
+        }
+      } else {
+        appendLog(line, classifyLine(line));
+      }
     }
     if (data.done) {
       activeSource.close();
@@ -1529,23 +1591,30 @@ function runCommand(url, logTitle, onDone) {
       isRunning = false;
       setSpinner(false);
       setAllButtons(false);
-      appendLog('', '');
-      if (data.exit_code === 0) {
-        appendLog('✓ Finished successfully', 'log-exit-ok');
+      if (tickerMode) {
+        finishTicker(data.exit_code);
       } else {
-        appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
+        appendLog('', '');
+        if (data.exit_code === 0) {
+          appendLog('✓ Finished successfully', 'log-exit-ok');
+        } else {
+          appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
+        }
       }
       if (onDone) onDone(data.exit_code);
     }
   };
 
   activeSource.onerror = () => {
-    // Server returned a non-SSE response (e.g. 409 RB-open error)
     activeSource.close();
     activeSource = null;
     isRunning = false;
     setSpinner(false);
     setAllButtons(false);
+    if (tickerMode) {
+      document.getElementById('log-ticker').style.display = 'none';
+      document.getElementById('log-output').style.display = 'block';
+    }
     appendLog('Connection error — check the server is running.', 'error');
     refreshStatus();
   };
@@ -1588,7 +1657,7 @@ function runProcess() {
   if (document.getElementById('process-no-key').checked)  p.set('no_key', '1');
   if (document.getElementById('process-force').checked)   p.set('force',  '1');
   p.set('no_normalize', '1');  // Step 2 is tags-only; normalize is Step 7
-  runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection');
+  runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection', null, true);
 }
 
 function runNormalize() {
@@ -1602,7 +1671,7 @@ function runNormalize() {
   );
   if (!confirmed) return;
   const p = new URLSearchParams({ path });
-  runCommand(`/api/run/process?${p}`, 'Normalize — Loudness to −8.0 LUFS');
+  runCommand(`/api/run/process?${p}`, 'Normalize — Loudness to −8.0 LUFS', null, true);
 }
 
 function runImportDry() {
