@@ -110,7 +110,7 @@ class AuditReport:
     paths: PathReport
     orphans: OrphanReport
 
-    def summary(self) -> str:
+    def summary(self, list_cap: int = 10) -> str:
         s = self.snapshot
         p = self.paths
         o = self.orphans
@@ -140,8 +140,29 @@ class AuditReport:
             f"  Missing files   : {p.missing_count}",
             f"  Streaming tracks: {p.streaming_only}",
             f"  Orphaned files  : {o.orphan_count} (on disk, not in DB)",
-            "═══════════════════════════════",
         ]
+
+        def _capped_list(items, cap, label):
+            if not items:
+                return []
+            out = [f"", f"  ── {label} ──"]
+            for item in items[:cap]:
+                out.append(f"    {item}")
+            if len(items) > cap:
+                out.append(f"    … and {len(items) - cap} more")
+            return out
+
+        if p.missing:
+            lines += _capped_list(
+                [fp for _, fp in p.missing], list_cap, f"Missing from disk ({p.missing_count})"
+            )
+        if o.orphaned_paths:
+            lines += _capped_list(
+                [path.name for path in o.orphaned_paths], list_cap,
+                f"Orphaned — on disk but not in DB ({o.orphan_count})"
+            )
+
+        lines.append("═══════════════════════════════")
         return "\n".join(lines)
 
 
