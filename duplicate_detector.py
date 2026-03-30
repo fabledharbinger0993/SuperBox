@@ -32,6 +32,7 @@ Public interface:
 
 import concurrent.futures
 import csv
+import json
 import logging
 import re
 import time
@@ -46,6 +47,88 @@ from config import AUDIO_EXTENSIONS, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES
 log = logging.getLogger(__name__)
 
 _LOG_EVERY: int = 100
+
+# Pre-filter tolerances
+_BPM_TOLERANCE_PCT: float = 0.03   # ±3% — accounts for detection variance
+_DURATION_TOLERANCE_SEC: float = 3.0  # ±3 seconds
+
+
+# ─── Scan index pre-filter ────────────────────────────────────────────────────
+
+def _load_scan_index() -> dict[str, dict]:
+    """Load scan_index.json written by audio_processor. Returns {} if absent."""
+    index_path = Path.home() / "rekordbox-toolkit" / "scan_index.json"
+    if not index_path.exists():
+        return {}
+    try:
+        with open(index_path, encoding="utf-8") as f:
+            entries = json.load(f)
+        return {e["path"]: e for e in entries if "path" in e}
+    except Exception as exc:
+        log.warning("Could not load scan index: %s", exc)
+        return {}
+
+
+def _bpm_bucket(bpm_str: str | None) -> str | None:
+    """Round BPM to nearest 3% bucket for grouping. Returns None if unparseable."""
+    if not bpm_str:
+        return None
+    try:
+        bpm = float(bpm_str)
+        if bpm <= 0:
+            return None
+        # Bucket by rounding to nearest integer — close enough for ±3% grouping
+        return str(round(bpm))
+    except (ValueError, TypeError):
+        return None
+
+
+def _candidate_pairs(files: list[Path], index: dict[str, dict]) -> list[Path]:
+    """
+    Filter files to only those that have at least one potential duplicate
+    based on matching key + BPM (±3%) + duration (±3s) from the scan index.
+    Files not in the index are always included (conservative — don't skip unknowns).
+    Returns deduplicated list of candidate files to fingerprint.
+    """
+    if not index:
+        return files
+
+    # Group files by (key, bpm_bucket) — duration checked per-pair below
+    from collections import defaultdict
+    buckets: dict[tuple, list[Path]] = defaultdict(list)
+    no_index: list[Path] = []
+
+    for path in files:
+        entry = index.get(str(path))
+        if not entry:
+            no_index.append(path)
+            continue
+        key = entry.get("key") or "UNKNOWN"
+        bpm_b = _bpm_bucket(entry.get("bpm")) or "UNKNOWN"
+        buckets[(key, bpm_b)].append(path)
+
+    # Within each bucket, check duration proximity
+    candidates: set[Path] = set()
+    for group_files in buckets.values():
+        if len(group_files) < 2:
+            continue
+        # Pairwise duration check within the bucket
+        for i, a in enumerate(group_files):
+            for b in group_files[i + 1:]:
+                dur_a = index.get(str(a), {}).get("duration_sec")
+                dur_b = index.get(str(b), {}).get("duration_sec")
+                if dur_a is None or dur_b is None or abs(dur_a - dur_b) <= _DURATION_TOLERANCE_SEC:
+                    candidates.add(a)
+                    candidates.add(b)
+
+    result = list(candidates) + no_index
+    skipped = len(files) - len(result)
+    if skipped > 0:
+        log.info(
+            "Pre-filter: %d / %d files are candidates (skipped %d — no matching key+BPM+duration)",
+            len(result), len(files), skipped,
+        )
+    return result
 
 # Regex for Pioneer-numbered filename stems.
 # Anchored to the start of the stem. Two forms are accepted:
@@ -202,10 +285,29 @@ def scan_duplicates(
         raise ValueError(f"scan_duplicates: {root} is not a directory")
 
     log.info("Walking %s for audio files...", root)
-    files = _walk_audio_files(root)
+    all_files = _walk_audio_files(root)
+    log.info("Found %d audio files total", len(all_files))
+
+    # Apply pre-filter from scan index if available
+    index = _load_scan_index()
+    if index:
+        files = _candidate_pairs(all_files, index)
+        print(
+            f"SUPERBOX_PREFILTER: "
+            + json.dumps({
+                "total": len(all_files),
+                "candidates": len(files),
+                "skipped": len(all_files) - len(files),
+            }),
+            flush=True,
+        )
+    else:
+        files = all_files
+        log.info("No scan index found — fingerprinting all files (run Tag Tracks first to speed this up)")
+
     total = len(files)
     log.info(
-        "Found %d audio files — beginning fingerprint pass "
+        "Beginning fingerprint pass on %d files "
         "(workers=%d pause=%.1fs)",
         total, max_workers, pause_seconds,
     )

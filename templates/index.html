@@ -54,6 +54,19 @@ body {
   min-height: 100vh;
   padding-bottom: calc(var(--log-h) + 48px);
 }
+body::before {
+  content: '';
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(60vw, 60vh);
+  height: min(60vw, 60vh);
+  background: url('/static/SRB_LOGO.png') center / contain no-repeat;
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 0;
+}
 a { color: var(--accent); text-decoration: none; }
 button { cursor: pointer; font-family: inherit; }
 input, select {
@@ -714,6 +727,12 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
       <div class="dot" style="background:var(--text-dim)"></div>
       <span id="backup-label"></span>
     </div>
+    <button id="view-output-btn" onclick="reopenLog()"
+      style="display:none; background:var(--accent-dim); border:1px solid var(--accent);
+             color:var(--accent); border-radius:5px; padding:4px 12px; font-size:.78rem;
+             letter-spacing:.04em; cursor:pointer;">
+      ▸ View Output
+    </button>
   </div>
 </header>
 
@@ -1498,6 +1517,7 @@ function openLog(title, useTicker = false) {
   document.getElementById('log-output').innerHTML = '';
   document.getElementById('log-ticker').style.display = useTicker ? 'block' : 'none';
   document.getElementById('log-output').style.display  = useTicker ? 'none'  : 'block';
+  document.getElementById('view-output-btn').style.display = 'none';
   if (useTicker) {
     ['tk-remaining','tk-clean','tk-errors','tk-warnings','tk-edited','tk-bpmkey']
       .forEach(id => document.getElementById(id).textContent = '—');
@@ -1511,7 +1531,15 @@ function closeLog() {
     setSpinner(false);
   }
   document.getElementById('log-panel').classList.remove('open');
+  // Show the re-open button whenever the panel has content
+  const hasContent = document.getElementById('log-output').children.length > 0
+    || document.getElementById('log-ticker').style.display !== 'none';
+  document.getElementById('view-output-btn').style.display = hasContent ? 'inline-block' : 'none';
   tickerMode = false;
+}
+function reopenLog() {
+  document.getElementById('log-panel').classList.add('open');
+  document.getElementById('view-output-btn').style.display = 'none';
 }
 function setSpinner(on) {
   document.getElementById('log-spinner').classList.toggle('active', on);
@@ -1553,7 +1581,7 @@ function finishTicker(exit_code) {
 }
 
 /* ── SSE runner ────────────────────────────────────────────────────────────── */
-function runCommand(url, logTitle, onDone, useTicker = false) {
+function runCommand(url, logTitle, onDone, useTicker = false, showPrefilter = false) {
   if (isRunning) return;
   openLog(logTitle, useTicker);
   isRunning = true;
@@ -1571,7 +1599,17 @@ function runCommand(url, logTitle, onDone, useTicker = false) {
     const data = JSON.parse(e.data);
     if (data.line !== undefined) {
       const line = data.line;
-      if (tickerMode && line.startsWith('SUPERBOX_PROGRESS: ')) {
+      if (showPrefilter && line.startsWith('SUPERBOX_PREFILTER: ')) {
+        try {
+          const pf = JSON.parse(line.slice(20));
+          if (pf.skipped > 0) {
+            appendLog(`Pre-filter: ${pf.candidates.toLocaleString()} of ${pf.total.toLocaleString()} files need fingerprinting — ${pf.skipped.toLocaleString()} skipped (no matching key + BPM + duration)`, 'success');
+          } else {
+            appendLog(`Pre-filter: no scan index found — fingerprinting all ${pf.total.toLocaleString()} files. Run Tag Tracks first to speed this up.`, 'warn');
+          }
+          appendLog('', '');
+        } catch(_) {}
+      } else if (tickerMode && line.startsWith('SUPERBOX_PROGRESS: ')) {
         try { updateTicker(JSON.parse(line.slice(19))); } catch(_) {}
       } else if (tickerMode) {
         // Count warnings silently; show summary lines in scroll log at the end
@@ -1712,7 +1750,7 @@ function runDuplicates() {
   const p = new URLSearchParams({ path });
   const out = document.getElementById('dupes-output').value.trim();
   if (out) p.set('output', out);
-  runCommand(`/api/run/duplicates?${p}`, 'Find Duplicates — Acoustic Fingerprinting');
+  runCommand(`/api/run/duplicates?${p}`, 'Find Duplicates — Acoustic Fingerprinting', null, false, true);
 }
 
 /* ── Prune Duplicates ──────────────────────────────────────────────────────── */

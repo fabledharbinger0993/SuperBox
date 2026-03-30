@@ -446,6 +446,40 @@ def process_directory(
                 tags_written += 1
         elif r.ok:
             clean += 1
+        # Build scan index entry — duration via librosa if BPM was detected
+        try:
+            duration_sec = None
+            if r.bpm_detected is not None or r.skipped_bpm:
+                y, sr = librosa.load(str(r.path), duration=30.0, mono=True)
+                # librosa.get_duration is fast since audio is already loaded
+                duration_sec = round(librosa.get_duration(y=y, sr=sr), 1)
+        except Exception:
+            pass
+        try:
+            file_size = r.path.stat().st_size
+        except OSError:
+            file_size = 0
+        # Read current BPM/key from tags (may have just been written)
+        bpm_val = None
+        key_val = None
+        try:
+            audio = MutagenFile(str(r.path), easy=False)
+            if audio and audio.tags:
+                tbpm = audio.tags.get("TBPM")
+                if tbpm:
+                    bpm_val = str(tbpm).strip()
+                tkey = audio.tags.get("TKEY")
+                if tkey:
+                    key_val = str(tkey).strip()
+        except Exception:
+            pass
+        scan_index.append({
+            "path":         str(r.path),
+            "bpm":          bpm_val,
+            "key":          key_val,
+            "duration_sec": duration_sec,
+            "file_size":    file_size,
+        })
 
     def _process_one(track, index: int) -> ProcessResult:
         r = process_file(
@@ -459,6 +493,8 @@ def process_directory(
                  index, total, track.path.name,
                  "  ✗ errors: " + ", ".join(r.errors) if r.errors else "")
         return r
+
+    scan_index: list[dict] = []   # accumulates entries for scan_index.json
 
     if max_workers > 1:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
@@ -486,6 +522,24 @@ def process_directory(
             _emit_progress()
             if pause_seconds > 0 and i < total - 1:
                 time.sleep(pause_seconds)
+
+    # Write scan index for duplicate pre-filter
+    if scan_index:
+        index_path = Path.home() / "rekordbox-toolkit" / "scan_index.json"
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            existing: dict[str, dict] = {}
+            if index_path.exists():
+                with open(index_path, encoding="utf-8") as f:
+                    for entry in json.load(f):
+                        existing[entry["path"]] = entry
+            for entry in scan_index:
+                existing[entry["path"]] = entry
+            with open(index_path, "w", encoding="utf-8") as f:
+                json.dump(list(existing.values()), f, indent=2)
+            log.info("Scan index written: %s (%d entries)", index_path, len(existing))
+        except Exception as exc:
+            log.warning("Could not write scan index: %s", exc)
 
     return results
 
