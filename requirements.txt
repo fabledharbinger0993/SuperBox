@@ -16,7 +16,7 @@ pyrekordbox==0.4.4
 mutagen==1.47
 # Audio tag reading and writing
 
-librosa==0.10
+librosa>=0.10.2
 # BPM detection, beat tracking, key detection, and chroma analysis
 
 pyloudnorm==0.1.1
