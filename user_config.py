@@ -159,6 +159,9 @@ def _has_binary(name: str) -> bool:
 def _has_python_module(name: str) -> bool:
     return importlib.util.find_spec(name) is not None
 
+_SYS = platform.system()  # "Darwin", "Windows", "Linux"
+
+
 def _ffmpeg_ok() -> bool:
     """ffmpeg must exist AND be able to decode audio (not just be present)."""
     if not _has_binary("ffmpeg"):
@@ -185,19 +188,38 @@ def _fpcalc_ok() -> bool:
         return False
 
 
-# (display_name, check_fn, brew_hint, pip_hint, used_by)
+def _install_hint(mac: str = "", win: str = "", linux: str = "") -> str:
+    """Return the platform-appropriate install hint string (empty = N/A)."""
+    if _SYS == "Darwin":
+        return mac
+    if _SYS == "Windows":
+        return win
+    return linux
+
+
+# (display_name, check_fn, system_install_hint, pip_hint, used_by)
+# system_install_hint is platform-specific (brew / winget / apt).
+# pip_hint is the same on all platforms.
 DEPENDENCIES: list[tuple[str, object, str, str, str]] = [
     (
         "ffmpeg",
         _ffmpeg_ok,
-        "brew install ffmpeg",
+        _install_hint(
+            mac="brew install ffmpeg",
+            win="winget install ffmpeg  (or download from https://ffmpeg.org/download.html)",
+            linux="sudo apt install ffmpeg  (or equivalent for your distro)",
+        ),
         "",
         "process (loudness normalisation)",
     ),
     (
         "fpcalc  (Chromaprint)",
         _fpcalc_ok,
-        "brew install chromaprint",
+        _install_hint(
+            mac="brew install chromaprint",
+            win="download fpcalc from https://acoustid.org/chromaprint",
+            linux="sudo apt install libchromaprint-tools",
+        ),
         "",
         "duplicates",
     ),
@@ -205,7 +227,7 @@ DEPENDENCIES: list[tuple[str, object, str, str, str]] = [
         "pyrekordbox",
         lambda: _has_python_module("pyrekordbox"),
         "",
-        "pip install pyrekordbox",
+        "pip install pyrekordbox==0.4.4",
         "all commands",
     ),
     (
@@ -218,7 +240,11 @@ DEPENDENCIES: list[tuple[str, object, str, str, str]] = [
     (
         "aubio",
         lambda: _has_python_module("aubio"),
-        "brew install aubio",
+        _install_hint(
+            mac="brew install aubio",
+            win="",   # no winget package; pip wheel available
+            linux="sudo apt install python3-aubio  (or pip install aubio)",
+        ),
         "pip install aubio",
         "process (BPM detection)",
     ),
@@ -304,7 +330,7 @@ def print_dependency_report(results: list[dict] | None = None) -> bool:
         status = "✓" if r["ok"] else "✗  NOT FOUND"
         print(f"  {r['name']:{width}} {status}")
         if not r["ok"]:
-            if r["brew"]:
+            if r["brew"]:   # platform-specific system package hint
                 print(f"    {'':>{width}} install:  {r['brew']}")
             if r["pip"]:
                 print(f"    {'':>{width}} install:  {r['pip']}")
