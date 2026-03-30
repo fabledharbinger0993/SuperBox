@@ -20,7 +20,7 @@ from typing import Generator
 
 from pyrekordbox import Rekordbox6Database
 
-from FabledHarbinger.SuperBox.config import BACKUP_DIR, DJMT_DB, LOCAL_DB
+from config import BACKUP_DIR, DJMT_DB, LOCAL_DB
 
 log = logging.getLogger(__name__)
 

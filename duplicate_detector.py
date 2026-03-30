@@ -39,7 +39,7 @@ from pathlib import Path
 import acoustid
 from mutagen import File as MutagenFile
 
-from SuperBox.config import AUDIO_EXTENSIONS, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES
+from config import AUDIO_EXTENSIONS, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES
 
 log = logging.getLogger(__name__)
 

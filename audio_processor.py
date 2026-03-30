@@ -36,14 +36,14 @@ import soundfile as sf
 from mutagen import File as MutagenFile
 from mutagen.id3 import TBPM, TKEY
 
-from config import AUDIO_EXTENSIONS, BPM_MAX, BPM_MIN
+from config import AUDIO_EXTENSIONS, BPM_MAX, BPM_MIN, LUFS_TOLERANCE, TARGET_LUFS
 
 log = logging.getLogger(__name__)
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-TARGET_LUFS: float = -8.0
-LUFS_TOLERANCE: float = 0.5
+# TARGET_LUFS and LUFS_TOLERANCE are loaded from user config via config.py.
+# To change the target, run: python3 cli.py setup --update
 ANALYSIS_DURATION: float = 90.0
 BPM_HOP_SIZE: int = 512
 BPM_WIN_SIZE: int = 1024

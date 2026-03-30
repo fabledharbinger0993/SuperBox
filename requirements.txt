@@ -1,0 +1,31 @@
+# rekordbox-toolkit Python dependencies
+#
+# Install with: pip install -r requirements.txt
+#
+# System binaries required separately (see README):
+#   macOS:   brew install ffmpeg chromaprint
+#   Windows: winget install ffmpeg  (fpcalc: https://acoustid.org/chromaprint)
+#
+# pyrekordbox 0.4.4 is the tested version. The add_content, add_to_playlist,
+# and update_content_path call signatures are version-sensitive — test after
+# any pyrekordbox upgrade before distributing a new release.
+
+pyrekordbox==0.4.4
+
+# Audio tag reading and writing
+mutagen>=1.47
+
+# BPM detection (requires system aubio binary as well; see above)
+aubio>=0.4.9
+
+# Key detection and chroma analysis
+librosa>=0.10
+
+# Loudness measurement (EBU R128 / LUFS)
+pyloudnorm>=0.1.1
+
+# Audio file I/O (used by pyloudnorm and normalisation verification)
+soundfile>=0.12
+
+# Acoustic fingerprinting wrapper (requires fpcalc binary; see above)
+pyacoustid>=1.3

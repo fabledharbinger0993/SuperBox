@@ -21,7 +21,7 @@ from pathlib import Path
 
 from pyrekordbox import Rekordbox6Database
 
-from SuperBox.config import AUDIO_EXTENSIONS, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES
+from config import AUDIO_EXTENSIONS, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES
 
 log = logging.getLogger(__name__)
 

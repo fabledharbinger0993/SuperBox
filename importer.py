@@ -25,9 +25,9 @@ from pathlib import Path
 
 from pyrekordbox import Rekordbox6Database
 
-from .config import BATCH_SIZE
-from .key_mapper import clear_cache as clear_key_cache, resolve_key_id
-from .scanner import TrackInfo, scan_directory
+from config import BATCH_SIZE
+from key_mapper import clear_cache as clear_key_cache, resolve_key_id
+from scanner import TrackInfo, scan_directory
 
 log = logging.getLogger(__name__)
 

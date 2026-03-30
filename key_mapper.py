@@ -18,7 +18,7 @@ from uuid import uuid4
 from pyrekordbox import Rekordbox6Database
 from pyrekordbox.db6 import tables
 
-from .config import CAMELOT_TO_RB, OPENKEY_TO_RB, STANDARD_KEY_ALIASES
+from config import CAMELOT_TO_RB, OPENKEY_TO_RB, STANDARD_KEY_ALIASES
 
 log = logging.getLogger(__name__)
 
