@@ -4,7 +4,6 @@ Central configuration: paths, constants, key mappings.
 All path references in the toolkit flow from here.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -16,19 +15,43 @@ if sys.version_info < (3, 12):
         "Path.walk() is used throughout — upgrade Python or replace with os.walk()."
     )
 
-# ─── Database paths ───────────────────────────────────────────────────────────
+# ─── User configuration ───────────────────────────────────────────────────────
+#
+# All paths and user-adjustable constants are stored in the user's config file
+# at ~/.rekordbox-toolkit/config.json and written there by `python3 cli.py setup`.
+#
+# These module-level names preserve the existing import interface throughout
+# the codebase — callers use LOCAL_DB, DJMT_DB, MUSIC_ROOT, BACKUP_DIR,
+# TARGET_LUFS, and LUFS_TOLERANCE exactly as before.
 
-# Primary Rekordbox database (what the Mac app reads/writes)
-LOCAL_DB = Path.home() / "Library/Pioneer/rekordbox/master.db"
+try:
+    from user_config import NotConfiguredError, load_user_config
+    _cfg = load_user_config()
+except NotConfiguredError as _exc:
+    raise RuntimeError(str(_exc)) from _exc
 
-# Device database on DJMT (exported for CDJ playback)
-DJMT_DB = Path("/Volumes/DJMT/PIONEER/Master/master.db")
+# ─── Database and filesystem paths ───────────────────────────────────────────
 
-# Music library root on the drive
-MUSIC_ROOT = Path("/Volumes/DJMT/DJMT PRIMARY")
+# Primary Rekordbox database on the local machine (what the desktop app reads/writes)
+LOCAL_DB = Path(_cfg["local_db"])
 
-# Backup directory (created automatically before any write)
-BACKUP_DIR = Path.home() / "rekordbox-toolkit/backups"
+# Database on the DJ drive (exported for CDJ playback)
+DJMT_DB = Path(_cfg["device_db"])
+
+# Music library root on the DJ drive
+MUSIC_ROOT = Path(_cfg["music_root"])
+
+# Backup directory — created automatically before any write operation
+BACKUP_DIR = Path(_cfg["backup_dir"])
+
+# ─── Audio normalisation ──────────────────────────────────────────────────────
+#
+# Target integrated loudness for the normalise operation (EBU R128 / LUFS).
+# −8.0 LUFS is the widely-used DJ standard for CDJ output monitoring.
+# Users can change this via `python3 cli.py setup --update`.
+
+TARGET_LUFS:    float = float(_cfg["target_lufs"])
+LUFS_TOLERANCE: float = float(_cfg["lufs_tolerance"])
 
 # Supported audio file extensions (lowercase)
 AUDIO_EXTENSIONS = {".mp3", ".aiff", ".aif", ".wav", ".flac", ".m4a", ".ogg", ".opus"}

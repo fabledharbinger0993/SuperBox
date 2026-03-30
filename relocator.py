@@ -46,7 +46,7 @@ from typing import Literal, TYPE_CHECKING
 
 from pyrekordbox import Rekordbox6Database
 
-from .config import AUDIO_EXTENSIONS, BATCH_SIZE, SKIP_DIRS, SKIP_PREFIXES
+from config import AUDIO_EXTENSIONS, BATCH_SIZE, SKIP_DIRS, SKIP_PREFIXES
 
 if TYPE_CHECKING:
     # DjmdContent is an ORM row type from pyrekordbox's SQLAlchemy models.

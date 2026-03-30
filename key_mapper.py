@@ -18,53 +18,43 @@ from uuid import uuid4
 from pyrekordbox import Rekordbox6Database
 from pyrekordbox.db6 import tables
 
-from .config import CAMELOT_TO_RB, OPENKEY_TO_RB, STANDARD_KEY_ALIASES
+from config import CAMELOT_TO_RB, OPENKEY_TO_RB, STANDARD_KEY_ALIASES
 
 log = logging.getLogger(__name__)
 
 # ─── Canonical key definitions ────────────────────────────────────────────────
 #
-# 24 keys Rekordbox recognises, with placeholder Seq values.
+# The 24 ScaleNames Rekordbox uses for standard keys.
 #
-# !! SEQ VALUES ARE UNVERIFIED — READ THIS BEFORE USING IN PRODUCTION !!
+# DjmdKey.Seq investigation (live DB dump, 2026-03-30):
 #
-# Seq is used by Rekordbox for display ordering in the key column.
-# The true Seq scheme must be derived from the live DjmdKey table.
-# Four observed rows contradict every simple pattern:
+#   Seq is NOT a canonical fixed ordering — it is simply an auto-incrementing
+#   counter assigned when Rekordbox first creates a DjmdKey row during track
+#   analysis. The values reflect the order keys were encountered in THIS
+#   user's library, not any musical scheme:
 #
-#   ScaleName  Observed Seq   Camelot#   Camelot# (sequential) predicts
-#   ---------  ------------   --------   ---------------------------------
-#   Ebm (7A)        8            7            mismatch
-#   Fm  (9A)        5            9            mismatch
-#   C   (1B)        7            1            mismatch
-#   Eb  (8B)        6           10            mismatch
+#     Seq 1 → Am      Seq 2 → Gm     Seq 3 → Abm    Seq 4 → Dm
+#     Seq 5 → Fm      Seq 6 → Eb     Seq 7 → C      Seq 8 → Ebm
 #
-# The placeholder values below (Camelot number) are WRONG for at least
-# these 4 rows. Newly created DjmdKey rows will have incorrect Seq values
-# until this is resolved.
+#   Rows created by third-party tools have Seq = None in the observed DB,
+#   confirming there is no fixed canonical mapping.
 #
-# TO FIX BEFORE PRODUCTION USE:
-#   1. Run the audit query in the smoke test below to dump all DjmdKey rows.
-#   2. Cross-reference every row against the Camelot wheel.
-#   3. Replace CANONICAL_KEYS values with the observed Seq integers.
-#   4. Remove this warning comment once verified.
-#
-# Practical impact: Seq is cosmetic (key column sort order in Rekordbox).
-# It does NOT affect playback, cue points, or playlist membership.
-# Rekordbox overwrites Seq when it re-analyses a track, but it may NOT
-# re-analyse tracks imported by a third-party tool. Treat the Seq values
-# as wrong until verified.
+# Resolution: _get_or_create_key_row() now computes Seq dynamically as
+# max(existing Seq values) + 1 — exactly what Rekordbox does natively.
+# This produces correct, non-colliding Seq values for any user's database
+# regardless of which keys they already have. The CANONICAL_SCALE_NAMES
+# frozenset below now only serves as the validity guard — Seq is gone.
 
-CANONICAL_KEYS: dict[str, int] = {
-    # Minor (xA) — placeholder Seq = Camelot number (UNVERIFIED — see above)
-    "Am":  1,   "Em":  2,   "Bm":  3,   "F#m": 4,
-    "C#m": 5,   "Abm": 6,   "Ebm": 7,   "Bbm": 8,
-    "Fm":  9,   "Cm":  10,  "Gm":  11,  "Dm":  12,
-    # Major (xB) — placeholder Seq = Camelot number (UNVERIFIED — see above)
-    "C":   1,   "G":   2,   "D":   3,   "A":   4,
-    "E":   5,   "B":   6,   "F#":  7,   "Db":  8,
-    "Ab":  9,   "Eb":  10,  "Bb":  11,  "F":   12,
-}
+CANONICAL_SCALE_NAMES: frozenset[str] = frozenset({
+    # Minor (Camelot xA)
+    "Am",  "Em",  "Bm",  "F#m",
+    "C#m", "Abm", "Ebm", "Bbm",
+    "Fm",  "Cm",  "Gm",  "Dm",
+    # Major (Camelot xB)
+    "C",   "G",   "D",   "A",
+    "E",   "B",   "F#",  "Db",
+    "Ab",  "Eb",  "Bb",  "F",
+})
 
 
 # ─── Notation normalisation ───────────────────────────────────────────────────
@@ -101,7 +91,7 @@ def notation_to_scale_name(raw: str | None) -> str | None:
         return STANDARD_KEY_ALIASES[key]
 
     # Last attempt: direct match against canonical key names
-    if key in CANONICAL_KEYS:
+    if key in CANONICAL_SCALE_NAMES:
         return key
 
     log.warning("Unrecognised key notation: %r — will import without key", raw)
@@ -114,11 +104,25 @@ def notation_to_scale_name(raw: str | None) -> str | None:
 _key_id_cache: dict[str, str] = {}
 
 
+def _next_seq(db: Rekordbox6Database) -> int:
+    """
+    Return the next available DjmdKey.Seq value.
+
+    Rekordbox assigns Seq as a simple incrementing counter — there is no
+    canonical musical ordering. We replicate that behaviour: find the current
+    maximum Seq and add 1. Rows with Seq = None (created by third-party tools)
+    are ignored. Returns 1 if no rows with a Seq value exist yet.
+    """
+    rows = db.get_key().all()
+    seqs = [r.Seq for r in rows if r.Seq is not None]
+    return (max(seqs) + 1) if seqs else 1
+
+
 def _get_or_create_key_row(scale_name: str, db: Rekordbox6Database) -> str:
     """
     Return the DjmdKey.ID for scale_name, creating the row if it doesn't exist.
 
-    Returns str. Raises ValueError if scale_name is not in CANONICAL_KEYS.
+    Returns str. Raises ValueError if scale_name is not in CANONICAL_SCALE_NAMES.
     """
     if scale_name in _key_id_cache:
         return _key_id_cache[scale_name]
@@ -128,12 +132,12 @@ def _get_or_create_key_row(scale_name: str, db: Rekordbox6Database) -> str:
         _key_id_cache[scale_name] = str(existing.ID)
         return str(existing.ID)
 
-    if scale_name not in CANONICAL_KEYS:
+    if scale_name not in CANONICAL_SCALE_NAMES:
         raise ValueError(
             f"Cannot create DjmdKey row for unknown scale name: {scale_name!r}"
         )
 
-    seq = CANONICAL_KEYS[scale_name]
+    seq = _next_seq(db)
     new_id = db.generate_unused_id(tables.DjmdKey)
     key_row = tables.DjmdKey.create(
         ID=new_id,
@@ -144,9 +148,8 @@ def _get_or_create_key_row(scale_name: str, db: Rekordbox6Database) -> str:
     db.add(key_row)
     db.flush()
 
-    log.warning(
-        "Created DjmdKey row: ScaleName=%r ID=%s Seq=%s "
-        "(WARNING: Seq value is a placeholder — see CANONICAL_KEYS comment in key_mapper.py)",
+    log.info(
+        "Created DjmdKey row: ScaleName=%r ID=%s Seq=%s",
         scale_name, new_id, seq,
     )
     _key_id_cache[scale_name] = str(new_id)

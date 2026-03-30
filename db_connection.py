@@ -11,6 +11,7 @@ Nothing in this toolkit writes to the database without going through open_db().
 """
 
 import logging
+import platform
 import shutil
 import subprocess
 from contextlib import contextmanager
@@ -20,7 +21,7 @@ from typing import Generator
 
 from pyrekordbox import Rekordbox6Database
 
-from FabledHarbinger.SuperBox.config import BACKUP_DIR, DJMT_DB, LOCAL_DB
+from config import BACKUP_DIR, DJMT_DB, LOCAL_DB
 
 log = logging.getLogger(__name__)
 
@@ -28,27 +29,53 @@ log = logging.getLogger(__name__)
 
 REKORDBOX_PROCESS_NAMES = ("rekordbox", "Rekordbox")
 
+_PLATFORM = platform.system()  # "Darwin", "Windows", or "Linux"
+
+if _PLATFORM not in ("Darwin", "Windows"):
+    log.warning(
+        "rekordbox-toolkit is only tested on macOS and Windows. "
+        "Rekordbox does not have a Linux release. Some features "
+        "(process detection, path casing) may behave differently on Linux."
+    )
+
 
 def rekordbox_is_running() -> bool:
-    """Return True if any Rekordbox process is currently active."""
+    """
+    Return True if any Rekordbox process is currently active.
+
+    Platform-aware:
+      macOS   — pgrep -x rekordbox  (exact name match)
+      Windows — tasklist /FI "IMAGENAME eq rekordbox.exe" /NH
+      Linux   — pgrep -x rekordbox  (Rekordbox has no Linux version, but
+                the check is harmless; always returns False in practice)
+    """
     try:
-        # -x matches the exact process name (not the full command line).
-        # Do NOT combine with -f: -x -f together require the full command
-        # string to equal the pattern exactly, which never matches in practice.
-        result = subprocess.run(
-            ["pgrep", "-x", "rekordbox"],
-            capture_output=True,
-            text=True,
-        )
-        return result.returncode == 0
+        if _PLATFORM == "Windows":
+            result = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq rekordbox.exe", "/NH"],
+                capture_output=True,
+                text=True,
+            )
+            # tasklist exits 0 even when no match; check stdout for the name
+            return "rekordbox.exe" in result.stdout.lower()
+        else:
+            # macOS and Linux both have pgrep
+            # -x matches the exact process name (not the full command line).
+            # Do NOT combine with -f: -x -f together require the full command
+            # string to equal the pattern exactly, which never matches in practice.
+            result = subprocess.run(
+                ["pgrep", "-x", "rekordbox"],
+                capture_output=True,
+                text=True,
+            )
+            return result.returncode == 0
     except FileNotFoundError:
-        # pgrep unavailable — fall back to ps
-        result = subprocess.run(
-            ["ps", "aux"],
-            capture_output=True,
-            text=True,
+        # Neither pgrep nor tasklist found — log and assume not running
+        log.warning(
+            "Could not check for running Rekordbox processes "
+            "(pgrep/tasklist not found). Proceeding without process check."
         )
-        return any(name in result.stdout for name in REKORDBOX_PROCESS_NAMES)
+        return False
 
 
 # ─── Backup ───────────────────────────────────────────────────────────────────

@@ -25,6 +25,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -36,14 +37,14 @@ import soundfile as sf
 from mutagen import File as MutagenFile
 from mutagen.id3 import TBPM, TKEY
 
-from config import AUDIO_EXTENSIONS, BPM_MAX, BPM_MIN
+from config import AUDIO_EXTENSIONS, BPM_MAX, BPM_MIN, LUFS_TOLERANCE, TARGET_LUFS
 
 log = logging.getLogger(__name__)
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-TARGET_LUFS: float = -8.0
-LUFS_TOLERANCE: float = 0.5
+# TARGET_LUFS and LUFS_TOLERANCE are loaded from user config via config.py.
+# To change the target, run: python3 cli.py setup --update
 ANALYSIS_DURATION: float = 90.0
 BPM_HOP_SIZE: int = 512
 BPM_WIN_SIZE: int = 1024
@@ -354,18 +355,76 @@ def process_directory(
     detect_key: bool = True,
     normalise: bool = True,
     force: bool = False,
+    max_workers: int = 1,
+    pause_seconds: float = 0.0,
 ) -> list[ProcessResult]:
-    """Process all audio files under root. Returns all ProcessResults."""
+    """
+    Process all audio files under root. Returns all ProcessResults.
+
+    Parameters
+    ----------
+    root : Path
+        Directory to scan recursively.
+    detect_bpm, detect_key, normalise, force : bool
+        Passed through to process_file().
+    max_workers : int
+        Number of files to process in parallel. Default 1 (sequential).
+        Values > 1 use a ThreadPoolExecutor. Keep at 1 on systems where
+        the BPM/key libraries are not thread-safe, or when normalisation
+        is enabled (ffmpeg is subprocess-safe but concurrent re-encoding
+        is very disk-intensive).
+    pause_seconds : float
+        Seconds to sleep between files (sequential mode only). Use this to
+        keep CPU load below 100% on slower machines or when DJing on the
+        same computer. Default 0.0 (no pause).
+    """
+    import concurrent.futures
     from scanner import scan_directory
-    results = []
-    for track in scan_directory(root):
-        results.append(process_file(
+
+    tracks = list(scan_directory(root))
+    total = len(tracks)
+    results: list[ProcessResult] = []
+
+    if total == 0:
+        log.info("No audio files found under %s", root)
+        return results
+
+    log.info(
+        "Processing %d files — workers=%d pause=%.1fs",
+        total, max_workers, pause_seconds,
+    )
+
+    def _process_one(track, index: int) -> ProcessResult:
+        r = process_file(
             track.path,
             detect_bpm=detect_bpm,
             detect_key=detect_key,
             normalise=normalise,
             force=force,
-        ))
+        )
+        log.info("[%d/%d] %s%s",
+                 index, total, track.path.name,
+                 "  ✗ errors: " + ", ".join(r.errors) if r.errors else "")
+        return r
+
+    if max_workers > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = {
+                ex.submit(_process_one, track, i + 1): i
+                for i, track in enumerate(tracks)
+            }
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    results.append(future.result())
+                except Exception as exc:
+                    idx = futures[future]
+                    log.error("Unexpected error processing file %d: %s", idx + 1, exc)
+    else:
+        for i, track in enumerate(tracks):
+            results.append(_process_one(track, i + 1))
+            if pause_seconds > 0 and i < total - 1:
+                time.sleep(pause_seconds)
+
     return results
 
 

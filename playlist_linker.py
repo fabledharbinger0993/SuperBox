@@ -21,6 +21,7 @@ Public interface:
     build_playlist_index(db) -> dict[str, ...]             # name → playlist obj
 """
 
+import csv
 import difflib
 import logging
 from dataclasses import dataclass, field
@@ -29,7 +30,7 @@ from typing import TYPE_CHECKING
 
 from pyrekordbox import Rekordbox6Database
 
-from SuperBox.config import BATCH_SIZE, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES, AUDIO_EXTENSIONS
+from config import BATCH_SIZE, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES, AUDIO_EXTENSIONS
 
 if TYPE_CHECKING:
     # DjmdPlaylist and DjmdContent are ORM row types from pyrekordbox's SQLAlchemy
@@ -54,16 +55,26 @@ _FUZZY_MAX_MATCHES: int = 3
 # ─── Result types ─────────────────────────────────────────────────────────────
 
 @dataclass
+class FuzzyMatch:
+    """Records a single fuzzy folder→playlist match for the audit log."""
+    track_path: str
+    folder_name: str
+    playlist_name: str
+    score: float
+
+
+@dataclass
 class TrackLinkResult:
     path: Path
     content_id: str
     playlist_ids_linked: list[str] = field(default_factory=list)
     unmatched_folders: list[str] = field(default_factory=list)
+    fuzzy_matches: list[FuzzyMatch] = field(default_factory=list)
     error: str | None = None
 
     @property
     def was_linked(self) -> bool:
-        """True if at least one playlist link was created for this track."""
+        """True if at least one playlist link was created (or would be, in dry run)."""
         return len(self.playlist_ids_linked) > 0
 
 
@@ -71,18 +82,41 @@ class TrackLinkResult:
 class LinkReport:
     linked: int = 0           # tracks that matched at least one playlist
     unmatched: int = 0        # tracks with no playlist match at any folder level
-    total_links: int = 0      # total DjmdSongPlaylist rows created
+    total_links: int = 0      # total DjmdSongPlaylist rows created (0 in dry run)
     failed: int = 0           # tracks that errored during linking
+    dry_run: bool = False
     results: list[TrackLinkResult] = field(default_factory=list)
 
+    @property
+    def all_fuzzy_matches(self) -> list[FuzzyMatch]:
+        """Flat list of every fuzzy match across all track results."""
+        out = []
+        for r in self.results:
+            out.extend(r.fuzzy_matches)
+        return out
+
     def summary(self) -> str:
+        mode = " [DRY RUN — no writes performed]" if self.dry_run else ""
         lines = [
-            "═══ PLAYLIST LINK REPORT ═══",
-            f"  Tracks linked      : {self.linked}",
+            f"═══ PLAYLIST LINK REPORT{mode} ═══",
+            f"  Tracks matched     : {self.linked}",
             f"  Tracks unmatched   : {self.unmatched}",
-            f"  Total links created: {self.total_links}",
+            f"  Total links        : {self.total_links}"
+              + (" (would be created)" if self.dry_run else " (created)"),
             f"  Errors             : {self.failed}",
         ]
+
+        fuzzy = self.all_fuzzy_matches
+        if fuzzy:
+            lines.append(f"\n  Fuzzy matches ({len(fuzzy)} total — verify before live run):")
+            for fm in fuzzy[:20]:
+                lines.append(
+                    f"    {fm.folder_name!r:35} → {fm.playlist_name!r:35} "
+                    f"(score {fm.score:.2f})"
+                )
+            if len(fuzzy) > 20:
+                lines.append(f"    … and {len(fuzzy) - 20} more — see audit log for full list")
+
         if self.unmatched > 0:
             lines.append("\n  Unmatched folders (sample):")
             seen: set[str] = set()
@@ -97,8 +131,35 @@ class LinkReport:
                             break
                 if count >= 10:
                     break
-        lines.append("═════════════════════════════")
+
+        lines.append("═════════════════════════════════════════")
         return "\n".join(lines)
+
+    def write_fuzzy_audit_log(self, output_path: Path) -> int:
+        """
+        Write all fuzzy matches to a CSV audit log.
+
+        Columns: track_path, folder_name, playlist_name, score
+        Returns the number of rows written (0 if no fuzzy matches).
+        """
+        fuzzy = self.all_fuzzy_matches
+        if not fuzzy:
+            return 0
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=["track_path", "folder_name", "playlist_name", "score"],
+            )
+            writer.writeheader()
+            for fm in fuzzy:
+                writer.writerow({
+                    "track_path":    fm.track_path,
+                    "folder_name":   fm.folder_name,
+                    "playlist_name": fm.playlist_name,
+                    "score":         f"{fm.score:.4f}",
+                })
+        return len(fuzzy)
 
 
 # ─── Playlist index ───────────────────────────────────────────────────────────
@@ -129,10 +190,12 @@ def _match_folder(
     folder_name: str,
     index: dict[str, object],
     playlist_names_lower: list[str],
-) -> list[object]:
+) -> list[tuple[object, float]]:
     """
     Attempt to match folder_name against the playlist index.
-    Returns a list of matching DjmdPlaylist objects (may be empty).
+
+    Returns a list of (DjmdPlaylist, score) tuples (may be empty).
+    Exact matches have score 1.0. Fuzzy matches carry the difflib ratio.
 
     Tries exact match first (case-insensitive), then fuzzy if name is long enough.
     Fuzzy can return up to _FUZZY_MAX_MATCHES results — see module-level note
@@ -140,9 +203,9 @@ def _match_folder(
     """
     key = folder_name.lower()
 
-    # Exact match (case-insensitive)
+    # Exact match (case-insensitive) — score 1.0
     if key in index:
-        return [index[key]]
+        return [(index[key], 1.0)]
 
     # Fuzzy match — only for names long enough to be unambiguous
     if len(folder_name) >= _FUZZY_MIN_LEN:
@@ -153,14 +216,18 @@ def _match_folder(
             cutoff=_FUZZY_CUTOFF,
         )
         if close:
-            matches = [index[name] for name in close if name in index]
-            if matches:
+            results = []
+            for name in close:
+                if name in index:
+                    score = difflib.SequenceMatcher(None, key, name).ratio()
+                    results.append((index[name], score))
+            if results:
                 log.debug(
                     "Fuzzy matched %r → %s",
                     folder_name,
-                    [m.Name for m in matches],
+                    [(m.Name, f"{s:.2f}") for m, s in results],
                 )
-            return matches
+            return results
 
     return []
 
@@ -174,6 +241,8 @@ def link_track(
     index: dict[str, object],
     playlist_names_lower: list[str],
     music_root: Path = MUSIC_ROOT,
+    *,
+    dry_run: bool = False,
 ) -> TrackLinkResult:
     """
     Link a single track to all matching playlists by walking up its path.
@@ -186,13 +255,15 @@ def link_track(
         The already-fetched ORM row for this track. Passed in by link_directory
         to avoid a redundant per-track DB lookup.
     db : Rekordbox6Database
-        Open write session.
+        Open session. Read-only session is sufficient when dry_run=True.
     index : dict
         Pre-built playlist name index from build_playlist_index().
     playlist_names_lower : list[str]
         Pre-built list of lowercased playlist names for difflib.
     music_root : Path
         Walk stops here — we don't try to match the root folder itself.
+    dry_run : bool
+        If True, record what would be linked without calling db.add_to_playlist.
 
     Returns
     -------
@@ -224,28 +295,43 @@ def link_track(
         matches = _match_folder(folder_name, index, playlist_names_lower)
 
         if matches:
-            for playlist in matches:
-                try:
-                    # PRE-PRODUCTION VERIFICATION REQUIRED:
-                    # Confirm db.add_to_playlist(playlist, content_row, track_no=None)
-                    # works against the installed pyrekordbox version BEFORE a live run.
-                    # If track_no=None raises TypeError, try track_no=0 or omit it.
-                    # Silent failures here produce a LinkReport showing zero links
-                    # with only WARNING-level log messages — easy to miss.
-                    # Verify by reading DjmdSongPlaylist rows with read_db() after a
-                    # test link pass on a single known track.
-                    db.add_to_playlist(playlist, content_row, track_no=None)
+            for playlist, score in matches:
+                # Record fuzzy matches (score < 1.0) in the audit trail
+                if score < 1.0:
+                    result.fuzzy_matches.append(FuzzyMatch(
+                        track_path=str(track_path),
+                        folder_name=folder_name,
+                        playlist_name=playlist.Name,
+                        score=score,
+                    ))
+
+                if dry_run:
+                    # Record the would-be link without writing
                     result.playlist_ids_linked.append(str(playlist.ID))
                     log.debug(
-                        "Linked %s → playlist %r (ID=%s)",
-                        track_path.name, playlist.Name, playlist.ID,
+                        "[DRY RUN] Would link %s → playlist %r (score %.2f)",
+                        track_path.name, playlist.Name, score,
                     )
-                except Exception as e:
-                    # Already linked or other non-fatal error — log and continue.
-                    log.warning(
-                        "Could not link %s to playlist %r: %s",
-                        track_path.name, playlist.Name, e,
-                    )
+                else:
+                    try:
+                        # Signature verified against pyrekordbox 0.4.4 (2026-03-30):
+                        #   add_to_playlist(playlist, content, track_no: int = None)
+                        # track_no=None → appends to end (TrackNo = nsongs + 1). No TypeError.
+                        # Raises ValueError if the playlist is a folder (Attribute != 0)
+                        # or a smart playlist — caught by the except below.
+                        # Live test performed on local DB with rollback: confirmed correct.
+                        db.add_to_playlist(playlist, content_row, track_no=None)
+                        result.playlist_ids_linked.append(str(playlist.ID))
+                        log.debug(
+                            "Linked %s → playlist %r (ID=%s, score %.2f)",
+                            track_path.name, playlist.Name, playlist.ID, score,
+                        )
+                    except Exception as e:
+                        # Already linked or other non-fatal error — log and continue.
+                        log.warning(
+                            "Could not link %s to playlist %r: %s",
+                            track_path.name, playlist.Name, e,
+                        )
         else:
             result.unmatched_folders.append(folder_name)
 
@@ -261,6 +347,7 @@ def link_directory(
     db: Rekordbox6Database,
     *,
     music_root: Path = MUSIC_ROOT,
+    dry_run: bool = False,
 ) -> LinkReport:
     """
     Link all tracks under root to their matching playlists.
@@ -274,16 +361,24 @@ def link_directory(
     root : Path
         Directory whose tracks should be linked.
     db : Rekordbox6Database
-        Open write session (write_db()).
+        Open session. write_db() for a live run; read_db() is sufficient for
+        dry_run=True (no writes will occur).
     music_root : Path
         Folder walk upper bound. Defaults to MUSIC_ROOT from config.
+    dry_run : bool
+        If True, report all proposed links and fuzzy matches without writing
+        any DjmdSongPlaylist rows. Use this to review fuzzy matches before
+        committing to a live run.
 
     Returns
     -------
     LinkReport
     """
-    report = LinkReport()
+    report = LinkReport(dry_run=dry_run)
     root_str = str(root)
+
+    if dry_run:
+        log.info("DRY RUN — no playlist rows will be written")
 
     # Build playlist index once for the session
     index = build_playlist_index(db)
@@ -316,6 +411,7 @@ def link_directory(
                 index=index,
                 playlist_names_lower=playlist_names_lower,
                 music_root=music_root,
+                dry_run=dry_run,
             )
         except Exception as e:
             log.exception("Unexpected error linking %s", track_path.name)
@@ -340,8 +436,8 @@ def link_directory(
             report.unmatched += 1
             log.warning("No playlist match for: %s", track_path.name)
 
-        # Batch commit
-        if batch_count >= BATCH_SIZE:
+        # Batch commit (skipped in dry run — nothing was written)
+        if not dry_run and batch_count >= BATCH_SIZE:
             try:
                 db.commit()
                 log.info("Committed batch (%d links)", batch_count)
@@ -351,8 +447,8 @@ def link_directory(
                 db.rollback()
                 raise
 
-    # Final commit for remaining tail
-    if batch_count > 0:
+    # Final commit for remaining tail (skipped in dry run)
+    if not dry_run and batch_count > 0:
         try:
             db.commit()
             log.info("Final commit: %d links", batch_count)

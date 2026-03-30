@@ -30,16 +30,18 @@ Public interface:
     write_csv_report(groups, output_path)
 """
 
+import concurrent.futures
 import csv
 import logging
 import re
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import acoustid
 from mutagen import File as MutagenFile
 
-from SuperBox.config import AUDIO_EXTENSIONS, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES
+from config import AUDIO_EXTENSIONS, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES
 
 log = logging.getLogger(__name__)
 
@@ -166,7 +168,12 @@ def _walk_audio_files(root: Path) -> list[Path]:
 
 # ─── Duplicate scanning ───────────────────────────────────────────────────────
 
-def scan_duplicates(root: Path) -> list[DuplicateGroup]:
+def scan_duplicates(
+    root: Path,
+    *,
+    max_workers: int = 1,
+    pause_seconds: float = 0.0,
+) -> list[DuplicateGroup]:
     """
     Fingerprint all audio files under root and return groups of duplicates.
 
@@ -177,6 +184,13 @@ def scan_duplicates(root: Path) -> list[DuplicateGroup]:
     ----------
     root : Path
         Directory to scan recursively.
+    max_workers : int
+        Number of files to fingerprint in parallel using fpcalc subprocesses.
+        Default 1 (sequential). fpcalc is subprocess-safe so workers > 1
+        is safe, but each worker spawns its own fpcalc process — be cautious
+        on machines with limited cores or when DJing simultaneously.
+    pause_seconds : float
+        Seconds to sleep between files in sequential mode. Default 0.0.
 
     Returns
     -------
@@ -190,23 +204,53 @@ def scan_duplicates(root: Path) -> list[DuplicateGroup]:
     log.info("Walking %s for audio files...", root)
     files = _walk_audio_files(root)
     total = len(files)
-    log.info("Found %d audio files — beginning fingerprint pass", total)
+    log.info(
+        "Found %d audio files — beginning fingerprint pass "
+        "(workers=%d pause=%.1fs)",
+        total, max_workers, pause_seconds,
+    )
 
     fp_map: dict[str, list[Path]] = {}
     failed = 0
+    completed = 0
 
-    for i, path in enumerate(files):
-        if i > 0 and i % _LOG_EVERY == 0:
-            log.info("Fingerprinting: %d / %d  (failures so far: %d)", i, total, failed)
+    def _fingerprint_one(path: Path) -> tuple[Path, str | None]:
+        return path, fingerprint_file(path)
 
-        fp = fingerprint_file(path)
-        if fp is None:
-            failed += 1
-            continue
-
-        if fp not in fp_map:
-            fp_map[fp] = []
-        fp_map[fp].append(path)
+    if max_workers > 1:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+            futures = {ex.submit(_fingerprint_one, p): p for p in files}
+            for future in concurrent.futures.as_completed(futures):
+                completed += 1
+                try:
+                    path, fp = future.result()
+                except Exception as exc:
+                    log.error("Unexpected fingerprint error: %s", exc)
+                    failed += 1
+                    continue
+                if fp is None:
+                    failed += 1
+                else:
+                    fp_map.setdefault(fp, []).append(path)
+                if completed % _LOG_EVERY == 0:
+                    log.info(
+                        "Fingerprinting: %d / %d  (failures: %d)",
+                        completed, total, failed,
+                    )
+    else:
+        for i, path in enumerate(files):
+            if i > 0 and i % _LOG_EVERY == 0:
+                log.info(
+                    "Fingerprinting: %d / %d  (failures so far: %d)",
+                    i, total, failed,
+                )
+            fp = fingerprint_file(path)
+            if fp is None:
+                failed += 1
+            else:
+                fp_map.setdefault(fp, []).append(path)
+            if pause_seconds > 0 and i < total - 1:
+                time.sleep(pause_seconds)
 
     log.info(
         "Fingerprint pass complete — %d unique prints, %d failures",

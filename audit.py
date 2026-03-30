@@ -16,12 +16,23 @@ Typical usage:
 """
 
 import logging
+import platform
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from pyrekordbox import Rekordbox6Database
 
-from SuperBox.config import AUDIO_EXTENSIONS, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES
+from config import AUDIO_EXTENSIONS, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES
+
+# macOS (APFS/HFS+) and Windows (NTFS) are case-insensitive filesystems.
+# Linux is case-sensitive. Path comparisons must match the filesystem behaviour
+# so orphan detection doesn't produce false positives or miss real orphans.
+_FS_CASE_INSENSITIVE: bool = platform.system() in ("Darwin", "Windows")
+
+
+def _normalise_path(p: str) -> str:
+    """Normalise a path string for case-insensitive or case-sensitive comparison."""
+    return p.lower() if _FS_CASE_INSENSITIVE else p
 
 log = logging.getLogger(__name__)
 
@@ -221,12 +232,13 @@ def find_orphans(db: Rekordbox6Database, root: Path) -> OrphanReport:
     """
     report = OrphanReport()
 
-    # Build set of all known paths from DB — lowercased for case-insensitive
-    # comparison on macOS HFS+/APFS volumes, which are case-insensitive by default.
+    # Build set of all known paths from DB, normalised for the host filesystem.
+    # macOS (APFS/HFS+) and Windows (NTFS) are case-insensitive — we lowercase.
+    # Linux is case-sensitive — we preserve case. See _normalise_path().
     known_paths: set[str] = set()
     for track in db.get_content().all():
         if track.FolderPath and not _is_streaming(track.FolderPath):
-            known_paths.add(track.FolderPath.lower())
+            known_paths.add(_normalise_path(track.FolderPath))
 
     if not root.is_dir():
         log.warning("Orphan scan root does not exist: %s", root)
@@ -245,7 +257,7 @@ def find_orphans(db: Rekordbox6Database, root: Path) -> OrphanReport:
             if file_path.suffix.lower() not in AUDIO_EXTENSIONS:
                 continue
             report.total_scanned += 1
-            if str(file_path).lower() not in known_paths:
+            if _normalise_path(str(file_path)) not in known_paths:
                 report.orphaned_paths.append(file_path)
 
     return report
