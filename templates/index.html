@@ -54,6 +54,7 @@ body {
   min-height: 100vh;
   padding-bottom: calc(var(--log-h) + 48px);
 }
+body.scan-active { padding-bottom: calc(var(--log-h) + 48px + 44px); }
 body::before {
   content: '';
   position: fixed;
@@ -319,7 +320,69 @@ details[open] > summary { color: var(--text); }
 }
 .rb-block-msg.visible { display: flex; }
 
-/* ── Log panel ─────────────────────────────────────────────────────────── */
+/* ── Scan bar ───────────────────────────────────────────────────────────── */
+#scan-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 190;
+  height: 44px;
+  background: #08081a;
+  border-top: 1px solid var(--border-hi);
+  display: none;
+  align-items: center;
+  padding: 0 18px;
+  gap: 0;
+}
+#scan-bar.active { display: flex; }
+body.log-open #scan-bar { bottom: var(--log-h); }
+
+.scan-bar-item {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: .75rem;
+  padding: 0 18px 0 0;
+  border-right: 1px solid var(--border);
+  margin-right: 18px;
+  white-space: nowrap;
+}
+.scan-bar-item:last-of-type { border-right: none; margin-right: 0; }
+.scan-bar-label { color: var(--text-muted); }
+.scan-bar-val   { color: var(--text); font-weight: 600; min-width: 2.5ch; }
+.scan-bar-note  { color: var(--text-dim); font-size: .68rem; }
+.scan-bar-val.safe    { color: var(--safe); }
+.scan-bar-val.caution { color: var(--caution); }
+.scan-bar-val.danger  { color: var(--danger); }
+
+.scan-bar-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 10px;
+}
+#scan-bar-title {
+  font-size: .72rem; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; max-width: 220px;
+}
+#scan-bar-spinner {
+  width: 12px; height: 12px;
+  border: 2px solid var(--border-hi);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: none;
+  flex-shrink: 0;
+}
+#scan-bar-spinner.active { display: block; }
+.scan-bar-view-btn {
+  background: var(--accent-dim); border: 1px solid var(--accent);
+  color: var(--accent); border-radius: 4px;
+  padding: 2px 9px; font-size: .72rem; cursor: pointer;
+  white-space: nowrap;
+}
+.scan-bar-dismiss {
+  background: none; border: none; color: var(--text-dim);
+  font-size: .95rem; cursor: pointer; padding: 2px 4px;
+  line-height: 1;
+}
+.scan-bar-dismiss:hover { color: var(--text); }
+
+/* ── Log panel ───────────────────────────────────────────────────────────── */
 #log-panel {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
   height: var(--log-h);
@@ -1384,6 +1447,38 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <div class="owl-panel-list" id="owl-panel-list"></div>
 </div>
 
+<!-- ══ Scan bar ═══════════════════════════════════════════════════════════ -->
+<div id="scan-bar">
+  <div class="scan-bar-item">
+    <span class="scan-bar-label">Remaining</span>
+    <span class="scan-bar-val" id="sb-remaining">—</span>
+  </div>
+  <div class="scan-bar-item">
+    <span class="scan-bar-label">No Change</span>
+    <span class="scan-bar-val safe" id="sb-clean">0</span>
+  </div>
+  <div class="scan-bar-item">
+    <span class="scan-bar-label">Edited</span>
+    <span class="scan-bar-val safe" id="sb-edited">0</span>
+  </div>
+  <div class="scan-bar-item">
+    <span class="scan-bar-label">Errors</span>
+    <span class="scan-bar-val danger" id="sb-errors">0</span>
+    <span class="scan-bar-note">(see report)</span>
+  </div>
+  <div class="scan-bar-item">
+    <span class="scan-bar-label">Warnings</span>
+    <span class="scan-bar-val caution" id="sb-warnings">0</span>
+    <span class="scan-bar-note">(see report)</span>
+  </div>
+  <div class="scan-bar-right">
+    <span id="scan-bar-title"></span>
+    <div id="scan-bar-spinner"></div>
+    <button class="scan-bar-view-btn" onclick="reopenLog()">▸ Output</button>
+    <button class="scan-bar-dismiss" id="scan-bar-dismiss" style="display:none" onclick="dismissScanBar()" title="Dismiss">✕</button>
+  </div>
+</div>
+
 <!-- ══ Log panel ════════════════════════════════════════════════════════════ -->
 <div id="log-panel">
   <div class="log-bar">
@@ -1391,23 +1486,6 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
     <div id="log-spinner"></div>
     <button class="log-close-btn" onclick="closeLog()" title="Close output">✕</button>
   </div>
-
-  <!-- Ticker view — shown during process/normalize runs -->
-  <div id="log-ticker" style="display:none; padding: 14px 24px; font-family: var(--mono); font-size:.85rem; line-height:2;">
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 4px 40px;">
-      <div>Remaining to scan: <strong id="tk-remaining">—</strong></div>
-      <div>Complete — no change: <strong id="tk-clean">0</strong></div>
-      <div style="color:var(--danger)">Errors <span style="color:var(--text-muted);font-size:.75rem">(file could not be read or processed)</span>: <strong id="tk-errors">0</strong></div>
-      <div style="color:var(--caution)">Warnings <span style="color:var(--text-muted);font-size:.75rem">(bad tag data, skipped)</span>: <strong id="tk-warnings">0</strong></div>
-      <div style="color:var(--safe)">Edited — tags updated: <strong id="tk-edited">0</strong>
-        <div style="padding-left:20px; font-size:.8rem; color:var(--text-muted)">
-          BPM / Key written: <strong id="tk-bpmkey" style="color:var(--safe)">0</strong>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Standard scrolling log — shown for all other commands -->
   <div id="log-output"></div>
 </div>
 
@@ -1505,40 +1583,56 @@ document.querySelectorAll('.step-tab').forEach(btn => {
   });
 });
 
-/* ── Log panel ─────────────────────────────────────────────────────────────── */
-let tickerMode = false;
-let tickerWarnings = 0;
+/* ── Scan bar ──────────────────────────────────────────────────────────────── */
+let scanWarnings = 0;
 
-function openLog(title, useTicker = false) {
-  tickerMode = useTicker;
-  tickerWarnings = 0;
+function showScanBar(title) {
+  scanWarnings = 0;
+  document.getElementById('sb-remaining').textContent = '—';
+  document.getElementById('sb-clean').textContent     = '0';
+  document.getElementById('sb-edited').textContent    = '0';
+  document.getElementById('sb-errors').textContent    = '0';
+  document.getElementById('sb-warnings').textContent  = '0';
+  document.getElementById('scan-bar-title').textContent = title;
+  document.getElementById('scan-bar-spinner').classList.add('active');
+  document.getElementById('scan-bar-dismiss').style.display = 'none';
+  document.getElementById('scan-bar').classList.add('active');
+  document.body.classList.add('scan-active');
+}
+function updateScanBar(p) {
+  document.getElementById('sb-remaining').textContent = p.remaining.toLocaleString();
+  document.getElementById('sb-clean').textContent     = p.clean.toLocaleString();
+  document.getElementById('sb-edited').textContent    = p.edited.toLocaleString();
+  document.getElementById('sb-errors').textContent    = p.errors.toLocaleString();
+  document.getElementById('sb-warnings').textContent  = scanWarnings.toLocaleString();
+}
+function finishScanBar() {
+  document.getElementById('scan-bar-spinner').classList.remove('active');
+  document.getElementById('scan-bar-dismiss').style.display = 'inline-block';
+}
+function dismissScanBar() {
+  document.getElementById('scan-bar').classList.remove('active');
+  document.body.classList.remove('scan-active');
+}
+
+/* ── Log panel ─────────────────────────────────────────────────────────────── */
+function openLog(title) {
   document.getElementById('log-panel').classList.add('open');
+  document.body.classList.add('log-open');
   document.getElementById('log-cmd-label').textContent = title;
   document.getElementById('log-output').innerHTML = '';
-  document.getElementById('log-ticker').style.display = useTicker ? 'block' : 'none';
-  document.getElementById('log-output').style.display  = useTicker ? 'none'  : 'block';
   document.getElementById('view-output-btn').style.display = 'none';
-  if (useTicker) {
-    ['tk-remaining','tk-clean','tk-errors','tk-warnings','tk-edited','tk-bpmkey']
-      .forEach(id => document.getElementById(id).textContent = '—');
-  }
 }
 function closeLog() {
-  if (isRunning && activeSource) {
-    activeSource.close();
-    activeSource = null;
-    isRunning = false;
-    setSpinner(false);
-  }
   document.getElementById('log-panel').classList.remove('open');
-  // Show the re-open button whenever the panel has content
-  const hasContent = document.getElementById('log-output').children.length > 0
-    || document.getElementById('log-ticker').style.display !== 'none';
-  document.getElementById('view-output-btn').style.display = hasContent ? 'inline-block' : 'none';
-  tickerMode = false;
+  document.body.classList.remove('log-open');
+  if (document.getElementById('log-output').children.length > 0) {
+    document.getElementById('view-output-btn').style.display = 'inline-block';
+  }
 }
 function reopenLog() {
   document.getElementById('log-panel').classList.add('open');
+  document.body.classList.add('log-open');
   document.getElementById('view-output-btn').style.display = 'none';
 }
 function setSpinner(on) {
@@ -1561,37 +1655,17 @@ function classifyLine(text) {
   if (t.startsWith('  ')) return 'dim';
   return 'normal';
 }
-function updateTicker(p) {
-  document.getElementById('tk-remaining').textContent = p.remaining;
-  document.getElementById('tk-clean').textContent     = p.clean;
-  document.getElementById('tk-errors').textContent    = p.errors;
-  document.getElementById('tk-warnings').textContent  = tickerWarnings;
-  document.getElementById('tk-edited').textContent    = p.edited;
-  document.getElementById('tk-bpmkey').textContent    = p.bpm_key_written;
-}
-function finishTicker(exit_code) {
-  // Switch from ticker to final report in the scroll log
-  document.getElementById('log-ticker').style.display = 'none';
-  document.getElementById('log-output').style.display = 'block';
-  if (exit_code === 0) {
-    appendLog('✓ Finished successfully', 'log-exit-ok');
-  } else {
-    appendLog(`✗ Exited with code ${exit_code}`, 'log-exit-fail');
-  }
-}
 
 /* ── SSE runner ────────────────────────────────────────────────────────────── */
-function runCommand(url, logTitle, onDone, useTicker = false, showPrefilter = false) {
+function runCommand(url, logTitle, onDone, useBar = false, showPrefilter = false) {
   if (isRunning) return;
-  openLog(logTitle, useTicker);
+  openLog(logTitle);
+  if (useBar) showScanBar(logTitle);
   isRunning = true;
   setSpinner(true);
   setAllButtons(true);
-
-  if (!useTicker) {
-    appendLog(`▸ ${logTitle}`, 'dim');
-    appendLog('', 'dim');
-  }
+  appendLog(`▸ ${logTitle}`, 'dim');
+  appendLog('', 'dim');
 
   activeSource = new EventSource(url);
 
@@ -1599,29 +1673,34 @@ function runCommand(url, logTitle, onDone, useTicker = false, showPrefilter = fa
     const data = JSON.parse(e.data);
     if (data.line !== undefined) {
       const line = data.line;
-      if (showPrefilter && line.startsWith('SUPERBOX_PREFILTER: ')) {
-        try {
-          const pf = JSON.parse(line.slice(20));
-          if (pf.skipped > 0) {
-            appendLog(`Pre-filter: ${pf.candidates.toLocaleString()} of ${pf.total.toLocaleString()} files need fingerprinting — ${pf.skipped.toLocaleString()} skipped (no matching key + BPM + duration)`, 'success');
-          } else {
-            appendLog(`Pre-filter: no scan index found — fingerprinting all ${pf.total.toLocaleString()} files. Run Tag Tracks first to speed this up.`, 'warn');
-          }
-          appendLog('', '');
-        } catch(_) {}
-      } else if (tickerMode && line.startsWith('SUPERBOX_PROGRESS: ')) {
-        try { updateTicker(JSON.parse(line.slice(19))); } catch(_) {}
-      } else if (tickerMode) {
-        // Count warnings silently; show summary lines in scroll log at the end
-        const t = line.toLowerCase();
-        if (t.includes('warning') || t.includes('warn')) tickerWarnings++;
-        // Buffer report lines (═══ blocks) to show after ticker
-        if (/^═/.test(line) || document.getElementById('log-output').children.length > 0) {
-          appendLog(line, classifyLine(line));
+      // Structured progress — update scan bar, don't echo to log
+      if (line.startsWith('SUPERBOX_PROGRESS: ')) {
+        if (useBar) {
+          try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
         }
-      } else {
-        appendLog(line, classifyLine(line));
+        return;
       }
+      // Pre-filter summary — show in log as info line
+      if (line.startsWith('SUPERBOX_PREFILTER: ')) {
+        if (showPrefilter) {
+          try {
+            const pf = JSON.parse(line.slice(20));
+            if (pf.skipped > 0) {
+              appendLog(`Pre-filter: ${pf.candidates.toLocaleString()} of ${pf.total.toLocaleString()} files queued for fingerprinting — ${pf.skipped.toLocaleString()} skipped (key + BPM + duration mismatch)`, 'success');
+            } else {
+              appendLog(`Pre-filter: no scan index found — fingerprinting all ${pf.total.toLocaleString()} files. Run Tag Tracks first to speed this up.`, 'warn');
+            }
+          } catch(_) {}
+        }
+        return;
+      }
+      // Count warnings for scan bar
+      const t = line.toLowerCase();
+      if (useBar && (t.includes('warning') || t.includes('warn'))) {
+        scanWarnings++;
+        document.getElementById('sb-warnings').textContent = scanWarnings.toLocaleString();
+      }
+      appendLog(line, classifyLine(line));
     }
     if (data.done) {
       activeSource.close();
@@ -1629,15 +1708,12 @@ function runCommand(url, logTitle, onDone, useTicker = false, showPrefilter = fa
       isRunning = false;
       setSpinner(false);
       setAllButtons(false);
-      if (tickerMode) {
-        finishTicker(data.exit_code);
+      if (useBar) finishScanBar();
+      appendLog('', '');
+      if (data.exit_code === 0) {
+        appendLog('✓ Finished successfully', 'log-exit-ok');
       } else {
-        appendLog('', '');
-        if (data.exit_code === 0) {
-          appendLog('✓ Finished successfully', 'log-exit-ok');
-        } else {
-          appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
-        }
+        appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
       }
       if (onDone) onDone(data.exit_code);
     }
@@ -1649,10 +1725,7 @@ function runCommand(url, logTitle, onDone, useTicker = false, showPrefilter = fa
     isRunning = false;
     setSpinner(false);
     setAllButtons(false);
-    if (tickerMode) {
-      document.getElementById('log-ticker').style.display = 'none';
-      document.getElementById('log-output').style.display = 'block';
-    }
+    if (useBar) finishScanBar();
     appendLog('Connection error — check the server is running.', 'error');
     refreshStatus();
   };
