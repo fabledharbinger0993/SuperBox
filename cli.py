@@ -273,6 +273,60 @@ def cmd_process(args: argparse.Namespace) -> None:
         log.warning("%d files had errors — check log above", errored)
 
 
+def cmd_convert(args: argparse.Namespace) -> None:
+    """Convert audio files to target format (mp3, wav, aif, flac) recursively."""
+    from pathlib import Path
+    from audio_processor import _convert_file
+
+    root = Path(args.path)
+    if not root.is_dir():
+        log.error("PATH is not a directory: %s", root)
+        sys.exit(1)
+
+    target_format = args.format.lower().lstrip(".")
+    if target_format not in ("mp3", "wav", "aif", "aiff", "flac"):
+        log.error("Unsupported format: %s", args.format)
+        sys.exit(1)
+
+    # Normalize aif → aiff
+    if target_format == "aif":
+        target_format = "aiff"
+
+    log.info("Converting audio files to %s in %s", target_format, root)
+
+    # Find all audio files
+    extensions = {".mp3", ".wav", ".aiff", ".aif", ".flac", ".m4a", ".ogg", ".opus"}
+    files = [f for f in root.rglob("*") if f.is_file() and f.suffix.lower() in extensions]
+
+    log.info("Found %d audio files", len(files))
+
+    if not files:
+        log.warning("No audio files found")
+        return
+
+    success_count = 0
+    error_count = 0
+
+    for i, fpath in enumerate(files, 1):
+        log.info("[%d/%d] Converting %s", i, len(files), fpath.name)
+        success, msg = _convert_file(fpath, target_format)
+        if success:
+            success_count += 1
+            log.info("✓ %s: %s", fpath.name, msg)
+        else:
+            error_count += 1
+            log.error("✗ %s: %s", fpath.name, msg)
+
+    print("═══ CONVERT REPORT ═══")
+    print(f"  Files processed : {len(files)}")
+    print(f"  Converted       : {success_count}")
+    print(f"  Errors          : {error_count}")
+    print("══════════════════════")
+
+    if error_count > 0:
+        log.warning("%d files had errors — check log above", error_count)
+
+
 # ─── Argument parser ──────────────────────────────────────────────────────────
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -290,6 +344,8 @@ Examples:
   python3 cli.py duplicates "/Volumes/DJMT/DJMT PRIMARY" --output ~/Desktop/dupes.csv
   python3 cli.py process "/Volumes/DJMT/DJMT PRIMARY" --no-normalize
   python3 cli.py process "/Volumes/DJMT/DJMT PRIMARY" --dry-run --no-bpm --no-key
+  python3 cli.py convert "/Volumes/DJMT/DJMT PRIMARY" mp3
+  python3 cli.py convert "/Volumes/DJMT/DJMT PRIMARY" flac
         """,
     )
     parser.add_argument(
@@ -385,6 +441,19 @@ Examples:
         ),
     )
     p_process.set_defaults(func=cmd_process)
+
+    # ── convert ──
+    p_convert = sub.add_parser(
+        "convert",
+        help="Convert audio files to target format (mp3, wav, aif, flac)",
+    )
+    p_convert.add_argument("path", metavar="PATH", help="Directory to convert")
+    p_convert.add_argument(
+        "format",
+        metavar="FORMAT",
+        help="Target format: mp3, wav, aif, or flac",
+    )
+    p_convert.set_defaults(func=cmd_convert)
 
     return parser
 

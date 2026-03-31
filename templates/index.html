@@ -45,7 +45,7 @@
 
 /* ── Reset ─────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 14px; }
+html { font-size: 16px; }
 body {
   background: var(--bg);
   color: var(--text);
@@ -63,7 +63,7 @@ body::before {
   transform: translate(-50%, -50%);
   width: min(60vw, 60vh);
   height: min(60vw, 60vh);
-  background: url('/static/SRB_LOGO.png') center / contain no-repeat;
+  background: url('/static/SRB-bg-update.png') center / contain no-repeat;
   opacity: 0.04;
   pointer-events: none;
   z-index: 0;
@@ -193,6 +193,7 @@ main { max-width: 860px; margin: 0 auto; padding: 32px 28px; }
   display: flex; align-items: center; justify-content: center;
   font-size: 1.1rem; flex-shrink: 0;
 }
+.card-icon img { width: 28px; height: 28px; object-fit: contain; }
 .card-icon.safe   { background: var(--safe-dim);   }
 .card-icon.caution{ background: var(--caution-dim); }
 .card-icon.warn   { background: var(--warn-dim);    }
@@ -282,7 +283,8 @@ details[open] > summary { color: var(--text); }
   display: inline-flex; align-items: center; gap: 7px;
   border: none; border-radius: 6px;
   padding: 8px 16px;
-  font-size: .83rem; font-weight: 600;
+  font-size: .83rem; font-weight: 700;
+  color: #000;
   transition: opacity .15s, transform .1s;
 }
 .btn:hover:not(:disabled) { opacity: .85; }
@@ -290,7 +292,7 @@ details[open] > summary { color: var(--text); }
 .btn:disabled { opacity: .35; cursor: not-allowed; }
 .btn-primary {
   background: var(--accent);
-  color: #fff;
+  border: 1px solid rgba(129,140,248,.5);
 }
 .btn-ghost {
   background: transparent;
@@ -298,15 +300,34 @@ details[open] > summary { color: var(--text); }
   color: var(--text-muted);
 }
 .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--text-muted); }
+/* Normalize, Find Duplicates — unified purple like btn-primary */
 .btn-danger-action {
+  background: var(--accent);
+  border: 1px solid rgba(129,140,248,.5);
+}
+/* Relocate step flow button — unified purple */
+.btn-warn-action {
+  background: var(--accent);
+  border: 1px solid rgba(129,140,248,.5);
+}
+/* Neon variant — Convert & Relocate primary actions */
+.btn-neon {
+  background: var(--accent);
+  border: 1px solid rgba(129,140,248,.6);
+  box-shadow: 0 0 8px rgba(129,140,248,.55), 0 0 18px rgba(129,140,248,.25);
+  text-shadow: 0 0 6px rgba(180,160,255,.45);
+  transition: opacity .15s, transform .1s, box-shadow .2s;
+}
+.btn-neon:hover:not(:disabled) {
+  opacity: 1;
+  box-shadow: 0 0 12px rgba(129,140,248,.75), 0 0 28px rgba(129,140,248,.35);
+  text-shadow: 0 0 8px rgba(180,160,255,.65);
+}
+/* Keep prune danger buttons visually distinct — safety signal */
+.btn-prune-danger {
   background: var(--danger-dim);
   border: 1px solid var(--danger-border);
   color: var(--danger);
-}
-.btn-warn-action {
-  background: var(--warn-dim);
-  border: 1px solid var(--warn-border);
-  color: var(--warn);
 }
 
 /* rb-blocked message */
@@ -774,10 +795,9 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
 <!-- ══ Header ══════════════════════════════════════════════════════════════ -->
 <header>
   <div class="brand">
-    <img class="brand-logo" src="/static/logo-guthrie.png" alt="Guthrie Entertainment">
-    <div class="brand-divider"></div>
-    <div>
-      Super<span>Box</span>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <img src="/static/superbox-header.png" alt="SuperBox"
+           style="height:44px;object-fit:contain;object-position:left;mix-blend-mode:screen;">
       <div class="brand-sub"><strong>Guthrie Entertainment LLC</strong>rekordbox-toolkit</div>
     </div>
   </div>
@@ -831,6 +851,9 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <button class="step-tab" data-target="step-relocate">
     <span class="step-num">⊕</span> Relocate
   </button>
+  <button class="step-tab" data-target="step-convert">
+    <span class="step-num">⊕</span> Convert
+  </button>
 </nav>
 
 <!-- ══ Main ════════════════════════════════════════════════════════════════ -->
@@ -841,7 +864,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- ── Step 1: Audit ──────────────────────────────────────────────────── -->
   <div class="card" id="step-audit">
     <div class="card-head">
-      <div class="card-icon safe">🔍</div>
+      <div class="card-icon safe"><img src="/static/icon-audit.png" alt="Audit"></div>
       <div class="card-meta">
         <div class="card-title">Step 1 — Audit Your Library</div>
         <div class="card-blurb">Before touching anything, get a snapshot of what's already broken. This is read-only — safe to run even with RekordBox open.</div>
@@ -876,7 +899,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         <input type="text" id="audit-root" placeholder="Leave blank to use default from config.py">
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="runAudit()">Execute Audit</button>
+        <button class="btn btn-neon" onclick="runAudit()">Execute Audit</button>
       </div>
     </div>
   </div>
@@ -884,7 +907,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- ── Step 2: Process (tags only) ────────────────────────────────────── -->
   <div class="card" id="step-process">
     <div class="card-head">
-      <div class="card-icon caution">🏷</div>
+      <div class="card-icon caution"><img src="/static/icon-tag.png" alt="Tag Tracks"></div>
       <div class="card-meta">
         <div class="card-title">Step 2 — Detect BPM &amp; Musical Key</div>
         <div class="card-blurb">Reads each audio file and writes BPM and musical key into the file's tags. Skips files that already have tags — won't overwrite your Mix In Key work unless you ask it to.</div>
@@ -904,8 +927,6 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
           <p>Files that already have a BPM or key tag are <strong>skipped by default</strong>. Use <em>Force Overwrite</em>
             only if you want to replace existing values.</p>
         </div>
-      </details>
-    </div>
       </details>
       <details>
         <summary>What could go wrong?</summary>
@@ -941,7 +962,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="runProcess()">Detect BPM &amp; Key</button>
+        <button class="btn btn-neon" onclick="runProcess()">Detect BPM &amp; Key</button>
       </div>
     </div>
   </div>
@@ -949,7 +970,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- ── Step 3: Import dry-run ──────────────────────────────────────────── -->
   <div class="card" id="step-import-dry">
     <div class="card-head">
-      <div class="card-icon safe">👁</div>
+      <div class="card-icon safe"><img src="/static/icon-preview.png" alt="Preview Import"></div>
       <div class="card-meta">
         <div class="card-title">Step 3 — Preview What Will Be Imported</div>
         <div class="card-blurb">See the exact list of tracks that would be added to the database — without actually adding them. Always do this before the real import.</div>
@@ -978,7 +999,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         <input type="text" id="import-dry-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="runImportDry()">Preview Import</button>
+        <button class="btn btn-neon" onclick="runImportDry()">Preview Import</button>
       </div>
     </div>
   </div>
@@ -986,7 +1007,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- ── Step 4: Import ─────────────────────────────────────────────────── -->
   <div class="card" id="step-import">
     <div class="card-head">
-      <div class="card-icon warn">📥</div>
+      <div class="card-icon warn"><img src="/static/icon-import.png" alt="Import"></div>
       <div class="card-meta">
         <div class="card-title">Step 4 — Import Tracks into RekordBox</div>
         <div class="card-blurb">Writes the new tracks into RekordBox's database. <strong>RekordBox must be closed.</strong> A timestamped backup is created automatically before anything is written.</div>
@@ -1025,7 +1046,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         <input type="text" id="import-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="btn-import" onclick="runImport()">Import Tracks</button>
+        <button class="btn btn-neon" id="btn-import" onclick="runImport()">Import Tracks</button>
       </div>
       <div class="rb-block-msg" id="import-rb-block">
         <span>⚠</span> RekordBox is open. Close it before importing.
@@ -1036,7 +1057,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- ── Step 5: Link playlists ──────────────────────────────────────────── -->
   <div class="card" id="step-link">
     <div class="card-head">
-      <div class="card-icon warn">🔗</div>
+      <div class="card-icon warn"><img src="/static/icon-link.png" alt="Link Playlists"></div>
       <div class="card-meta">
         <div class="card-title">Step 5 — Link Tracks to Their Playlists</div>
         <div class="card-blurb">Matches imported tracks to RekordBox playlists based on the folder they live in. If your playlists were built from your folder structure, this connects them automatically.</div>
@@ -1071,7 +1092,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         <input type="text" id="link-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="btn-link" onclick="runLink()">Link Playlists</button>
+        <button class="btn btn-neon" id="btn-link" onclick="runLink()">Link Playlists</button>
       </div>
       <div class="rb-block-msg" id="link-rb-block">
         <span>⚠</span> RekordBox is open. Close it before linking.
@@ -1082,7 +1103,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- ── Step 6: Audit again ─────────────────────────────────────────────── -->
   <div class="card" id="step-audit2">
     <div class="card-head">
-      <div class="card-icon safe">✅</div>
+      <div class="card-icon safe"><img src="/static/icon-health-check.png" alt="Health Check"></div>
       <div class="card-meta">
         <div class="card-title">Step 6 — Confirm Everything Worked</div>
         <div class="card-blurb">Run Audit again to verify the import landed cleanly. Track count should be up, orphaned files should be down, path integrity should be 100%.</div>
@@ -1096,7 +1117,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         <input type="text" id="audit2-root" placeholder="Leave blank to use default from config.py">
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="runAudit2()">Execute Confirmation Audit</button>
+        <button class="btn btn-neon" onclick="runAudit2()">Execute Confirmation Audit</button>
       </div>
     </div>
   </div>
@@ -1104,7 +1125,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- ── Step 7: Normalize ───────────────────────────────────────────────── -->
   <div class="card" id="step-normalize">
     <div class="card-head">
-      <div class="card-icon danger">🔊</div>
+      <div class="card-icon danger"><img src="/static/icon-normalize.png" alt="Normalize"></div>
       <div class="card-meta">
         <div class="card-title">Step 7 — Normalize Loudness <em style="font-weight:400;color:var(--text-muted)">(Optional)</em></div>
         <div class="card-blurb">Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard. <strong>This rewrites the actual audio file.</strong></div>
@@ -1146,7 +1167,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         <input type="text" id="normalize-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
       </div>
       <div class="btn-row">
-        <button class="btn btn-danger-action" onclick="runNormalize()">Normalize Loudness</button>
+        <button class="btn btn-neon" onclick="runNormalize()">Normalize Loudness</button>
       </div>
     </div>
   </div>
@@ -1157,7 +1178,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- Duplicate detector -->
   <div class="card" id="step-duplicates">
     <div class="card-head">
-      <div class="card-icon safe">👯</div>
+      <div class="card-icon safe"><img src="/static/icon-find-duplicate.png" alt="Find Duplicates"></div>
       <div class="card-meta">
         <div class="card-title">Find Duplicate Tracks</div>
         <div class="card-blurb">Acoustically fingerprints every file and groups the ones that are actually the same song — even if they have different filenames, formats, or bitrates. Outputs a CSV report. Never deletes anything.</div>
@@ -1199,7 +1220,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         <input type="text" id="dupes-output" placeholder="~/Desktop/duplicates.csv  (default: ~/rekordbox-toolkit/duplicate_report.csv)">
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="runDuplicates()">Find Duplicates</button>
+        <button class="btn btn-neon" onclick="runDuplicates()">Find Duplicates</button>
       </div>
     </div>
   </div>
@@ -1207,7 +1228,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- ── Prune Duplicates ──────────────────────────────────────────────── -->
   <div class="card" id="step-prune">
     <div class="card-head">
-      <div class="card-icon danger">🗑</div>
+      <div class="card-icon danger"><img src="/static/icon-prune.png" alt="Prune"></div>
       <div class="card-meta">
         <div class="card-title">Prune Duplicates — Review &amp; Remove</div>
         <div class="card-blurb">Load a duplicate report, review each group side-by-side, pick what to keep, and move the rest to a labeled recovery folder in Trash. <strong>Nothing is permanently deleted.</strong> RekordBox must be closed.</div>
@@ -1284,7 +1305,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         <!-- Action bar -->
         <div class="prune-action-bar">
           <span class="prune-selected-count" id="prune-selected-summary">Select files above to continue.</span>
-          <button class="btn btn-danger-action" id="btn-prune-start"
+          <button class="btn btn-prune-danger" id="btn-prune-start"
                   onclick="pruneStep1()" disabled>
             Move to Trash →
           </button>
@@ -1331,7 +1352,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
     <div class="confirm-panel-footer">
       <button class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
       <span style="flex:1"></span>
-      <button class="btn btn-danger-action" onclick="pruneStep3()">This is correct — final step →</button>
+      <button class="btn btn-prune-danger" onclick="pruneStep3()">This is correct — final step →</button>
     </div>
   </div>
 
@@ -1352,7 +1373,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
       <p class="confirm-detail">RekordBox must be closed. If it's open, the operation will be blocked automatically.</p>
     </div>
     <div class="confirm-panel-footer">
-      <button class="btn btn-danger-action" id="btn-execute-prune" onclick="executePrune()">Execute — Move to Trash</button>
+      <button class="btn btn-prune-danger" id="btn-execute-prune" onclick="executePrune()">Execute — Move to Trash</button>
       <span style="flex:1"></span>
       <button class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
     </div>
@@ -1364,7 +1385,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <!-- Relocate -->
   <div class="card" id="step-relocate">
     <div class="card-head">
-      <div class="card-icon warn">📦</div>
+      <div class="card-icon warn"><img src="/static/icon-move.png" alt="Relocate"></div>
       <div class="card-meta">
         <div class="card-title">Relocate — Fix Broken File Paths</div>
         <div class="card-blurb">When you move or rename your music folders, RekordBox loses the tracks. This updates the database to point to where the files actually are now. <strong>RekordBox must be closed.</strong></div>
@@ -1406,10 +1427,69 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-warn-action" id="btn-relocate" onclick="runRelocate()">Relocate Paths</button>
+        <button class="btn btn-neon" id="btn-relocate" onclick="runRelocate()">Relocate Paths</button>
       </div>
       <div class="rb-block-msg" id="relocate-rb-block">
         <span>⚠</span> RekordBox is open. Close it before relocating.
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="step-convert">
+    <div class="card-head">
+      <div class="card-icon"><img src="/static/icon-convert.png" alt="Convert"></div>
+      <div class="card-meta">
+        <div class="card-title">Convert — Change Audio Format</div>
+        <div class="card-blurb">Convert your entire library (or a folder) to a different audio format. Supports MP3, WAV, AIFF, and FLAC. Metadata is preserved.</div>
+      </div>
+      <span class="risk-badge safe">Modifies Files</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>Which format should I choose?</summary>
+        <div class="explain-body">
+          <ul>
+            <li><strong>MP3</strong> — smallest files, universal compatibility, lossy compression. Best for: storage constraints, portability.</li>
+            <li><strong>WAV</strong> — lossless, uncompressed. Best for: archival, mastering, when file size isn't a concern.</li>
+            <li><strong>AIFF</strong> — lossless, mainly used on Mac. Best for: Mac DJs, archival.</li>
+            <li><strong>FLAC</strong> — lossless, compressed to ~60% of WAV size. Best for: archival with smaller file sizes, high-fidelity listening.</li>
+          </ul>
+          <p>RekordBox works with all formats equally. Choose based on your storage space, backup strategy, and playback device.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Will my tags be preserved?</summary>
+        <div class="explain-body">
+          <p>Yes. All metadata (BPM, key, cue points, hot cues, loops) is copied to the new file. After conversion, the original files are moved to the SuperBox Archive Quarantine folder, so you can recover them if needed.</p>
+        </div>
+      </details>
+      <details>
+        <summary>How long will this take?</summary>
+        <div class="explain-body">
+          <p>Conversion speed depends on file count and your drive speed. MP3 encoding is typically fastest, FLAC slowest (uses compression level 8). A 10,000-track library might take several hours. The operation shows real-time progress.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field-row">
+        <div class="field">
+          <label>Directory to Convert</label>
+          <input type="text" id="convert-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+        </div>
+        <div class="field">
+          <label>Target Format</label>
+          <select id="convert-format">
+            <option value="mp3">MP3 (320 kbps)</option>
+            <option value="wav">WAV (lossless, uncompressed)</option>
+            <option value="aiff">AIFF (lossless, Mac native)</option>
+            <option value="flac">FLAC (lossless, compressed)</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-neon" id="btn-convert" onclick="runConvert()">Start Converting</button>
       </div>
     </div>
   </div>
@@ -1418,15 +1498,15 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
 
 <!-- ══ Footer ════════════════════════════════════════════════════════════════ -->
 <footer style="
-  max-width:860px; margin:48px auto 0; padding:24px 28px 32px;
+  max-width:860px; margin:64px auto 0; padding:40px 28px 48px;
   border-top:1px solid var(--border);
-  display:flex; align-items:center; gap:14px;
+  display:flex; flex-direction:column; align-items:center; gap:16px;
 ">
-  <img src="/static/logo-guthrie.png" alt="Guthrie Entertainment"
-       style="width:28px;height:28px;object-fit:contain;mix-blend-mode:screen;opacity:.7;">
-  <span style="font-size:.75rem;color:var(--text-dim);letter-spacing:.04em;">
-    Designed by <strong style="color:var(--text-muted);">Guthrie Entertainment LLC</strong>
-    &nbsp;·&nbsp; rekordbox-toolkit &nbsp;·&nbsp; Osos Discos
+  <img src="/static/fabled-cube-bg.png" alt="SuperBox"
+       style="width:160px;height:160px;object-fit:contain;mix-blend-mode:screen;opacity:.85;">
+  <span style="font-size:.82rem;color:var(--text-dim);letter-spacing:.06em;text-align:center;">
+    <strong style="color:var(--text-muted);letter-spacing:.08em;">SUPERBOX</strong>
+    &nbsp;·&nbsp; Guthrie Entertainment LLC &nbsp;·&nbsp; Osos Discos
   </span>
 </footer>
 
@@ -1541,7 +1621,7 @@ async function prefillDefaults() {
   // Fields that map to the music root
   const rootFields = [
     'process-path','import-dry-path','import-path',
-    'link-path','normalize-path','dupes-path','relocate-new',
+    'link-path','normalize-path','dupes-path','relocate-new','convert-path',
   ];
   // Fields that are optional overrides (audit root) — prefill but don't force
   const optionalFields = ['audit-root','audit2-root'];
@@ -1824,6 +1904,15 @@ function runDuplicates() {
   const out = document.getElementById('dupes-output').value.trim();
   if (out) p.set('output', out);
   runCommand(`/api/run/duplicates?${p}`, 'Find Duplicates — Acoustic Fingerprinting', null, false, true);
+}
+
+function runConvert() {
+  const path = document.getElementById('convert-path').value.trim();
+  const format = document.getElementById('convert-format').value.trim();
+  if (!path) { alert('Enter a music folder path first.'); return; }
+  if (!format) { alert('Select a target format.'); return; }
+  const p = new URLSearchParams({ path, format });
+  runCommand(`/api/run/convert?${p}`, `Converting Audio Files to ${format.toUpperCase()}`);
 }
 
 /* ── Prune Duplicates ──────────────────────────────────────────────────────── */

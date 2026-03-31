@@ -245,6 +245,97 @@ def _normalise_file(path: Path, gain_db: float) -> bool:
             tmp_path.unlink()
 
 
+# ─── Format Conversion ────────────────────────────────────────────────────────────
+
+def _convert_file(path: Path, target_format: str) -> tuple[bool, str]:
+    """
+    Convert path to target format (mp3, wav, aif, flac).
+    Write → verify → move original to .bak → move new to path with target ext → delete .bak.
+    Returns (success: bool, message: str).
+    """
+    target_format = target_format.lower().lstrip(".")
+    if target_format not in ("mp3", "wav", "aif", "aiff", "flac"):
+        return False, f"Unsupported format: {target_format}"
+
+    # Normalize aif → aiff for consistency
+    if target_format == "aif":
+        target_format = "aiff"
+
+    if path.suffix.lower().lstrip(".") in ("aif", "aiff"):
+        target_ext = ".aiff"
+    else:
+        target_ext = f".{target_format}"
+
+    # If already target format, skip
+    if path.suffix.lower() == target_ext.lower():
+        return True, f"Already {target_format}"
+
+    new_path = path.with_suffix(target_ext)
+    if new_path.exists():
+        return False, f"{new_path.name} already exists"
+
+    tmp_fd, tmp_path_str = tempfile.mkstemp(suffix=target_ext, dir=path.parent)
+    tmp_path = Path(tmp_path_str)
+    os.close(tmp_fd)
+
+    bak = path.with_suffix(path.suffix + ".bak")
+    original_moved = False
+
+    try:
+        # Determine codec args for target format
+        if target_format == "mp3":
+            codec_args = ["-codec:a", "libmp3lame", "-b:a", "320k"]
+        elif target_format == "aiff":
+            try:
+                info = sf.info(str(path))
+                codec = "pcm_s24le" if "24" in info.subtype else "pcm_s16le"
+            except Exception:
+                codec = "pcm_s16le"
+            codec_args = ["-codec:a", codec]
+        elif target_format == "wav":
+            codec_args = ["-codec:a", "pcm_s16le"]
+        elif target_format == "flac":
+            codec_args = ["-codec:a", "flac", "-compression_level", "8"]
+
+        cmd = [
+            "ffmpeg", "-y", "-i", str(path),
+            *codec_args,
+            "-map_metadata", "0",
+            "-id3v2_version", "3",
+            str(tmp_path),
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            return False, f"ffmpeg failed: {result.stderr[-200:]}"
+
+        # Verify output
+        verify_data, _ = sf.read(str(tmp_path))
+        if len(verify_data) == 0:
+            return False, "ffmpeg output is empty (zero samples)"
+
+        # Move original to .bak, new to path
+        shutil.move(str(path), str(bak))
+        original_moved = True
+        shutil.move(str(tmp_path), str(new_path))
+        bak.unlink()
+        return True, f"Converted to {target_format}"
+
+    except Exception as e:
+        if original_moved and not path.exists() and bak.exists():
+            try:
+                shutil.move(str(bak), str(path))
+                log.warning("Restored original from .bak: %s", path.name)
+                return False, f"Conversion failed (restored original): {e}"
+            except Exception as restore_err:
+                log.critical("RESTORE FAILED for %s — original is at %s: %s", path.name, bak, restore_err)
+                return False, f"Conversion failed AND restore failed: {restore_err}"
+        return False, f"Conversion failed: {e}"
+
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
 # ─── Tag writing ──────────────────────────────────────────────────────────────
 
 def _write_tags(path: Path, bpm: float | None, key: str | None) -> None:

@@ -201,6 +201,17 @@ def api_process():
     return _sse_response(cmd)
 
 
+@app.route("/api/run/convert")
+def api_convert():
+    path = request.args.get("path", "").strip()
+    format_target = request.args.get("format", "").strip()
+    if not path or not format_target:
+        return jsonify({"error": "path and format are required"}), 400
+
+    cmd = [sys.executable, str(CLI_PATH), "convert", path, format_target]
+    return _sse_response(cmd)
+
+
 @app.route("/api/run/import")
 def api_import():
     dry_run = request.args.get("dry_run") == "1"
