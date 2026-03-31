@@ -703,12 +703,13 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   background: var(--surface-hi); border: 1px solid var(--border);
   border-radius: 7px; padding: 11px 14px; cursor: pointer;
   transition: border-color .15s;
+  min-width: 0; overflow: hidden;
 }
 .settings-radio:has(input:checked) { border-color: var(--accent); }
 .settings-radio input[type="radio"] { margin-top: 2px; accent-color: var(--accent); flex-shrink:0; }
 .settings-radio > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.settings-radio-label { font-size: .83rem; font-weight: 600; color: var(--text); word-break: break-word; }
-.settings-radio-desc  { font-size: .78rem; color: var(--text-muted); margin-top: 2px; line-height:1.5; word-break: break-word; }
+.settings-radio-label { font-size: .83rem; font-weight: 600; color: var(--text); word-break: break-word; overflow-wrap: break-word; }
+.settings-radio-desc  { font-size: .78rem; color: var(--text-muted); margin-top: 2px; line-height:1.5; word-break: break-word; overflow-wrap: break-word; }
 #settings-custom-path {
   display: none; margin-top: 8px;
 }
