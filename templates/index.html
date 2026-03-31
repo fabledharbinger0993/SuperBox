@@ -693,8 +693,10 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   background: var(--surface);
   border: 1px solid var(--border-hi);
   border-radius: 12px;
-  width: 100%; max-width: 560px;
+  width: 100%; max-width: 580px;
+  max-height: calc(100vh - 80px);
   box-shadow: 0 24px 80px rgba(0,0,0,.8);
+  display: flex; flex-direction: column;
   overflow: hidden;
 }
 .settings-header {
@@ -708,7 +710,7 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   font-size: 1.2rem; cursor: pointer; padding: 2px 4px; line-height:1;
 }
 .settings-close:hover { color: var(--text); }
-.settings-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+.settings-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; flex: 1; }
 .settings-section h3 {
   font-size: .75rem; font-weight: 700; letter-spacing: .1em;
   text-transform: uppercase; color: var(--accent); margin: 0 0 12px;
