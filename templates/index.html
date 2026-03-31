@@ -677,6 +677,250 @@ body.log-open #scan-bar { bottom: var(--log-h); }
 }
 .owl-icon { font-size: 1.1rem; line-height: 1; }
 /* shift up when log panel is open */
+/* ── Settings button ────────────────────────────────────────────────────── */
+#settings-btn {
+  background: none; border: 1px solid var(--border-hi); color: var(--text-muted);
+  border-radius: 5px; padding: 4px 12px; font-size:.78rem; cursor: pointer;
+  letter-spacing:.04em; margin-right: 6px;
+}
+#settings-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Settings modal ──────────────────────────────────────────────────────── */
+#settings-backdrop {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,.72);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+#settings-backdrop.hidden { display: none; }
+#settings-modal {
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  width: 100%; max-width: 560px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.8);
+  overflow: hidden;
+}
+.settings-header {
+  padding: 22px 28px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.settings-header h2 { font-size: 1.05rem; font-weight: 700; margin: 0; }
+.settings-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1.2rem; cursor: pointer; padding: 2px 4px; line-height:1;
+}
+.settings-close:hover { color: var(--text); }
+.settings-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+.settings-section h3 {
+  font-size: .75rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--accent); margin: 0 0 12px;
+}
+.settings-radio-group { display: flex; flex-direction: column; gap: 8px; }
+.settings-radio {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--surface-hi); border: 1px solid var(--border);
+  border-radius: 7px; padding: 11px 14px; cursor: pointer;
+  transition: border-color .15s;
+}
+.settings-radio:has(input:checked) { border-color: var(--accent); }
+.settings-radio input[type="radio"] { margin-top: 2px; accent-color: var(--accent); flex-shrink:0; }
+.settings-radio-label { font-size: .83rem; font-weight: 600; color: var(--text); }
+.settings-radio-desc  { font-size: .78rem; color: var(--text-muted); margin-top: 2px; line-height:1.5; }
+#settings-custom-path {
+  display: none; margin-top: 8px;
+}
+#settings-custom-path input {
+  width: 100%; box-sizing: border-box;
+  background: var(--surface-hi); border: 1px solid var(--border-hi);
+  border-radius: 6px; padding: 8px 12px;
+  color: var(--text); font-size: .83rem;
+}
+#settings-custom-path input:focus { outline: none; border-color: var(--accent); }
+.settings-warnings {
+  display: none;
+  background: rgba(239,68,68,.07);
+  border: 1px solid rgba(239,68,68,.25);
+  border-radius: 7px; padding: 14px 16px;
+  margin-top: 4px;
+}
+.settings-warnings h4 {
+  font-size: .75rem; font-weight: 700; color: var(--danger);
+  letter-spacing: .06em; text-transform: uppercase; margin: 0 0 10px;
+}
+.settings-warn-item {
+  font-size: .79rem; color: var(--text-muted);
+  line-height: 1.55; margin-bottom: 7px; padding-left: 16px; position: relative;
+}
+.settings-warn-item:last-child { margin-bottom: 0; }
+.settings-warn-item::before { content: '⚠'; position: absolute; left: 0; color: var(--caution); }
+.settings-footer {
+  padding: 0 28px 24px;
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+.settings-save {
+  background: var(--accent); border: none; color: #fff;
+  border-radius: 7px; padding: 9px 24px;
+  font-size: .83rem; font-weight: 600; cursor: pointer;
+}
+.settings-save:hover { opacity: .88; }
+.settings-cancel {
+  background: none; border: 1px solid var(--border-hi); color: var(--text-muted);
+  border-radius: 7px; padding: 9px 18px; font-size: .83rem; cursor: pointer;
+}
+
+/* ── Lightbulb / Welcome button ─────────────────────────────────────────── */
+#lightbulb-btn {
+  position: fixed;
+  bottom: 28px; right: 120px;
+  z-index: 9999;
+  display: flex; align-items: center; gap: 7px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border-hi);
+  border-radius: 24px;
+  padding: 8px 13px 8px 10px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: .78rem; font-weight: 600; letter-spacing: .05em;
+  transition: background .2s, border-color .2s, color .2s, bottom .25s;
+  user-select: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,.55);
+}
+#lightbulb-btn:hover {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+body.log-open #lightbulb-btn { bottom: calc(var(--log-h) + 28px); }
+body.scan-active #lightbulb-btn { bottom: calc(44px + 28px); }
+body.log-open.scan-active #lightbulb-btn { bottom: calc(var(--log-h) + 44px + 28px); }
+
+/* ── Welcome modal ───────────────────────────────────────────────────────── */
+#welcome-backdrop {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,.72);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+#welcome-backdrop.hidden { display: none; }
+#welcome-modal {
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  width: 100%; max-width: 680px;
+  max-height: 82vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0,0,0,.8);
+}
+.welcome-header {
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0;
+  background: var(--surface);
+  z-index: 1;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+}
+.welcome-header-text h2 {
+  font-size: 1.25rem; font-weight: 700; color: var(--text);
+  margin: 0 0 4px;
+}
+.welcome-header-text p {
+  font-size: .82rem; color: var(--text-muted); margin: 0;
+}
+.welcome-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1.2rem; cursor: pointer; padding: 2px 4px; flex-shrink: 0;
+  line-height: 1;
+}
+.welcome-close:hover { color: var(--text); }
+.welcome-body {
+  padding: 24px 32px 32px;
+  display: flex; flex-direction: column; gap: 24px;
+}
+.welcome-section h3 {
+  font-size: .78rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--accent);
+  margin: 0 0 10px;
+}
+.welcome-section p {
+  font-size: .85rem; color: var(--text-muted); line-height: 1.7; margin: 0 0 8px;
+}
+.welcome-section p:last-child { margin-bottom: 0; }
+.welcome-tool-row {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.welcome-tool {
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 14px;
+}
+.welcome-tool-name {
+  font-family: var(--mono); font-size: .8rem; font-weight: 600;
+  color: var(--accent); margin-bottom: 3px;
+}
+.welcome-tool-desc {
+  font-size: .8rem; color: var(--text-muted); line-height: 1.5;
+}
+.welcome-compare-row {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.welcome-compare {
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 14px;
+}
+.welcome-compare-name {
+  font-size: .82rem; font-weight: 600; color: var(--text); margin-bottom: 3px;
+}
+.welcome-compare-desc {
+  font-size: .8rem; color: var(--text-muted); line-height: 1.5;
+}
+.welcome-permission {
+  margin: 0 32px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.welcome-permission h4 {
+  font-size: .78rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--caution);
+  margin: 0 0 8px;
+}
+.welcome-permission p {
+  font-size: .82rem; color: var(--text-muted); line-height: 1.6; margin: 0 0 12px;
+}
+.welcome-permission code {
+  font-family: var(--mono); font-size: .78em;
+  background: var(--border); padding: 1px 5px; border-radius: 3px;
+  color: var(--text);
+}
+.welcome-permission-tree {
+  font-family: var(--mono); font-size: .76rem; color: var(--text-dim);
+  line-height: 1.8; margin: 0 0 14px;
+  padding: 10px 12px;
+  background: var(--bg); border-radius: 5px;
+  border: 1px solid var(--border);
+}
+.welcome-permission-tree .hl { color: var(--accent); }
+.welcome-permission-btns {
+  display: flex; gap: 10px;
+}
+.welcome-footer {
+  padding: 16px 32px 28px;
+  display: flex; justify-content: flex-end;
+}
+.welcome-got-it {
+  background: var(--accent); border: none; color: #fff;
+  border-radius: 7px; padding: 10px 28px;
+  font-size: .85rem; font-weight: 600; letter-spacing: .04em;
+  cursor: pointer;
+}
+.welcome-got-it:hover { opacity: .88; }
+.welcome-got-it:disabled { opacity: .4; cursor: not-allowed; }
 body.log-open #owl-btn       { bottom: calc(var(--log-h) + 28px); }
 body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
 
@@ -906,6 +1150,13 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
     </button>
     <button id="settings-btn" onclick="openSettings()" title="Archive &amp; Log Settings">
       ⚙ Settings
+    </button>
+    <button id="quit-btn" onclick="quitSuperBox()"
+      style="background:none; border:1px solid var(--border-hi); color:var(--text-muted);
+             border-radius:5px; padding:4px 12px; font-size:.78rem; cursor:pointer;
+             letter-spacing:.04em;"
+      title="Shut down the SuperBox server">
+      ⏻ Quit
     </button>
   </div>
 </header>
@@ -1649,6 +1900,12 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   </div>
 </div>
 
+<!-- ══ Lightbulb / Welcome ══════════════════════════════════════════════════ -->
+<div id="lightbulb-btn" onclick="openWelcome()" title="About SuperBox">
+  <span style="font-size:1.1rem;line-height:1">💡</span>
+  <span>About</span>
+</div>
+
 <!-- ══ Owl / Glossary ════════════════════════════════════════════════════════ -->
 <div id="owl-btn"
      onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()"
@@ -1666,6 +1923,183 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <div class="owl-panel-list" id="owl-panel-list"></div>
 </div>
 
+<!-- ══ Settings modal ═══════════════════════════════════════════════════════ -->
+<div id="settings-backdrop" class="hidden">
+  <div id="settings-modal">
+    <div class="settings-header">
+      <h2>⚙ Archive &amp; Log Settings</h2>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-body">
+
+      <div class="settings-section">
+        <h3>Log &amp; Archive Destination</h3>
+        <div class="settings-radio-group">
+
+          <label class="settings-radio">
+            <input type="radio" name="archive-mode" value="auto">
+            <div>
+              <div class="settings-radio-label">🟢 Auto — beside the library (recommended)</div>
+              <div class="settings-radio-desc">Creates <code>SuperBox Archive/</code> at the same root level as your music folder. Everything is co-located with your library and travels with the drive.</div>
+            </div>
+          </label>
+
+          <label class="settings-radio">
+            <input type="radio" name="archive-mode" value="custom">
+            <div style="width:100%">
+              <div class="settings-radio-label">🟡 Custom — point and shoot</div>
+              <div class="settings-radio-desc">Direct all logs, savepoints, quarantine files, and reports to any folder you choose. Useful if you want everything on a separate archive drive.</div>
+              <div id="settings-custom-path">
+                <input type="text" id="settings-custom-input" placeholder="/path/to/your/archive/folder">
+              </div>
+            </div>
+          </label>
+
+          <label class="settings-radio">
+            <input type="radio" name="archive-mode" value="none">
+            <div>
+              <div class="settings-radio-label">🔴 Disabled — no logging</div>
+              <div class="settings-radio-desc">SuperBox runs without creating any files on disk. Some features will be slower or unavailable — see below.</div>
+            </div>
+          </label>
+
+        </div>
+
+        <div class="settings-warnings" id="settings-warnings">
+          <h4>Features affected when logging is disabled</h4>
+          <div class="settings-warn-item"><strong>Tag Tracks → Duplicate Finder:</strong> Tag Tracks normally writes a scan index so the Duplicate Finder can skip files that clearly aren't duplicates. Without it, every file gets fingerprinted every run. On a 10,000+ track library this is the difference between minutes and hours.</div>
+          <div class="settings-warn-item"><strong>Rollback unavailable:</strong> Import, Normalize, Relocate, and Prune make changes that cannot be undone without Savepoints. There is no recovery if something goes wrong.</div>
+          <div class="settings-warn-item"><strong>Triage limited:</strong> Problem files from scans can be Revealed in Finder or sent to Trash, but cannot be moved to Quarantine — that folder won't exist.</div>
+          <div class="settings-warn-item"><strong>Duplicate reports:</strong> CSV reports require a manual destination path each run — there is no default location to save them to.</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="settings-footer">
+      <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="settings-save" onclick="saveSettings()">Save &amp; Restart</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Welcome modal ════════════════════════════════════════════════════════ -->
+<div id="welcome-backdrop" class="hidden">
+  <div id="welcome-modal">
+    <div class="welcome-header">
+      <div class="welcome-header-text">
+        <h2>Welcome to SuperBox</h2>
+        <p>A free, open-source rekordbox library toolkit by Guthrie Entertainment LLC</p>
+      </div>
+      <button class="welcome-close" onclick="closeWelcome()" title="Close">✕</button>
+    </div>
+
+    <div class="welcome-body">
+
+      <div class="welcome-section">
+        <h3>Why this exists</h3>
+        <p>Rekordbox is an excellent performance tool. As a library manager, it has real limits. It doesn't write analysis results to your actual audio files — only its own database. That means BPM and key data disappears if you ever rebuild your library, migrate to another platform, or Rekordbox loses its mind. And it does, sometimes.</p>
+        <p>Path breakage is the other one. Move a folder, rename a drive, plug into a different USB port on a different computer — Rekordbox loses every file it can't find and gives you no tools to fix it in bulk. SuperBox was built to solve exactly these problems, and to give DJs with large, mature libraries a safety net that Rekordbox doesn't provide.</p>
+      </div>
+
+      <div class="welcome-section">
+        <h3>What it does</h3>
+        <p><strong>Audit</strong> — reads your database and music folder and cross-checks them. Orphaned files, missing tracks, broken paths, untagged tracks. Gives you the full picture before you touch anything.</p>
+        <p><strong>Tag Tracks</strong> — analyzes each audio file's actual waveform and writes BPM and musical key directly into the file tags (ID3 for MP3/AIFF, Vorbis for FLAC). These tags travel with the file forever, independent of any database.</p>
+        <p><strong>Import</strong> — adds new tracks to Rekordbox's database with a full backup created before any write. Preview mode shows you exactly what would change before committing.</p>
+        <p><strong>Normalize</strong> — measures integrated loudness per track (EBU R128 standard) and re-encodes files that fall outside the target. Every original is preserved as a .bak until the new file is verified readable.</p>
+        <p><strong>Duplicates</strong> — acoustic fingerprinting across your whole library. Finds files that are the same recording regardless of filename, bitrate, or format. Not filename matching — actual audio content comparison.</p>
+        <p><strong>Relocate</strong> — when a drive mounts under a new name or files move to a new folder, this updates every affected path in the database in one operation. Three match strategies: exact, hash-based, and fuzzy.</p>
+      </div>
+
+      <div class="welcome-section">
+        <h3>Under the hood</h3>
+        <div class="welcome-tool-row">
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">librosa</div>
+            <div class="welcome-tool-desc">Open-source audio analysis library from the music information retrieval research community. Used for BPM detection (beat tracking on the actual waveform) and key detection (Krumhansl-Schmuckler algorithm on chroma features). Free, runs entirely on your machine.</div>
+          </div>
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">mutagen</div>
+            <div class="welcome-tool-desc">Industry-standard Python library for reading and writing audio file tags. Handles ID3 (MP3/AIFF), Vorbis comments (FLAC), and more. Used by Beets, MusicBrainz Picard, and many other tools in the music metadata world.</div>
+          </div>
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">pyrekordbox</div>
+            <div class="welcome-tool-desc">Reads and writes Rekordbox's SQLite database directly, using the same file Rekordbox uses. This is what lets SuperBox import tracks, update paths, and link playlists without Rekordbox needing to be open.</div>
+          </div>
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">pyloudnorm + soundfile</div>
+            <div class="welcome-tool-desc">EBU R128 loudness measurement and audio I/O. The same loudness standard used in broadcast and streaming. Ensures every track in your set hits the same integrated loudness target — consistent energy without riding the gain knob.</div>
+          </div>
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">chromaprint + pyacoustid</div>
+            <div class="welcome-tool-desc">Acoustic fingerprinting — the same underlying technology used by AcoustID and MusicBrainz. Generates a compact signature from the audio content itself. Two files with different names, different bitrates, different lengths — if they're the same recording, this finds them.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="welcome-section">
+        <h3>Honest comparison</h3>
+        <div class="welcome-compare-row">
+          <div class="welcome-compare">
+            <div class="welcome-compare-name">vs Mixed In Key</div>
+            <div class="welcome-compare-desc">Mixed In Key is excellent and arguably still the most accurate BPM/key tool built specifically for DJs. It's $58 one-time, polished, and has years of refinement behind it. SuperBox uses librosa, which is solid and research-grade, but MIK has the edge on accuracy for complex or atonal tracks. If you use MIK, SuperBox respects that — it won't overwrite existing tags unless you explicitly ask it to.</div>
+          </div>
+          <div class="welcome-compare">
+            <div class="welcome-compare-name">vs Lexicon</div>
+            <div class="welcome-compare-desc">Lexicon is the best cross-platform DJ library manager available right now, around $10/month. If you work across Serato, Traktor, and Rekordbox, Lexicon is probably the right tool. SuperBox is Rekordbox-specific, free, and focused on the safety and recovery problems Lexicon doesn't prioritize. They're not direct competitors — they solve different problems.</div>
+          </div>
+          <div class="welcome-compare">
+            <div class="welcome-compare-name">vs Rekordbox's own analysis</div>
+            <div class="welcome-compare-desc">Rekordbox's BPM analysis is fine. The fundamental difference is where results are stored. Rekordbox writes to its database only — results don't survive a library rebuild and don't work in other software. SuperBox writes to the file tags themselves. Those tags travel with the audio file permanently, across any software and any database.</div>
+          </div>
+          <div class="welcome-compare">
+            <div class="welcome-compare-name">vs MusicBrainz Picard</div>
+            <div class="welcome-compare-desc">Picard is a full metadata editor — it identifies recordings, corrects track info, standardizes tags. SuperBox doesn't do that. It doesn't touch song titles, artists, or album data. The scope is deliberately narrow: BPM, key, loudness, path integrity, and library safety. Different tool, different job.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="welcome-section">
+        <h3>The philosophy</h3>
+        <p>Every write operation in SuperBox creates a timestamped backup before it touches anything. DB changes, audio rewrites, path updates — all of it is logged and reversible. Files go to Trash, not permanent deletion. The goal is that you should be able to undo anything SuperBox has ever done to your library.</p>
+        <p>No cloud. No accounts. No subscription. Your library data stays on your machine.</p>
+        <p style="margin-top:10px; padding:10px 14px; background:var(--surface-hi); border:1px solid var(--border); border-radius:7px; font-size:.81rem; color:var(--text-muted);">
+          💡 You can revisit this window anytime — including the archive folder setup — by clicking the <strong style="color:var(--text)">lightbulb icon</strong> in the bottom-right corner of the screen.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Permission block -->
+    <div class="welcome-permission">
+      <h4>⚠️ One thing before you start</h4>
+      <p>SuperBox needs to create a folder on your DJ drive to store logs, backups, quarantined files, and rollback savepoints. It will be placed at the same root level as your music library — nothing inside your library folder is touched.</p>
+      <div class="welcome-permission-tree" id="welcome-archive-tree">
+        <span class="hl">Your DJ Drive/</span><br>
+        ├── DJMT PRIMARY/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← your music (untouched)<br>
+        └── <span class="hl">SuperBox Archive/</span>&nbsp;&nbsp;&nbsp;&nbsp;← created by SuperBox<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;├── Savepoints/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← DB backups before every write<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;├── Quarantine/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← problem files for triage<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;├── Reports/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← audit &amp; scan reports<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;└── Logs/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← per-step operation logs
+      </div>
+      <p>May SuperBox create this folder structure on your drive?</p>
+      <div class="welcome-permission-btns">
+        <button class="welcome-got-it" id="welcome-yes-btn" onclick="welcomeGrantPermission()" style="padding:8px 22px">Yes, create folders</button>
+        <button onclick="welcomeDenyPermission()"
+          style="background:none; border:1px solid var(--border-hi); color:var(--text-muted);
+                 border-radius:7px; padding:8px 22px; font-size:.85rem; cursor:pointer;">
+          Not yet
+        </button>
+      </div>
+    </div>
+
+    <div class="welcome-footer">
+      <button class="welcome-got-it" id="welcome-letsgo-btn" onclick="closeWelcome()" disabled>Let's go →</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ Scan bar ═══════════════════════════════════════════════════════════ -->
 <div id="scan-bar">
   <div class="scan-bar-item">
@@ -1673,7 +2107,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
     <span class="scan-bar-val" id="sb-remaining">—</span>
   </div>
   <div class="scan-bar-item">
-    <span class="scan-bar-label">No Change</span>
+    <span class="scan-bar-label">Complete w/o Edits</span>
     <span class="scan-bar-val safe" id="sb-clean">0</span>
   </div>
   <div class="scan-bar-item">
@@ -1703,7 +2137,7 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
   <div class="log-bar">
     <div class="log-bar-title"><strong id="log-cmd-label">Output</strong></div>
     <div id="log-spinner"></div>
-    <button class="log-close-btn" onclick="closeLog()" title="Close output">✕</button>
+    <button class="log-close-btn" onclick="toggleLog()" title="Hide output — scan keeps running">−</button>
   </div>
   <div id="log-output"></div>
 </div>
@@ -1715,6 +2149,113 @@ let isRunning    = false;
 let rbRunning    = false;
 
 /* ── Status polling ────────────────────────────────────────────────────────── */
+/* ── Settings modal ────────────────────────────────────────────────────────── */
+function openSettings() {
+  // Load current config into the form
+  fetch('/api/config').then(r => r.json()).then(cfg => {
+    const mode = cfg.archive_mode || 'auto';
+    document.querySelector(`input[name="archive-mode"][value="${mode}"]`).checked = true;
+    document.getElementById('settings-custom-input').value = cfg.custom_archive || '';
+    _settingsUpdateUI(mode);
+  }).catch(() => {
+    document.querySelector('input[name="archive-mode"][value="auto"]').checked = true;
+    _settingsUpdateUI('auto');
+  });
+  document.getElementById('settings-backdrop').classList.remove('hidden');
+}
+function closeSettings() {
+  document.getElementById('settings-backdrop').classList.add('hidden');
+}
+function _settingsUpdateUI(mode) {
+  document.getElementById('settings-custom-path').style.display  = mode === 'custom' ? 'block' : 'none';
+  document.getElementById('settings-warnings').style.display     = mode === 'none'   ? 'block' : 'none';
+}
+document.addEventListener('change', e => {
+  if (e.target.name === 'archive-mode') _settingsUpdateUI(e.target.value);
+});
+async function saveSettings() {
+  const mode   = document.querySelector('input[name="archive-mode"]:checked')?.value || 'auto';
+  const custom = document.getElementById('settings-custom-input').value.trim();
+  if (mode === 'custom' && !custom) {
+    alert('Please enter a folder path for the custom archive location.');
+    return;
+  }
+  const btn = document.querySelector('.settings-save');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const res  = await fetch('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ archive_mode: mode, custom_archive_dir: custom }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      closeSettings();
+      // Restart the server to apply new config
+      await fetch('/api/quit', { method: 'POST' }).catch(() => {});
+      setTimeout(() => window.close(), 500);
+    } else {
+      alert('Save failed: ' + (data.error || 'unknown error'));
+    }
+  } catch(e) {
+    alert('Could not save settings.');
+  }
+  btn.textContent = 'Save & Restart'; btn.disabled = false;
+}
+
+/* ── Welcome modal ─────────────────────────────────────────────────────────── */
+function openWelcome() {
+  document.getElementById('welcome-backdrop').classList.remove('hidden');
+  // Populate the archive tree with the real drive path if config is loaded
+  fetch('/api/config').then(r => r.json()).then(cfg => {
+    if (cfg.archive_root) {
+      const root   = cfg.archive_root;
+      const parent = root.split('/').slice(0, -1).join('/') || '/';
+      const name   = root.split('/').pop();
+      const music  = cfg.music_root ? cfg.music_root.split('/').pop() : 'Music Library';
+      document.getElementById('welcome-archive-tree').innerHTML =
+        `<span class="hl">${parent}/</span><br>` +
+        `├── ${music}/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← your music (untouched)<br>` +
+        `└── <span class="hl">${name}/</span>&nbsp;&nbsp;&nbsp;&nbsp;← created by SuperBox<br>` +
+        `&nbsp;&nbsp;&nbsp;&nbsp;├── Savepoints/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← DB backups before every write<br>` +
+        `&nbsp;&nbsp;&nbsp;&nbsp;├── Quarantine/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← problem files for triage<br>` +
+        `&nbsp;&nbsp;&nbsp;&nbsp;├── Reports/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← audit &amp; scan reports<br>` +
+        `&nbsp;&nbsp;&nbsp;&nbsp;└── Logs/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← per-step operation logs`;
+    }
+  }).catch(() => {});
+}
+function closeWelcome() {
+  document.getElementById('welcome-backdrop').classList.add('hidden');
+  localStorage.setItem('superbox-welcome-seen', '1');
+}
+function welcomeGrantPermission() {
+  localStorage.setItem('superbox-archive-permission', 'granted');
+  document.getElementById('welcome-yes-btn').textContent    = '✓ Permission granted';
+  document.getElementById('welcome-yes-btn').disabled       = true;
+  document.getElementById('welcome-letsgo-btn').disabled    = false;
+  fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
+}
+function welcomeDenyPermission() {
+  localStorage.setItem('superbox-archive-permission', 'denied');
+  document.getElementById('welcome-letsgo-btn').disabled = false;
+  document.getElementById('welcome-letsgo-btn').textContent = 'Continue without folders';
+}
+
+async function quitSuperBox() {
+  const msg = isRunning
+    ? '⚠️ A scan is still running.\n\nShutting down now will cancel it mid-process. Are you sure?'
+    : 'Shut down SuperBox?\n\nThe server will stop and this window will close.';
+  if (!confirm(msg)) return;
+  const btn = document.getElementById('quit-btn');
+  btn.textContent = 'Shutting down…';
+  btn.disabled = true;
+  try {
+    await fetch('/api/quit', { method: 'POST' });
+  } catch(_) {}
+  // Server is gone — close the tab
+  setTimeout(() => window.close(), 500);
+}
+
 async function refreshStatus() {
   try {
     const res  = await fetch('/api/status');
@@ -1743,6 +2284,13 @@ async function refreshStatus() {
 }
 refreshStatus();
 setInterval(refreshStatus, 6000);
+// Show welcome on first visit
+if (!localStorage.getItem('superbox-welcome-seen')) {
+  openWelcome();
+} else if (localStorage.getItem('superbox-archive-permission') === 'granted') {
+  // Re-run archive setup silently on every launch in case drive was remounted
+  fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
+}
 
 /* ── Config prefill + localStorage persistence ─────────────────────────────── */
 const LS_PREFIX = 'superbox_path_';
@@ -1875,11 +2423,30 @@ function classifyLine(text) {
   return 'normal';
 }
 
+/* ── Log helpers ───────────────────────────────────────────────────────────── */
+function initLog(title) {
+  // Prepare the log buffer without showing the panel — scan bar is primary UI
+  document.getElementById('log-cmd-label').textContent = title;
+  document.getElementById('log-output').innerHTML = '';
+  document.getElementById('view-output-btn').style.display = 'none';
+}
+function toggleLog() {
+  const panel = document.getElementById('log-panel');
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    document.body.classList.remove('log-open');
+  } else {
+    panel.classList.add('open');
+    document.body.classList.add('log-open');
+    document.getElementById('view-output-btn').style.display = 'none';
+  }
+}
+
 /* ── SSE runner ────────────────────────────────────────────────────────────── */
-function runCommand(url, logTitle, onDone, useBar = false, showPrefilter = false) {
+function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false) {
   if (isRunning) return;
-  openLog(logTitle);
-  if (useBar) showScanBar(logTitle);
+  initLog(logTitle);
+  showScanBar(logTitle);
   isRunning = true;
   setSpinner(true);
   setAllButtons(true);
@@ -1970,13 +2537,13 @@ function setAllButtons(disabled) {
 function runAudit() {
   const root = document.getElementById('audit-root').value.trim();
   const params = root ? `?root=${encodeURIComponent(root)}` : '';
-  runCommand(`/api/run/audit${params}`, 'Audit — Library Health Check');
+  runCommand(`/api/run/audit${params}`, 'Audit — Library Health Check', null, true);
 }
 
 function runAudit2() {
   const root = document.getElementById('audit2-root').value.trim();
   const params = root ? `?root=${encodeURIComponent(root)}` : '';
-  runCommand(`/api/run/audit${params}`, 'Audit — Confirmation Check');
+  runCommand(`/api/run/audit${params}`, 'Audit — Confirmation Check', null, true);
 }
 
 function runProcess() {
@@ -2008,7 +2575,7 @@ function runImportDry() {
   const path = document.getElementById('import-dry-path').value.trim();
   if (!path) { alert('Enter a music folder path first.'); return; }
   const p = new URLSearchParams({ path, dry_run: '1' });
-  runCommand(`/api/run/import?${p}`, 'Preview Import — Dry Run');
+  runCommand(`/api/run/import?${p}`, 'Preview Import — Dry Run', null, true);
 }
 
 function runImport() {
@@ -2016,7 +2583,7 @@ function runImport() {
   const path = document.getElementById('import-path').value.trim();
   if (!path) { alert('Enter a music folder path first.'); return; }
   const p = new URLSearchParams({ path });
-  runCommand(`/api/run/import?${p}`, 'Import — Writing Tracks to Database');
+  runCommand(`/api/run/import?${p}`, 'Import — Writing Tracks to Database', null, true);
 }
 
 function runLink() {
@@ -2024,7 +2591,7 @@ function runLink() {
   const path = document.getElementById('link-path').value.trim();
   if (!path) { alert('Enter a music folder path first.'); return; }
   const p = new URLSearchParams({ path });
-  runCommand(`/api/run/link?${p}`, 'Link Playlists — Matching Tracks to Folders');
+  runCommand(`/api/run/link?${p}`, 'Link Playlists — Matching Tracks to Folders', null, true);
 }
 
 function runRelocate() {
@@ -2033,7 +2600,7 @@ function runRelocate() {
   const new_ = document.getElementById('relocate-new').value.trim();
   if (!old_ || !new_) { alert('Both old and new paths are required.'); return; }
   const p = new URLSearchParams({ old_root: old_, new_root: new_ });
-  runCommand(`/api/run/relocate?${p}`, 'Relocate — Updating File Paths in Database');
+  runCommand(`/api/run/relocate?${p}`, 'Relocate — Updating File Paths in Database', null, true);
 }
 
 function runDuplicates() {
@@ -2042,7 +2609,7 @@ function runDuplicates() {
   const p = new URLSearchParams({ path });
   const out = document.getElementById('dupes-output').value.trim();
   if (out) p.set('output', out);
-  runCommand(`/api/run/duplicates?${p}`, 'Find Duplicates — Acoustic Fingerprinting', null, false, true);
+  runCommand(`/api/run/duplicates?${p}`, 'Find Duplicates — Acoustic Fingerprinting', null, true, true);
 }
 
 function runConvert() {

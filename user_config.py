@@ -40,6 +40,7 @@ from pathlib import Path
 
 CONFIG_DIR  = Path.home() / ".rekordbox-toolkit"
 CONFIG_FILE = CONFIG_DIR / "config.json"
+CONFIG_PATH = CONFIG_FILE  # alias used by app.py routes
 
 # ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,8 @@ REQUIRED_KEYS = ("local_db", "device_db", "music_root", "backup_dir")
 DEFAULTS: dict = {
     "target_lufs":    -8.0,
     "lufs_tolerance":  0.5,
+    "archive_mode":        "auto",
+    "custom_archive_dir":  "",
 }
 
 # Smart defaults for the setup wizard (platform-aware where relevant)

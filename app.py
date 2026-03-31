@@ -17,6 +17,7 @@ import json
 import os
 import platform
 import queue
+import signal
 import subprocess
 import sys
 import threading
@@ -125,6 +126,14 @@ def _require_rb_closed():
     return None
 
 
+# ── Startup ───────────────────────────────────────────────────────────────────
+
+try:
+    from config import ensure_archive_structure  # noqa: PLC0415
+    ensure_archive_structure()
+except Exception:
+    pass  # Drive not mounted yet — non-fatal
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -144,19 +153,35 @@ def api_status():
 def api_config():
     """Expose the configured default paths so the UI can pre-fill forms."""
     try:
-        from config import DJMT_DB, MUSIC_ROOT  # noqa: PLC0415
+        from config import (  # noqa: PLC0415
+            DJMT_DB, MUSIC_ROOT,
+            ARCHIVE_ROOT, SAVEPOINTS_DIR, QUARANTINE_DIR, REPORTS_DIR,
+            ARCHIVE_ENABLED, _archive_mode, _custom_archive,
+        )
         return jsonify({
-            "music_root": str(MUSIC_ROOT),
-            "djmt_db": str(DJMT_DB),
-            "backup_dir": str(_backup_dir()),
-            "configured": True,
+            "music_root":       str(MUSIC_ROOT),
+            "djmt_db":          str(DJMT_DB),
+            "backup_dir":       str(SAVEPOINTS_DIR),
+            "archive_root":     str(ARCHIVE_ROOT),
+            "quarantine":       str(QUARANTINE_DIR),
+            "reports":          str(REPORTS_DIR),
+            "archive_mode":     _archive_mode,
+            "custom_archive":   _custom_archive,
+            "archive_enabled":  ARCHIVE_ENABLED,
+            "configured":       True,
         })
     except Exception:
         return jsonify({
-            "music_root": "",
-            "djmt_db": "",
-            "backup_dir": str(_backup_dir()),
-            "configured": False,
+            "music_root":      "",
+            "djmt_db":         "",
+            "backup_dir":      str(_backup_dir()),
+            "archive_root":    "",
+            "quarantine":      "",
+            "reports":         "",
+            "archive_mode":    "auto",
+            "custom_archive":  "",
+            "archive_enabled": True,
+            "configured":      False,
         })
 
 
@@ -415,6 +440,51 @@ def api_run_prune():
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Archive setup ─────────────────────────────────────────────────────────────
+
+@app.route("/api/setup-archive", methods=["POST"])
+def api_setup_archive():
+    """Create the SuperBox Archive folder structure on the DJ drive."""
+    try:
+        from config import ensure_archive_structure  # noqa: PLC0415
+        ensure_archive_structure()
+        return jsonify({"ok": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/settings", methods=["POST"])
+def api_settings():
+    """Save archive mode and custom path to user config."""
+    try:
+        from user_config import load_user_config, CONFIG_PATH  # noqa: PLC0415
+        import json as _json
+        data = request.get_json(force=True) or {}
+        cfg  = load_user_config()
+        if "archive_mode" in data:
+            cfg["archive_mode"] = data["archive_mode"]
+        if "custom_archive_dir" in data:
+            cfg["custom_archive_dir"] = data["custom_archive_dir"]
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            _json.dump(cfg, f, indent=2)
+        return jsonify({"ok": True, "note": "Restart SuperBox for changes to take effect."})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+# ── Quit ──────────────────────────────────────────────────────────────────────
+
+@app.route("/api/quit", methods=["POST"])
+def api_quit():
+    """Shut the server down cleanly after sending the response."""
+    def _shutdown():
+        import time
+        time.sleep(0.4)          # let the response reach the browser
+        os.kill(os.getpid(), signal.SIGTERM)
+    threading.Thread(target=_shutdown, daemon=True).start()
+    return jsonify({"ok": True})
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

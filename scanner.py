@@ -112,7 +112,7 @@ def _parse_bpm(raw: str | None) -> float | None:
         # Sanity check: BPM outside range is almost certainly corrupt
         if BPM_MIN <= val <= BPM_MAX:
             return val
-        log.warning("BPM value %s outside expected range (%s–%s) — discarding", val, BPM_MIN, BPM_MAX)
+        log.debug("BPM value %s outside expected range (%s–%s) — discarding", val, BPM_MIN, BPM_MAX)
         return None
     except (ValueError, AttributeError):
         return None

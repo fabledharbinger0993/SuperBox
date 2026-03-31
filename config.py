@@ -41,8 +41,68 @@ DJMT_DB = Path(_cfg["device_db"])
 # Music library root on the DJ drive
 MUSIC_ROOT = Path(_cfg["music_root"])
 
-# Backup directory — created automatically before any write operation
-BACKUP_DIR = Path(_cfg["backup_dir"])
+# ─── SuperBox Archive ─────────────────────────────────────────────────────────
+#
+# All SuperBox-generated data lives in one folder beside the music library:
+#
+#   <drive root>/
+#   ├── DJMT PRIMARY/       ← music library
+#   └── SuperBox Archive/   ← auto-created on first run
+#       ├── Savepoints/     ← timestamped DB backups before every write
+#       ├── Quarantine/     ← problem files moved here from triage
+#       ├── Reports/        ← audit summaries, duplicate CSVs, scan reports
+#       └── Logs/
+#           ├── Audit/
+#           ├── Tag Tracks/
+#           ├── Import/
+#           ├── Normalize/
+#           ├── Duplicates/
+#           ├── Relocate/
+#           └── Prune/
+
+# Archive mode: "auto" (beside library), "custom" (user path), or "none" (disabled)
+_archive_mode      = _cfg.get("archive_mode", "auto")
+_custom_archive    = _cfg.get("custom_archive_dir", "").strip()
+
+ARCHIVE_ENABLED: bool = _archive_mode != "none"
+
+if _archive_mode == "custom" and _custom_archive:
+    ARCHIVE_ROOT = Path(_custom_archive)
+else:
+    ARCHIVE_ROOT = MUSIC_ROOT.parent / "SuperBox Archive"
+
+SAVEPOINTS_DIR = ARCHIVE_ROOT / "Savepoints"
+QUARANTINE_DIR = ARCHIVE_ROOT / "Quarantine"
+REPORTS_DIR    = ARCHIVE_ROOT / "Reports"
+LOGS_DIR       = ARCHIVE_ROOT / "Logs"
+
+LOG_DIRS: dict[str, Path] = {
+    "Audit":       LOGS_DIR / "Audit",
+    "Tag Tracks":  LOGS_DIR / "Tag Tracks",
+    "Import":      LOGS_DIR / "Import",
+    "Normalize":   LOGS_DIR / "Normalize",
+    "Duplicates":  LOGS_DIR / "Duplicates",
+    "Relocate":    LOGS_DIR / "Relocate",
+    "Prune":       LOGS_DIR / "Prune",
+}
+
+# Backup directory — points to Savepoints inside the archive
+BACKUP_DIR = SAVEPOINTS_DIR
+
+
+def ensure_archive_structure() -> None:
+    """
+    Create the full SuperBox Archive folder tree on the DJ drive if it doesn't
+    exist yet. Safe to call on every startup — uses exist_ok=True throughout.
+    Skips silently if the drive isn't mounted or if archive is disabled.
+    """
+    if not ARCHIVE_ENABLED:
+        return
+    try:
+        for path in [SAVEPOINTS_DIR, QUARANTINE_DIR, REPORTS_DIR, *LOG_DIRS.values()]:
+            path.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        pass
 
 # ─── Audio normalisation ──────────────────────────────────────────────────────
 #
