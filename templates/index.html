@@ -788,6 +788,94 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
 }
 .gls-card-body ul { margin: 5px 0 5px 15px; }
 .gls-card-body li { margin-bottom: 3px; }
+
+/* ── Archive & Log Settings modal ─────────────────────────────────────── */
+#settings-backdrop {
+  position: fixed; inset: 0; z-index: 8900;
+  background: rgba(0,0,0,.55);
+  display: none;
+}
+#settings-backdrop.open { display: flex; align-items: center; justify-content: center; }
+
+#settings-modal {
+  width: 540px; max-width: calc(100vw - 40px);
+  max-height: 80vh;
+  background: #0d0d20;
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 48px rgba(0,0,0,.75);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.settings-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 15px;
+  border-bottom: 1px solid var(--border-hi);
+  flex-shrink: 0;
+}
+.settings-modal-title {
+  font-size: 1rem; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+}
+.settings-modal-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1.1rem; cursor: pointer; padding: 2px 4px; line-height: 1;
+}
+.settings-modal-close:hover { color: var(--text); }
+.settings-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.settings-section-label {
+  font-size: .68rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 12px;
+}
+/* Radio option rows — overflow fix */
+.settings-radio {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  margin-bottom: 8px;
+}
+.settings-radio:hover { border-color: var(--border-hi); background: var(--surface-hi); }
+.settings-radio input[type="radio"] { margin-top: 3px; flex-shrink: 0; accent-color: var(--accent); }
+.settings-radio-text { flex: 1; min-width: 0; }
+.settings-radio-text strong {
+  display: block; font-size: .88rem; color: var(--text);
+  overflow-wrap: break-word; word-break: break-word;
+}
+.settings-radio-text span {
+  display: block; font-size: .78rem; color: var(--text-muted); margin-top: 3px;
+  overflow-wrap: break-word; word-break: break-word; line-height: 1.5;
+}
+.settings-radio-badge {
+  display: inline-block; font-size: .62rem; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+  background: var(--safe-dim); color: var(--safe); border: 1px solid var(--safe-border);
+  border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle;
+  flex-shrink: 0;
+}
+.settings-modal-footer {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Gear / settings trigger button */
+#settings-btn {
+  background: none; border: 1px solid var(--border-hi);
+  color: var(--text-muted); border-radius: 6px;
+  padding: 5px 10px; font-size: .82rem; cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: background .15s, border-color .15s, color .15s;
+}
+#settings-btn:hover { background: var(--surface-hi); border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -815,6 +903,9 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
              color:var(--accent); border-radius:5px; padding:4px 12px; font-size:.78rem;
              letter-spacing:.04em; cursor:pointer;">
       ▸ View Output
+    </button>
+    <button id="settings-btn" onclick="openSettings()" title="Archive &amp; Log Settings">
+      ⚙ Settings
     </button>
   </div>
 </header>
@@ -1509,6 +1600,54 @@ body.log-open #owl-hover-panel { bottom: calc(var(--log-h) + 74px); }
     &nbsp;·&nbsp; Guthrie Entertainment LLC &nbsp;·&nbsp; Osos Discos
   </span>
 </footer>
+
+<!-- ══ Archive & Log Settings modal ════════════════════════════════════════ -->
+<div id="settings-backdrop">
+  <div id="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="settings-modal-head">
+      <span class="settings-modal-title" id="settings-title">⚙ Archive &amp; Log Settings</span>
+      <button class="settings-modal-close" onclick="closeSettings()" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-modal-body">
+      <div class="settings-section-label">Log &amp; Archive Destination</div>
+
+      <label class="settings-radio">
+        <input type="radio" name="archive-dest" value="auto" checked>
+        <div class="settings-radio-text">
+          <strong>Auto: Beside Library <span class="settings-radio-badge">Recommended</span></strong>
+          <span>Creates a SuperBox Archive folder in the same location as your music library. Everything co-located with your library — travels with the disk wherever it goes.</span>
+        </div>
+      </label>
+
+      <label class="settings-radio">
+        <input type="radio" name="archive-dest" value="home">
+        <div class="settings-radio-text">
+          <strong>Home Directory</strong>
+          <span>Places the SuperBox Archive folder at <code style="font-family:var(--mono);font-size:.78em;background:var(--border);padding:1px 4px;border-radius:3px;color:var(--accent)">~/SuperBox Archive/</code> — always in the same spot regardless of where your library lives.</span>
+        </div>
+      </label>
+
+      <label class="settings-radio">
+        <input type="radio" name="archive-dest" value="custom">
+        <div class="settings-radio-text">
+          <strong>Custom Path</strong>
+          <span>Specify any folder below. SuperBox will create the Archive subfolder structure inside it.</span>
+        </div>
+      </label>
+
+      <div id="settings-custom-path-row" style="display:none;margin-top:4px;margin-bottom:8px">
+        <input type="text" id="settings-custom-path" placeholder="/Volumes/Backups/SuperBox Archive"
+               style="width:100%;background:var(--surface);border:1px solid var(--border-hi);
+                      border-radius:var(--radius);color:var(--text);padding:8px 12px;
+                      font-size:.85rem;outline:none;">
+      </div>
+    </div>
+    <div class="settings-modal-footer">
+      <button class="btn btn-ghost" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-neon" onclick="saveSettings()">Save &amp; Restart</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ Owl / Glossary ════════════════════════════════════════════════════════ -->
 <div id="owl-btn"
@@ -2416,6 +2555,62 @@ function closeCard(id) {
   if (pinnedCards.size === 0) {
     document.getElementById('owl-btn').classList.remove('active');
     owlCardsActive = false;
+  }
+}
+
+/* ── Archive & Log Settings modal ─────────────────────────────────────────── */
+const SETTINGS_KEY = 'superbox_archive_dest';
+
+function openSettings() {
+  const saved = localStorage.getItem(SETTINGS_KEY) || 'auto';
+  document.querySelectorAll('input[name="archive-dest"]').forEach(r => {
+    r.checked = r.value === saved;
+  });
+  toggleCustomPath(saved === 'custom');
+  document.getElementById('settings-backdrop').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-backdrop').classList.remove('open');
+}
+
+function toggleCustomPath(show) {
+  document.getElementById('settings-custom-path-row').style.display = show ? 'block' : 'none';
+}
+
+document.querySelectorAll('input[name="archive-dest"]').forEach(r => {
+  r.addEventListener('change', () => toggleCustomPath(r.value === 'custom'));
+});
+
+document.getElementById('settings-backdrop').addEventListener('click', function(e) {
+  if (e.target === this) closeSettings();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeSettings();
+});
+
+async function saveSettings() {
+  const chosen = document.querySelector('input[name="archive-dest"]:checked')?.value || 'auto';
+  const custom = document.getElementById('settings-custom-path').value.trim();
+  localStorage.setItem(SETTINGS_KEY, chosen);
+
+  const payload = { archive_dest: chosen, custom_path: custom };
+  try {
+    const res = await fetch('/api/settings/archive', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      closeSettings();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert('Failed to save settings: ' + (data.error || res.status));
+    }
+  } catch (err) {
+    // Server not implemented yet — save locally and close
+    closeSettings();
   }
 }
 
