@@ -56,27 +56,6 @@ KS_MAJOR = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66,
 KS_MINOR = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
 NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
-def _detect_bpm(path: Path) -> float | None:
-    try:
-        y, sr = librosa.load(str(path), duration=ANALYSIS_DURATION, mono=True)
-        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-
-        bpm = float(np.squeeze(tempo))
-
-        if BPM_MIN <= bpm <= BPM_MAX:
-            return round(bpm, 2)
-
-        log.warning(
-            "BPM %s out of range (%s–%s) for %s",
-            bpm,
-            BPM_MIN,
-            BPM_MAX,
-            path.name,
-        )
-        return None
-    except Exception as e:
-        log.error("BPM detection failed for %s: %s", path.name, e)
-        return None
 # ─── Result dataclass ─────────────────────────────────────────────────────────
 
 @dataclass

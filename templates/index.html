@@ -971,6 +971,44 @@ body.log-open #owl-hover-panel         { bottom: calc(var(--log-h) + 74px); }
 body.scan-active #owl-hover-panel      { bottom: calc(44px + 74px); }
 body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 74px); }
 
+/* ── Session summary pills ──────────────────────────────────────────────── */
+#session-pills-container {
+  position: fixed;
+  right: 28px;
+  bottom: 76px;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: none;
+  transition: bottom .25s;
+}
+body.log-open #session-pills-container             { bottom: calc(var(--log-h) + 76px); }
+body.scan-active #session-pills-container          { bottom: calc(44px + 76px); }
+body.log-open.scan-active #session-pills-container { bottom: calc(var(--log-h) + 44px + 76px); }
+.summary-pill {
+  pointer-events: all;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent);
+  border: 1px solid rgba(129,140,248,.6);
+  border-radius: 24px;
+  padding: 7px 14px 7px 12px;
+  font-size: .76rem; font-weight: 700; letter-spacing: .04em;
+  color: #000;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(129,140,248,.55), 0 0 18px rgba(129,140,248,.25);
+  text-shadow: 0 0 6px rgba(180,160,255,.45);
+  transition: box-shadow .2s, opacity .15s;
+  user-select: none;
+  white-space: nowrap;
+}
+.summary-pill:hover {
+  box-shadow: 0 0 12px rgba(129,140,248,.75), 0 0 28px rgba(129,140,248,.4);
+  text-shadow: 0 0 8px rgba(180,160,255,.65);
+}
+.summary-pill-icon { font-size: .9rem; line-height: 1; }
+
 /* ── Welcome modal ───────────────────────────────────────────────────────── */
 #welcome-backdrop {
   position: fixed; inset: 0; z-index: 10000;
@@ -1527,7 +1565,7 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
     </div>
   </div>
 
-  <!-- ── Step 5: Link playlists ──────────────────────────────────────────── -->
+  <!-- ── Step 4: Link playlists ──────────────────────────────────────────── -->
   <div class="card" id="step-link">
     <div class="card-head">
       <div class="card-icon warn"><img src="/static/icon-link.png" alt="Link Playlists"></div>
@@ -1573,13 +1611,12 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
     </div>
   </div>
 
-  <!-- ── Step 6: Audit again ─────────────────────────────────────────────── -->
-  <!-- ── Step 6: Normalize ───────────────────────────────────────────────── -->
+  <!-- ── Step 5: Normalize ───────────────────────────────────────────────── -->
   <div class="card" id="step-normalize">
     <div class="card-head">
       <div class="card-icon danger"><img src="/static/icon-normalize.png" alt="Normalize"></div>
       <div class="card-meta">
-        <div class="card-title">Step 6 — Normalize Loudness <em style="font-weight:400;color:var(--text-muted)">(Optional)</em></div>
+        <div class="card-title">Step 5 — Normalize Loudness <em style="font-weight:400;color:var(--text-muted)">(Optional)</em></div>
         <div class="card-blurb">Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard. <strong>This rewrites the actual audio file.</strong></div>
       </div>
       <span class="risk-badge danger">Rewrites Audio</span>
@@ -1991,6 +2028,9 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
   <div class="owl-panel-list" id="owl-panel-list"></div>
 </div>
 
+<!-- ══ Session summary pills ════════════════════════════════════════════════ -->
+<div id="session-pills-container"></div>
+
 <!-- ══ Settings modal ═══════════════════════════════════════════════════════ -->
 <div id="settings-backdrop" class="hidden">
   <div id="settings-modal">
@@ -2233,6 +2273,39 @@ let rbRunning    = false;
 // Session-only storage — cleared when the page reloads / server stops.
 const sessionReports = {};
 
+// Map SSE log titles → human-readable pill labels
+const STEP_PILL_LABELS = {
+  'Audit — Library Health Check':                 'Step 1 Summary',
+  'Tag Tracks — BPM & Key Detection':             'Step 2 Summary',
+  'Preview Import — Dry Run':                     'Step 3 Preview',
+  'Import — Writing Tracks to Database':          'Step 3 Summary',
+  'Link Playlists — Matching Tracks to Folders':  'Step 4 Summary',
+  'Normalize — Loudness to −8.0 LUFS':            'Step 5 Summary',
+  'Find Duplicates — Acoustic Fingerprinting':    'Duplicates Summary',
+  'Relocate — Updating File Paths in Database':   'Relocate Summary',
+};
+
+function _addOrUpdateSummaryPill(title) {
+  const label     = STEP_PILL_LABELS[title] || (title.split(' — ')[0] + ' Summary');
+  const container = document.getElementById('session-pills-container');
+  if (!container) return;
+  // If a pill for this title already exists, its click handler already reads
+  // from sessionReports[title] which was just updated — nothing else to do.
+  if (container.querySelector(`[data-pill-title]`) &&
+      [...container.querySelectorAll('[data-pill-title]')]
+        .some(el => el.dataset.pillTitle === title)) return;
+  const pill = document.createElement('button');
+  pill.className        = 'summary-pill';
+  pill.dataset.pillTitle = title;
+  pill.title            = 'Re-open summary: ' + label;
+  pill.innerHTML        = `<span class="summary-pill-icon">📋</span>${label}`;
+  pill.addEventListener('click', () => {
+    const r = sessionReports[title];
+    if (r) openReportModal(title, r.text, r.reportPath);
+  });
+  container.appendChild(pill);
+}
+
 function openReportModal(title, text, reportPath) {
   document.getElementById('rmod-title').textContent = title + ' — Complete';
   const pathEl = document.getElementById('rmod-save-path');
@@ -2246,8 +2319,9 @@ function openReportModal(title, text, reportPath) {
   }
   document.getElementById('rmod-pre').textContent = text;
   document.getElementById('report-modal-backdrop').classList.remove('hidden');
-  // Keep in session memory so user can re-open (future feature hook)
+  // Keep in session memory and surface as a persistent pill button
   sessionReports[title] = { text, reportPath, ts: Date.now() };
+  _addOrUpdateSummaryPill(title);
 }
 
 function closeReportModal() {
@@ -2740,7 +2814,7 @@ function runProcess() {
   if (document.getElementById('process-no-bpm').checked)  p.set('no_bpm', '1');
   if (document.getElementById('process-no-key').checked)  p.set('no_key', '1');
   if (document.getElementById('process-force').checked)   p.set('force',  '1');
-  p.set('no_normalize', '1');  // Step 2 is tags-only; normalize is Step 7
+  p.set('no_normalize', '1');  // Step 2 is tags-only; normalize is Step 5
   const el = document.getElementById('process-result');
   if (el) el.classList.add('hidden');
   runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection', null, true, false, 'process-result');
