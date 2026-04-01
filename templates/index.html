@@ -1645,6 +1645,16 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
         <label>Save Report To (optional)</label>
         <input type="text" id="dupes-output" placeholder="~/Desktop/duplicates.csv  (default: ~/rekordbox-toolkit/duplicate_report.csv)">
       </div>
+      <div class="field">
+        <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— fpcalc processes to run simultaneously (your Mac has 8 cores)</span></label>
+        <select id="dupes-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+          <option value="1">1 — sequential (safe, slowest)</option>
+          <option value="2">2 workers</option>
+          <option value="4" selected>4 workers (recommended)</option>
+          <option value="6">6 workers (fast)</option>
+          <option value="8">8 workers (max — all cores)</option>
+        </select>
+      </div>
       <div class="btn-row">
         <button class="btn btn-neon" onclick="runDuplicates()">Find Duplicates</button>
       </div>
@@ -2691,6 +2701,8 @@ function runDuplicates() {
   const p = new URLSearchParams({ path });
   const out = document.getElementById('dupes-output').value.trim();
   if (out) p.set('output', out);
+  const workers = document.getElementById('dupes-workers')?.value || '4';
+  if (parseInt(workers) > 1) p.set('workers', workers);
   runCommand(`/api/run/duplicates?${p}`, 'Find Duplicates — Acoustic Fingerprinting', null, true, true);
 }
 
