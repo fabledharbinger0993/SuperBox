@@ -455,6 +455,27 @@ body.log-open #scan-bar { bottom: var(--log-h); }
 .log-exit-ok    { color: var(--safe);   margin-top: 8px; font-weight: 600; }
 .log-exit-fail  { color: var(--danger); margin-top: 8px; font-weight: 600; }
 
+/* ── Report cards ──────────────────────────────────────────────────────── */
+.report-card {
+  margin: 18px 22px 4px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+}
+.report-card.hidden { display: none; }
+.report-card-label {
+  font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 10px; font-family: var(--sans);
+  display: flex; align-items: center; gap: 6px;
+}
+.report-card-label::before { content: '▸'; }
+.report-card pre {
+  font-family: var(--mono); font-size: .8rem; line-height: 1.7;
+  color: var(--text); white-space: pre-wrap; word-break: break-all; margin: 0;
+}
+
 /* ── Misc ──────────────────────────────────────────────────────────────── */
 .divider-label {
   display: flex; align-items: center; gap: 12px;
@@ -1328,6 +1349,10 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
         <button class="btn btn-neon" onclick="runAudit()">Execute Audit</button>
       </div>
     </div>
+    <div id="audit-result" class="report-card hidden">
+      <div class="report-card-label">Audit Result</div>
+      <pre id="audit-result-pre"></pre>
+    </div>
   </div>
 
   <!-- ── Step 2: Process (tags only) ────────────────────────────────────── -->
@@ -1390,6 +1415,10 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
       <div class="btn-row">
         <button class="btn btn-neon" onclick="runProcess()">Detect BPM &amp; Key</button>
       </div>
+    </div>
+    <div id="process-result" class="report-card hidden">
+      <div class="report-card-label">Tag Tracks Result</div>
+      <pre id="process-result-pre"></pre>
     </div>
   </div>
 
@@ -2535,7 +2564,7 @@ function toggleLog() {
 }
 
 /* ── SSE runner ────────────────────────────────────────────────────────────── */
-function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false) {
+function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false, reportTarget = null) {
   if (isRunning) return;
   initLog(logTitle);
   showScanBar(logTitle);
@@ -2545,12 +2574,31 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
   appendLog(`▸ ${logTitle}`, 'dim');
   appendLog('', 'dim');
 
+  // Report block capture — detect ═══ ... ═══ blocks in the CLI output
+  let reportBuffer = [];
+  let inReport = false;
+
   activeSource = new EventSource(url);
 
   activeSource.onmessage = (e) => {
     const data = JSON.parse(e.data);
     if (data.line !== undefined) {
       const line = data.line;
+
+      // Detect report block boundaries (═══ TITLE ═══ opener / ═══...═══ closer)
+      if (/^═{3,}/.test(line)) {
+        if (!inReport) {
+          // Opening line — start capture
+          inReport = true;
+          reportBuffer = [line];
+        } else {
+          // Closing line — end capture
+          reportBuffer.push(line);
+          inReport = false;
+        }
+      } else if (inReport) {
+        reportBuffer.push(line);
+      }
       // Structured progress — update scan bar, don't echo to log
       if (line.startsWith('SUPERBOX_PROGRESS: ')) {
         if (useBar) {
@@ -2593,6 +2641,16 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
       } else {
         appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
       }
+      // Render captured report block into the step's report card
+      if (reportTarget && reportBuffer.length > 0) {
+        const card = document.getElementById(reportTarget);
+        const pre  = document.getElementById(reportTarget + '-pre');
+        if (card && pre) {
+          pre.textContent = reportBuffer.join('\n');
+          card.classList.remove('hidden');
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
       if (onDone) onDone(data.exit_code);
     }
   };
@@ -2629,13 +2687,17 @@ function setAllButtons(disabled) {
 function runAudit() {
   const root = document.getElementById('audit-root').value.trim();
   const params = root ? `?root=${encodeURIComponent(root)}` : '';
-  runCommand(`/api/run/audit${params}`, 'Audit — Library Health Check', null, true);
+  const el = document.getElementById('audit-result');
+  if (el) el.classList.add('hidden');
+  runCommand(`/api/run/audit${params}`, 'Audit — Library Health Check', null, true, false, 'audit-result');
 }
 
 function runAudit2() {
   const root = document.getElementById('audit2-root').value.trim();
   const params = root ? `?root=${encodeURIComponent(root)}` : '';
-  runCommand(`/api/run/audit${params}`, 'Audit — Confirmation Check', null, true);
+  const el = document.getElementById('audit-result');
+  if (el) el.classList.add('hidden');
+  runCommand(`/api/run/audit${params}`, 'Audit — Confirmation Check', null, true, false, 'audit-result');
 }
 
 function runProcess() {
@@ -2646,7 +2708,9 @@ function runProcess() {
   if (document.getElementById('process-no-key').checked)  p.set('no_key', '1');
   if (document.getElementById('process-force').checked)   p.set('force',  '1');
   p.set('no_normalize', '1');  // Step 2 is tags-only; normalize is Step 7
-  runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection', null, true);
+  const el = document.getElementById('process-result');
+  if (el) el.classList.add('hidden');
+  runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection', null, true, false, 'process-result');
 }
 
 function runNormalize() {
