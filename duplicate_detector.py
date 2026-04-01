@@ -40,6 +40,7 @@ import shutil
 import subprocess
 import time
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from mutagen import File as MutagenFile
@@ -62,6 +63,36 @@ _DURATION_TOLERANCE_SEC: float = 3.0  # ±3 seconds
 # fp_offset and fp_length so mismatches are detected automatically).
 _FP_OFFSET_SEC: int = 45   # seconds to skip at the start
 _FP_LENGTH_SEC: int = 45   # seconds to analyse after the offset
+
+# Filename similarity gate.
+# After fingerprints match, at least one pair in the group must have filenames
+# this similar (0.0–1.0) or the group is rejected as a false positive.
+# Catches shared sample loops and common breakdowns that hash identically.
+# 0.4 = 40% character overlap after normalisation — loose enough for
+# "Track_PN.mp3" vs "Track (Extended).aiff", tight enough to reject
+# "Artist A - Song X.mp3" vs "Artist B - Song Y.mp3".
+_FILENAME_SIMILARITY_MIN: float = 0.4
+
+
+def _normalise_stem(path: Path) -> str:
+    """
+    Strip noise from a filename stem for similarity comparison.
+    Removes: leading track numbers, _PN/_MIK suffixes, parenthetical
+    version tags, extra whitespace. Lowercases everything.
+    """
+    s = path.stem.lower()
+    s = re.sub(r'_pn(_pn)*$', '', s)           # _PN, _PN_PN
+    s = re.sub(r'_mik$', '', s)                 # _MIK
+    s = re.sub(r'^\d{1,3}[\s.\-–]+', '', s)    # leading track numbers
+    s = re.sub(r'\s*[\(\[].*(remix|edit|mix|dub|version|extended|radio|inst).*[\)\]]', '', s)
+    s = re.sub(r'[-_]+', ' ', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+
+
+def _filename_similarity(a: Path, b: Path) -> float:
+    """Return 0.0–1.0 similarity between two track filenames after normalisation."""
+    return SequenceMatcher(None, _normalise_stem(a), _normalise_stem(b)).ratio()
 
 # Build an extended environment for subprocess calls so fpcalc is found
 # even when the server process has a minimal PATH (e.g. launched via Automator).
@@ -670,9 +701,26 @@ def scan_duplicates(
     )
 
     groups: list[DuplicateGroup] = []
+    fp_rejected = 0
 
     for fp, paths in fp_map.items():
         if len(paths) < 2:
+            continue
+
+        # Filename gate — reject groups where no pair has similar names.
+        # Filters false positives caused by shared sample loops / breakdowns
+        # that produce identical fingerprints for genuinely different tracks.
+        has_similar_pair = any(
+            _filename_similarity(paths[i], paths[j]) >= _FILENAME_SIMILARITY_MIN
+            for i in range(len(paths))
+            for j in range(i + 1, len(paths))
+        )
+        if not has_similar_pair:
+            fp_rejected += 1
+            log.debug(
+                "Rejected fingerprint group (name mismatch): %s",
+                [p.name for p in paths],
+            )
             continue
 
         ranked = sorted(paths, key=_rank_file)
