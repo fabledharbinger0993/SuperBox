@@ -180,7 +180,9 @@ def prune_files(
     emit("  Removing from RekordBox database…")
     for path in file_paths:
         try:
-            rows = db.get_content(FolderPath=path)
+            # Materialise the query (.all()) so we iterate over row objects,
+            # not a SQLAlchemy Query object (which is always truthy even when empty).
+            rows = list(db.get_content(FolderPath=path))
             if rows:
                 for row in rows:
                     db.session.delete(row)
@@ -192,6 +194,29 @@ def prune_files(
             msg = f"DB error for {Path(path).name}: {exc}"
             errors.append(msg)
             emit(f"    DB ✗  {msg}")
+
+    # Explicitly commit so changes persist regardless of whether
+    # Rekordbox6Database.close() auto-commits.
+    if db_removed > 0:
+        try:
+            db.session.commit()
+            emit(f"  ✓ {db_removed} database entries committed.")
+        except Exception as exc:
+            msg = f"DB commit failed — files will NOT be moved: {exc}"
+            errors.append(msg)
+            emit(f"  ✗ {msg}")
+            emit("")
+            emit("═══ PRUNE SUMMARY ═══")
+            emit("  Database commit error — operation aborted, no files moved.")
+            emit(f"  {msg}")
+            emit("═════════════════════")
+            return {
+                "db_removed":  0,
+                "files_moved": 0,
+                "skipped":     0,
+                "errors":      errors,
+                "trash_dir":   str(trash_dir),
+            }
 
     emit("")
 

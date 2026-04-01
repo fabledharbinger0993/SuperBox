@@ -25,6 +25,7 @@ mutagen, librosa, etc.
 import argparse
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 
 try:
@@ -33,6 +34,32 @@ except ImportError:
     from config import DJMT_DB, MUSIC_ROOT             # when run as a script
 
 log = logging.getLogger(__name__)
+
+
+# ─── Report file helper ───────────────────────────────────────────────────────
+
+def _write_report(subdir: str, filename: str, text: str) -> str | None:
+    """
+    Write a report text file to REPORTS_DIR/subdir/filename.
+    Returns the written path as a string, or None if REPORTS_DIR is unavailable
+    (drive not mounted, archive disabled, etc.).
+    Failures are logged as warnings — they never abort the command.
+    """
+    try:
+        try:
+            from SuperBox.config import REPORTS_DIR  # noqa: PLC0415
+        except ImportError:
+            from config import REPORTS_DIR           # noqa: PLC0415
+
+        out_dir = REPORTS_DIR / subdir
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / filename
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        return str(out_path)
+    except Exception as exc:
+        log.warning("Could not write report to %s/%s: %s", subdir, filename, exc)
+        return None
 
 
 # ─── Logging setup ────────────────────────────────────────────────────────────
@@ -62,7 +89,13 @@ def cmd_audit(args: argparse.Namespace) -> None:
     try:
         with read_db(DJMT_DB) as db:
             report = full_audit(db, root=root)
-        print(report.summary())
+        summary_text = report.summary()
+        print(summary_text)
+        # Write report to REPORTS_DIR/Audit/
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_path = _write_report("Audit", f"audit_{timestamp}.txt", summary_text)
+        if report_path:
+            print(f"SUPERBOX_REPORT_PATH: {report_path}", flush=True)
     except Exception:
         log.exception("Audit failed")
         sys.exit(1)
@@ -176,11 +209,22 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         log.error("PATH is not a directory: %s", root)
         sys.exit(1)
 
-    output = (
-        Path(args.output)
-        if args.output
-        else Path.home() / "rekordbox-toolkit" / "duplicate_report.csv"
-    )
+    if args.output:
+        output = Path(args.output)
+    else:
+        # Default: write into REPORTS_DIR/Duplicates/ if archive is configured,
+        # otherwise fall back to ~/rekordbox-toolkit/
+        try:
+            try:
+                from SuperBox.config import REPORTS_DIR  # noqa: PLC0415
+            except ImportError:
+                from config import REPORTS_DIR           # noqa: PLC0415
+            out_dir = REPORTS_DIR / "Duplicates"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output = out_dir / f"duplicate_report_{timestamp}.csv"
+        except Exception:
+            output = Path.home() / "rekordbox-toolkit" / "duplicate_report.csv"
 
     workers = max(1, args.workers)
     log.info("Scanning for duplicates under: %s (workers=%d)", root, workers)
@@ -199,6 +243,7 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         try:
             write_csv_report(groups, output)
             print(f"  Report written to      : {output}")
+            print(f"SUPERBOX_REPORT_PATH: {output}", flush=True)
         except Exception:
             log.exception("Failed to write CSV report")
             sys.exit(1)
@@ -265,13 +310,22 @@ def cmd_process(args: argparse.Namespace) -> None:
     skipped_bpm = sum(1 for r in results if r.skipped_bpm)
     skipped_key = sum(1 for r in results if r.skipped_key)
 
-    print("═══ PROCESS REPORT ═══")
-    print(f"  Files processed : {total}")
-    print(f"  BPM written     : {bpm_written}  (skipped existing: {skipped_bpm})")
-    print(f"  Key written     : {key_written}  (skipped existing: {skipped_key})")
-    print(f"  Normalised      : {normalised}")
-    print(f"  Errors          : {errored}")
-    print("══════════════════════")
+    report_lines = [
+        "═══ PROCESS REPORT ═══",
+        f"  Files processed : {total}",
+        f"  BPM written     : {bpm_written}  (skipped existing: {skipped_bpm})",
+        f"  Key written     : {key_written}  (skipped existing: {skipped_key})",
+        f"  Normalised      : {normalised}",
+        f"  Errors          : {errored}",
+        "══════════════════════",
+    ]
+    report_text = "\n".join(report_lines)
+    print(report_text)
+    # Write report to REPORTS_DIR/Tag Tracks/
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = _write_report("Tag Tracks", f"tag_tracks_{timestamp}.txt", report_text)
+    if report_path:
+        print(f"SUPERBOX_REPORT_PATH: {report_path}", flush=True)
 
     if errored > 0:
         log.warning("%d files had errors — check log above", errored)

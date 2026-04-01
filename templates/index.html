@@ -1097,6 +1097,54 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
 .welcome-got-it:hover { opacity: .88; }
 .welcome-got-it:disabled { opacity: .4; cursor: not-allowed; }
 
+/* ── Step completion report modal ─────────────────────────────────────── */
+#report-modal-backdrop {
+  position: fixed; inset: 0; z-index: 11000;
+  background: rgba(0,0,0,.78);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+#report-modal-backdrop.hidden { display: none; }
+#report-modal {
+  background: var(--surface);
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  width: 100%; max-width: 700px;
+  max-height: 82vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0,0,0,.9);
+  display: flex; flex-direction: column;
+}
+.rmod-header {
+  padding: 24px 28px 18px;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0;
+  background: var(--surface);
+  z-index: 1;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+}
+.rmod-header-text h2 {
+  font-size: 1.1rem; font-weight: 700; color: var(--text); margin: 0 0 6px;
+}
+.rmod-save-path {
+  font-family: var(--mono); font-size: .73rem; color: var(--accent);
+  margin: 0; word-break: break-all; line-height: 1.5;
+}
+.rmod-body {
+  padding: 22px 28px 16px; flex: 1;
+}
+.rmod-body pre {
+  font-family: var(--mono); font-size: .8rem; line-height: 1.8;
+  color: var(--text); white-space: pre-wrap; word-break: break-all; margin: 0;
+}
+.rmod-footer {
+  padding: 14px 28px 24px;
+  display: flex; justify-content: flex-end;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 12px;
+}
+
 /* hover panel */
 #owl-hover-panel {
   position: fixed;
@@ -1803,44 +1851,21 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
     </div>
   </div>
 
-  <!-- Step 2 — top-left. "Exact file list." Proceed button top-right of footer. -->
+  <!-- Step 2 — top-left. File list + execute. -->
   <div class="confirm-panel" id="confirm-step2">
     <div class="confirm-panel-head">
       <div class="confirm-step-num">2</div>
-      <div class="confirm-panel-title">Review Files to Remove</div>
+      <div class="confirm-panel-title">Review &amp; Execute</div>
       <button class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
     </div>
     <div class="confirm-file-list" id="c2-file-list"></div>
     <div class="confirm-panel-body" style="padding-top:10px;padding-bottom:6px">
-      <p class="confirm-detail">These files will be moved to Trash. Their database entries will be removed. Scroll through and confirm this is the right list.</p>
+      <p class="confirm-detail">These files will be moved to Trash. Their database entries will be removed. A timestamped backup of <code>master.db</code> is created automatically. RekordBox must be closed.</p>
     </div>
     <div class="confirm-panel-footer">
       <button class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
       <span style="flex:1"></span>
-      <button class="btn btn-prune-danger" onclick="pruneStep3()">This is correct — final step →</button>
-    </div>
-  </div>
-
-  <!-- Step 3 — center-top. "Execute." Proceed button bottom-left. -->
-  <div class="confirm-panel" id="confirm-step3">
-    <div class="confirm-panel-head">
-      <div class="confirm-step-num">3</div>
-      <div class="confirm-panel-title">Final Confirmation — Execute Prune</div>
-      <button class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
-    </div>
-    <div class="confirm-panel-body">
-      <p>This is the last step. Clicking <strong>Execute</strong> will:</p>
-      <ul style="margin:8px 0 8px 16px;font-size:.82rem">
-        <li>Back up <code>master.db</code> with a timestamp</li>
-        <li>Remove <strong id="c3-count">—</strong> tracks from the RekordBox database</li>
-        <li>Move those files to a labeled recovery folder in Trash</li>
-      </ul>
-      <p class="confirm-detail">RekordBox must be closed. If it's open, the operation will be blocked automatically.</p>
-    </div>
-    <div class="confirm-panel-footer">
       <button class="btn btn-prune-danger" id="btn-execute-prune" onclick="executePrune()">Execute — Move to Trash</button>
-      <span style="flex:1"></span>
-      <button class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
     </div>
     <div class="rb-block-msg" id="prune-final-rb-block" style="margin:0 14px 10px">
       <span>⚠</span> RekordBox is open. Close it to proceed.
@@ -1960,6 +1985,25 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
   </div>
 
 </main>
+
+<!-- ══ Step completion report modal ════════════════════════════════════════ -->
+<div id="report-modal-backdrop" class="hidden">
+  <div id="report-modal">
+    <div class="rmod-header">
+      <div class="rmod-header-text">
+        <h2 id="rmod-title">Step Complete</h2>
+        <p class="rmod-save-path" id="rmod-save-path"></p>
+      </div>
+      <button class="welcome-close" onclick="closeReportModal()" title="Close">✕</button>
+    </div>
+    <div class="rmod-body">
+      <pre id="rmod-pre"></pre>
+    </div>
+    <div class="rmod-footer">
+      <button class="welcome-got-it" onclick="closeReportModal()">✓ Got it</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ Footer ════════════════════════════════════════════════════════════════ -->
 <footer style="
@@ -2235,6 +2279,33 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
 let activeSource = null;
 let isRunning    = false;
 let rbRunning    = false;
+
+/* ── Step completion report modal ─────────────────────────────────────────── */
+// Session-only storage — cleared when the page reloads / server stops.
+const sessionReports = {};
+
+function openReportModal(title, text, reportPath) {
+  document.getElementById('rmod-title').textContent = title + ' — Complete';
+  const pathEl = document.getElementById('rmod-save-path');
+  if (reportPath) {
+    pathEl.textContent = '▸ Report saved to:  ' + reportPath;
+    pathEl.style.display = '';
+  } else {
+    // No saved file — just note it's session-only
+    pathEl.textContent = '▸ Session summary only — no file saved for this step.';
+    pathEl.style.display = '';
+  }
+  document.getElementById('rmod-pre').textContent = text;
+  document.getElementById('report-modal-backdrop').classList.remove('hidden');
+  // Keep in session memory so user can re-open (future feature hook)
+  sessionReports[title] = { text, reportPath, ts: Date.now() };
+}
+
+function closeReportModal() {
+  document.getElementById('report-modal-backdrop').classList.add('hidden');
+}
+
+// Escape key handled in the global keydown listener below
 
 /* ── Status polling ────────────────────────────────────────────────────────── */
 /* ── Settings modal ────────────────────────────────────────────────────────── */
@@ -2577,6 +2648,7 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false,
   // Report block capture — detect ═══ ... ═══ blocks in the CLI output
   let reportBuffer = [];
   let inReport = false;
+  let capturedReportPath = null;   // set by SUPERBOX_REPORT_PATH: line
 
   activeSource = new EventSource(url);
 
@@ -2598,6 +2670,12 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false,
         }
       } else if (inReport) {
         reportBuffer.push(line);
+      }
+
+      // Machine-readable report path — capture silently, don't echo to log
+      if (line.startsWith('SUPERBOX_REPORT_PATH: ')) {
+        capturedReportPath = line.slice(22).trim();
+        return;
       }
       // Structured progress — update scan bar, don't echo to log
       if (line.startsWith('SUPERBOX_PROGRESS: ')) {
@@ -2650,7 +2728,7 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false,
       } else {
         appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
       }
-      // Render captured report block into the step's report card
+      // Render captured report block into the step's inline report card
       if (reportTarget && reportBuffer.length > 0) {
         const card = document.getElementById(reportTarget);
         const pre  = document.getElementById(reportTarget + '-pre');
@@ -2659,6 +2737,10 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false,
           card.classList.remove('hidden');
           card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
+      }
+      // Always show the report modal on success when there's a report block
+      if (data.exit_code === 0 && reportBuffer.length > 0) {
+        openReportModal(logTitle, reportBuffer.join('\n'), capturedReportPath);
       }
       if (onDone) onDone(data.exit_code);
     }
@@ -2978,20 +3060,13 @@ function pruneStep2() {
     div.textContent = p;
     list.appendChild(div);
   });
+  // Show or hide the RB warning based on current status
+  document.getElementById('prune-final-rb-block').classList.toggle('visible', rbRunning);
   _openConfirm('confirm-step2');
 }
 
-function pruneStep3() {
-  _closeConfirm('confirm-step2');
-  const n = pruneSelected.size;
-  document.getElementById('c3-count').textContent =
-    `${n} file${n > 1 ? 's' : ''}`;
-  document.getElementById('prune-final-rb-block').classList.toggle('visible', rbRunning);
-  _openConfirm('confirm-step3');
-}
-
 async function executePrune() {
-  // Final RB check — if open, surface the warning and block
+  // Live RB check — surface the warning and block if open
   await refreshStatus();
   if (rbRunning) {
     document.getElementById('prune-final-rb-block').classList.add('visible');
@@ -3002,7 +3077,7 @@ async function executePrune() {
 
   const paths = [...pruneSelected];
   const url   = '/api/run/prune?paths=' + encodeURIComponent(JSON.stringify(paths));
-  runCommand(url, `Pruning ${paths.length} duplicate${paths.length > 1 ? 's' : ''} — moving to Trash`, () => {
+  runCommand(url, `Prune — ${paths.length} duplicate${paths.length > 1 ? 's' : ''} moved to Trash`, () => {
     // Clear state after successful prune so the UI doesn't show stale data
     pruneSelected.clear();
     _updatePruneSummary();
@@ -3010,7 +3085,7 @@ async function executePrune() {
 }
 
 function cancelPrune() {
-  ['confirm-step1','confirm-step2','confirm-step3'].forEach(_closeConfirm);
+  ['confirm-step1','confirm-step2'].forEach(_closeConfirm);
   document.getElementById('confirm-backdrop').classList.remove('open');
 }
 
@@ -3295,9 +3370,15 @@ function closeCard(id) {
 document.getElementById('settings-backdrop').addEventListener('click', function(e) {
   if (e.target === this) closeSettings();
 });
+document.getElementById('report-modal-backdrop').addEventListener('click', function(e) {
+  if (e.target === this) closeReportModal();
+});
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeSettings();
+  if (e.key === 'Escape') {
+    closeSettings();
+    closeReportModal();
+  }
 });
 
 /* patch openLog / closeLog to shift owl button above the log panel */
