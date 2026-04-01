@@ -99,6 +99,11 @@ def _backup_db(db_path: Path) -> Path:
 
     shutil.copy2(db_path, backup_path)
     log.info("Backup created: %s", backup_path)
+    try:
+        from icon_utils import set_file_icon    # noqa: PLC0415
+        set_file_icon(backup_path)
+    except Exception:
+        pass
     return backup_path
 
 

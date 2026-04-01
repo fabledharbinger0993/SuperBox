@@ -95,12 +95,21 @@ def ensure_archive_structure() -> None:
     Create the full SuperBox Archive folder tree on the DJ drive if it doesn't
     exist yet. Safe to call on every startup — uses exist_ok=True throughout.
     Skips silently if the drive isn't mounted or if archive is disabled.
+    Applies the branded green-folder Finder icon to every directory created.
     """
     if not ARCHIVE_ENABLED:
         return
     try:
+        from icon_utils import set_folder_icon  # noqa: PLC0415
+    except Exception:
+        def set_folder_icon(_p):                # noqa: ANN001
+            pass
+    try:
         for path in [SAVEPOINTS_DIR, QUARANTINE_DIR, REPORTS_DIR, *LOG_DIRS.values()]:
             path.mkdir(parents=True, exist_ok=True)
+            set_folder_icon(path)
+        # Also brand the Archive root itself (created via parents=True above).
+        set_folder_icon(ARCHIVE_ROOT)
     except OSError:
         pass
 

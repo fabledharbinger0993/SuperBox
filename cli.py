@@ -56,6 +56,11 @@ def _write_report(subdir: str, filename: str, text: str) -> str | None:
         out_path = out_dir / filename
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(text)
+        try:
+            from icon_utils import set_file_icon    # noqa: PLC0415
+            set_file_icon(out_path)
+        except Exception:
+            pass
         return str(out_path)
     except Exception as exc:
         log.warning("Could not write report to %s/%s: %s", subdir, filename, exc)
