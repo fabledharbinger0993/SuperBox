@@ -73,6 +73,32 @@ _FP_LENGTH_SEC: int = 45   # seconds to analyse after the offset
 # "Artist A - Song X.mp3" vs "Artist B - Song Y.mp3".
 _FILENAME_SIMILARITY_MIN: float = 0.4
 
+# ─── Version-tag constants ────────────────────────────────────────────────────
+#
+# After the acoustic fingerprint gate passes, a fingerprint group may still
+# contain different *releases* of the same recording — e.g. the original and a
+# dub mix share enough audio to match. These are not duplicate copies; they are
+# distinct products that should be kept. The version-tag splitter separates
+# them by extracting a normalised version phrase from each filename and
+# bucketing: files with the same tag (or both with no tag) remain as
+# duplicates; files with *different* tags become separate groups.
+
+# Core keywords that mark a file as a specific version/mix.
+# Matched case-insensitively within the extracted phrase.
+_VERSION_CORE_KW = re.compile(
+    r'\b(remix|rmx|dub|mix|instrumental|instru|edit|version|vip|flip|'
+    r'rework|bootleg|mashup|remaster(?:ed)?|reprise|revision|reconstruction)\b',
+    re.IGNORECASE,
+)
+
+# Version phrases that mean "original release" — treated the same as no tag so
+# a bare "Track.aiff" and "Track - Original Mix.aiff" are still flagged as
+# duplicates of each other (they almost always are).
+_ORIGINAL_TAG_NORM: frozenset[str] = frozenset({
+    'original', 'original mix', 'original version', 'original edit',
+    'original club mix', 'main mix', 'main', 'album version', 'album mix',
+})
+
 
 def _normalise_stem(path: Path) -> str:
     """
@@ -93,6 +119,114 @@ def _normalise_stem(path: Path) -> str:
 def _filename_similarity(a: Path, b: Path) -> float:
     """Return 0.0–1.0 similarity between two track filenames after normalisation."""
     return SequenceMatcher(None, _normalise_stem(a), _normalise_stem(b)).ratio()
+
+
+def _extract_version_tag(path: Path) -> str | None:
+    """
+    Extract and normalise a version tag from a filename stem.
+
+    Scans the stem for a version phrase (remix, dub, mix, instrumental,
+    edit, etc.) at the tail, inside parentheses/brackets, or after a dash
+    separator — in that order of preference. Returns a lowercase,
+    whitespace-normalised string, or None when:
+      • no version keyword is found, or
+      • the phrase is an "original" variant ("Original Mix", etc.), which is
+        treated identically to having no version tag at all.
+
+    Examples
+    --------
+    "Track - Club Mix.aiff"             → "club mix"
+    "Artist - Track [Danny Dub].mp3"    → "danny dub"
+    "Track (Deep Mix).aiff"             → "deep mix"
+    "01 - Track Remix.mp3"              → "remix"
+    "Track Instrumental.aiff"           → "instrumental"
+    "Track - Original Mix.aiff"         → None   (original = base version)
+    "Artist - Track Name.aiff"          → None   (no version)
+    """
+    stem = path.stem
+    # Strip leading track numbers and PN/MIK suffixes so they don't
+    # accidentally land inside the version-phrase window.
+    stem = re.sub(r'^(?:track\s+)?\d{1,3}[\s.\-\u2013\u2014]+', '', stem, flags=re.IGNORECASE)
+    stem = re.sub(r'_(?:pn|mik)(?:_pn)*$', '', stem, flags=re.IGNORECASE)
+
+    candidate: str | None = None
+
+    # ① Last parenthetical or bracketed suffix — most explicit form.
+    m = re.search(r'[\(\[]\s*([^()\[\]]{2,60}?)\s*[\)\]]\s*$', stem)
+    if m and _VERSION_CORE_KW.search(m.group(1)):
+        candidate = m.group(1)
+
+    # ② Dash-separated suffix (no bracketed version found).
+    if candidate is None:
+        m = re.search(r'[-\u2013\u2014]\s*(.{2,60}?)\s*$', stem)
+        if m and _VERSION_CORE_KW.search(m.group(1)):
+            candidate = m.group(1)
+
+    # ③ Bare version keyword sitting at the very end of the stem.
+    if candidate is None:
+        m = re.search(
+            r'(?:^|\s)((?:[\w]+\s+){0,3}'
+            r'(?:remix|rmx|dub|mix|instrumental|instru|edit|vip|flip|rework|bootleg))'
+            r'\s*$',
+            stem,
+            re.IGNORECASE,
+        )
+        if m:
+            candidate = m.group(1)
+
+    if candidate is None:
+        return None
+
+    tag = re.sub(r'\s+', ' ', candidate.lower()).strip()
+
+    # "original mix" and equivalents → same tier as no version tag
+    if tag in _ORIGINAL_TAG_NORM:
+        return None
+
+    return tag
+
+
+def _split_group_by_version(paths: list[Path]) -> list[list[Path]]:
+    """
+    Split a fingerprint-matched group into sub-groups by version tag.
+
+    Files with the same version tag (or both with None) stay in the same
+    sub-group — they are duplicate copies of the same release. Files with
+    *different* tags are separated — they are different releases of the same
+    recording (e.g. "Club Mix" vs "Dub Mix") and should not be flagged as
+    duplicates of each other.
+
+    Sub-groups with fewer than 2 files are omitted (a single file has no
+    duplicate within its version).
+
+    Returns the original list unchanged (wrapped in a list) when no
+    version differences are detected, keeping the common-case overhead to
+    one set-of-tags comparison.
+    """
+    from collections import defaultdict  # noqa: PLC0415
+
+    tags = {p: _extract_version_tag(p) for p in paths}
+    unique_tags = set(tags.values())
+
+    if len(unique_tags) == 1:
+        # All files share the same version tag (or all None) — nothing to split.
+        return [paths]
+
+    buckets: dict[str | None, list[Path]] = defaultdict(list)
+    for path, tag in tags.items():
+        buckets[tag].append(path)
+
+    singletons = [p for grp in buckets.values() if len(grp) == 1 for p in grp]
+    if singletons:
+        log.debug(
+            "Version split: %d file(s) have no same-version duplicate and will be "
+            "excluded from all groups: %s",
+            len(singletons),
+            [p.name for p in singletons],
+        )
+
+    return [grp for grp in buckets.values() if len(grp) >= 2]
+
 
 # Build an extended environment for subprocess calls so fpcalc is found
 # even when the server process has a minimal PATH (e.g. launched via Automator).
@@ -701,7 +835,8 @@ def scan_duplicates(
     )
 
     groups: list[DuplicateGroup] = []
-    fp_rejected = 0
+    fp_rejected   = 0
+    ver_split_cnt = 0
 
     for fp, paths in fp_map.items():
         if len(paths) < 2:
@@ -723,25 +858,45 @@ def scan_duplicates(
             )
             continue
 
-        ranked = sorted(paths, key=_rank_file)
-        keep = ranked[0]
-        remove = ranked[1:]
-        ranks = {str(p): _RANK_LABELS[_rank_file(p)] for p in paths}
+        # Version-tag split — a fingerprint match can contain different
+        # *releases* of the same recording (e.g. "Club Mix" vs "Dub Mix"
+        # or "[Artist] Dub" vs another artist's dub). These share audio but
+        # are distinct products and should NOT be marked as duplicates.
+        # Split the group by version tag; files with the same tag (or both
+        # with no tag) remain as duplicates. Each sub-group is ranked and
+        # reported independently.
+        sub_groups = _split_group_by_version(paths)
+        if len(sub_groups) != 1 or len(sub_groups[0]) != len(paths):
+            ver_split_cnt += 1
+            log.debug(
+                "Version split (%d file(s) → %d sub-group(s)): %s",
+                len(paths),
+                len(sub_groups),
+                [p.name for p in paths],
+            )
 
-        groups.append(DuplicateGroup(
-            fingerprint=fp,
-            files=paths,
-            recommended_keep=keep,
-            recommended_remove=remove,
-            ranks=ranks,
-        ))
+        for sub_paths in sub_groups:
+            ranked = sorted(sub_paths, key=_rank_file)
+            keep   = ranked[0]
+            remove = ranked[1:]
+            ranks  = {str(p): _RANK_LABELS[_rank_file(p)] for p in sub_paths}
+            groups.append(DuplicateGroup(
+                fingerprint=fp,
+                files=sub_paths,
+                recommended_keep=keep,
+                recommended_remove=remove,
+                ranks=ranks,
+            ))
 
     groups.sort(key=lambda g: len(g.files), reverse=True)
 
     log.info(
-        "Duplicate scan complete — %d groups, %d duplicate files",
+        "Duplicate scan complete — %d groups, %d duplicate files "
+        "(%d fingerprint groups rejected by name gate, %d split by version tag)",
         len(groups),
         sum(len(g.recommended_remove) for g in groups),
+        fp_rejected,
+        ver_split_cnt,
     )
     return groups
 
