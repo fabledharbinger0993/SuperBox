@@ -44,6 +44,9 @@ def _setup_logging(verbose: bool) -> None:
         format="%(asctime)s %(levelname)-8s %(name)s — %(message)s",
         datefmt="%H:%M:%S",
     )
+    # pyrekordbox has its own internal handler that also prints warnings —
+    # suppress it to ERROR so playlist-not-found noise doesn't appear twice.
+    logging.getLogger("pyrekordbox").setLevel(logging.ERROR)
 
 
 # ─── Command handlers ─────────────────────────────────────────────────────────
