@@ -1805,18 +1805,23 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
 </div>
 
 <!-- ══ Settings modal ═══════════════════════════════════════════════════════ -->
-<div id="settings-backdrop">
+<!-- Add this whole block where you want the settings modal to appear -->
+<!-- ══ Settings modal ═══════════════════════════════════════════════════════ -->
+<div id="settings-backdrop" class="hidden">
   <div id="settings-modal">
+    
+    <!-- Header -->
     <div class="settings-header">
       <h2>⚙ Archive &amp; Log Settings</h2>
       <button class="settings-close" onclick="closeSettings()">✕</button>
     </div>
-    <div class="settings-body">
 
+    <!-- Body -->
+    <div class="settings-body">
       <div class="settings-section">
         <h3>Log &amp; Archive Destination</h3>
         <div class="settings-radio-group">
-
+          
           <label class="settings-radio">
             <input type="radio" name="archive-mode" value="auto">
             <div>
@@ -1827,7 +1832,7 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
 
           <label class="settings-radio">
             <input type="radio" name="archive-mode" value="custom">
-            <div style="width:100%">
+            <div>
               <div class="settings-radio-label">🟡 Custom — point and shoot</div>
               <div class="settings-radio-desc">Direct all logs, savepoints, quarantine files, and reports to any folder you choose. Useful if you want everything on a separate archive drive.</div>
               <div id="settings-custom-path">
@@ -1848,18 +1853,28 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
 
         <div class="settings-warnings" id="settings-warnings">
           <h4>Features affected when logging is disabled</h4>
-          <div class="settings-warn-item"><strong>Tag Tracks → Duplicate Finder:</strong> Tag Tracks normally writes a scan index so the Duplicate Finder can skip files that clearly aren't duplicates. Without it, every file gets fingerprinted every run. On a 10,000+ track library this is the difference between minutes and hours.</div>
-          <div class="settings-warn-item"><strong>Rollback unavailable:</strong> Import, Normalize, Relocate, and Prune make changes that cannot be undone without Savepoints. There is no recovery if something goes wrong.</div>
-          <div class="settings-warn-item"><strong>Triage limited:</strong> Problem files from scans can be Revealed in Finder or sent to Trash, but cannot be moved to Quarantine — that folder won't exist.</div>
-          <div class="settings-warn-item"><strong>Duplicate reports:</strong> CSV reports require a manual destination path each run — there is no default location to save them to.</div>
+          <div class="settings-warn-item">
+            <strong>Tag Tracks → Duplicate Finder:</strong> Tag Tracks normally writes a scan index so the Duplicate Finder can skip files that clearly aren't duplicates. Without it, every file gets fingerprinted every run. On a 10,000+ track library this is the difference between minutes and hours.
+          </div>
+          <div class="settings-warn-item">
+            <strong>Rollback unavailable:</strong> Import, Normalize, Relocate, and Prune make changes that cannot be undone without Savepoints. There is no recovery if something goes wrong.
+          </div>
+          <div class="settings-warn-item">
+            <strong>Triage limited:</strong> Problem files from scans can be Revealed in Finder or sent to Trash, but cannot be moved to Quarantine — that folder won't exist.
+          </div>
+          <div class="settings-warn-item">
+            <strong>Duplicate reports:</strong> CSV reports require a manual destination path each run — there is no default location to save them to.
+          </div>
         </div>
       </div>
-
     </div>
+
+    <!-- Footer -->
     <div class="settings-footer">
       <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
       <button class="settings-save" onclick="saveSettings()">Save &amp; Restart</button>
     </div>
+
   </div>
 </div>
 
