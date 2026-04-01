@@ -34,6 +34,7 @@ import concurrent.futures
 import csv
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -62,11 +63,15 @@ _DURATION_TOLERANCE_SEC: float = 3.0  # ±3 seconds
 _FP_OFFSET_SEC: int = 45   # seconds to skip at the start
 _FP_LENGTH_SEC: int = 5    # seconds to analyse after the offset
 
-# Resolve fpcalc binary once at import time.
-# shutil.which() checks PATH; fallbacks cover common Homebrew locations
-# that may not be in the server process's PATH (Intel: /usr/local, Apple Silicon: /opt/homebrew).
+# Build an extended environment for subprocess calls so fpcalc is found
+# even when the server process has a minimal PATH (e.g. launched via Automator).
+_FPCALC_ENV = os.environ.copy()
+_FPCALC_ENV["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + _FPCALC_ENV.get("PATH", "")
+
+
 def _find_fpcalc() -> str:
-    found = shutil.which("fpcalc")
+    """Locate fpcalc binary, checking PATH (extended) then common Homebrew paths."""
+    found = shutil.which("fpcalc", path=_FPCALC_ENV["PATH"])
     if found:
         return found
     for candidate in ["/opt/homebrew/bin/fpcalc", "/usr/local/bin/fpcalc"]:
@@ -74,9 +79,36 @@ def _find_fpcalc() -> str:
             return candidate
     return "fpcalc"   # will produce a clear FileNotFoundError at call time
 
+
+def _check_fpcalc_offset_support(fpcalc: str) -> bool:
+    """
+    Return True if this fpcalc build supports the -offset flag.
+    -offset was added in chromaprint 1.5.0 (2020). Older Homebrew installs
+    may not have it. Upgrade with: brew upgrade chromaprint
+    """
+    try:
+        # Pass a nonexistent file — we only care whether fpcalc rejects
+        # -offset before it even tries to open the file.
+        result = subprocess.run(
+            [fpcalc, "-offset", "0", "-length", "1", "__superbox_offset_check__"],
+            capture_output=True, text=True, timeout=5, env=_FPCALC_ENV,
+        )
+        return "Unknown option -offset" not in result.stderr
+    except Exception:
+        return False
+
+
 _FPCALC = _find_fpcalc()
+_FPCALC_OFFSET_OK = _check_fpcalc_offset_support(_FPCALC)
+
 log_startup = logging.getLogger(__name__)
 log_startup.debug("fpcalc resolved to: %s", _FPCALC)
+if not _FPCALC_OFFSET_OK:
+    log_startup.warning(
+        "fpcalc does not support -offset (chromaprint < 1.5.0) — "
+        "fingerprinting from the start of each file. "
+        "Upgrade for intro-skipping: brew upgrade chromaprint"
+    )
 
 
 # ─── Scan index pre-filter ────────────────────────────────────────────────────
@@ -354,16 +386,16 @@ def fingerprint_file(
         Fingerprint string, or None on any failure.
     """
     try:
+        cmd = [_FPCALC, "-json", "-length", str(length)]
+        if offset > 0 and _FPCALC_OFFSET_OK:
+            cmd += ["-offset", str(offset)]
+        cmd.append(str(path))
         result = subprocess.run(
-            [
-                _FPCALC, "-json",
-                "-offset", str(offset),
-                "-length", str(length),
-                str(path),
-            ],
+            cmd,
             capture_output=True,
             text=True,
             timeout=90,
+            env=_FPCALC_ENV,
         )
         if result.returncode != 0:
             log.error("fpcalc error for %s: %s", path.name, result.stderr.strip())
