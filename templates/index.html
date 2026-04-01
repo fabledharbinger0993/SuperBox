@@ -1309,6 +1309,16 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
       </details>
     </div>
 
+    <div id="dead-roots-banner" style="display:none; margin: 12px 0; padding: 12px 16px;
+         background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3);
+         border-radius: 8px; font-size: .84rem; color: var(--text);">
+      <strong style="color:var(--danger);">⚠ Disconnected drive detected</strong>
+      <div id="dead-roots-detail" style="margin-top:6px; color:var(--text-muted); line-height:1.6;"></div>
+      <div style="margin-top:8px; font-size:.78rem; color:var(--text-dim);">
+        The Relocate step has been pre-filled with these paths. Run Audit first, then go to Relocate to fix them.
+      </div>
+    </div>
+
     <div class="card-form">
       <div class="field">
         <label>Music Root (optional — for orphan scan)</label>
@@ -2378,6 +2388,39 @@ async function prefillDefaults() {
   });
 }
 prefillDefaults();
+
+/* ── Dead root detection ────────────────────────────────────────────────────── */
+async function checkDeadRoots() {
+  try {
+    const res = await fetch('/api/audit/path-roots');
+    const data = await res.json();
+    if (data.has_dead_roots) {
+      showDeadRootsBanner(data.dead_roots);
+      prefillRelocate(data.dead_roots);
+    }
+  } catch(e) { /* silent — non-critical */ }
+}
+
+function showDeadRootsBanner(deadRoots) {
+  const banner = document.getElementById('dead-roots-banner');
+  const detail = document.getElementById('dead-roots-detail');
+  if (!banner || !detail) return;
+  const lines = Object.entries(deadRoots)
+    .map(([root, count]) => `<code style="color:var(--accent)">${root}</code> — ${count.toLocaleString()} tracks unreachable`);
+  detail.innerHTML = lines.join('<br>');
+  banner.style.display = 'block';
+}
+
+function prefillRelocate(deadRoots) {
+  // Pre-fill the old path field with the first (largest) dead root
+  const sorted = Object.entries(deadRoots).sort((a,b) => b[1]-a[1]);
+  if (!sorted.length) return;
+  const [oldRoot] = sorted[0];
+  const oldInput = document.getElementById('relocate-old');
+  if (oldInput && !oldInput.value) oldInput.value = oldRoot;
+}
+
+checkDeadRoots();
 
 /* ── Workflow rail scroll ───────────────────────────────────────────────────── */
 document.querySelectorAll('.step-tab').forEach(btn => {

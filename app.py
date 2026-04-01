@@ -474,6 +474,28 @@ def api_settings():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route("/api/audit/path-roots")
+def api_audit_path_roots():
+    """
+    Quick read-only scan of all track paths in the DB.
+    Returns live and dead roots with track counts.
+    Used by the UI to pre-fill the Relocate form.
+    """
+    try:
+        from audit import find_dead_roots          # noqa: PLC0415
+        from db_connection import read_db          # noqa: PLC0415
+        from config import DJMT_DB as _DB          # noqa: PLC0415
+        with read_db(_DB) as db:
+            report = find_dead_roots(db)
+        return jsonify({
+            "dead_roots": report.dead_roots,
+            "live_roots": report.live_roots,
+            "has_dead_roots": report.has_dead_roots,
+        })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 # ── Quit ──────────────────────────────────────────────────────────────────────
 
 @app.route("/api/quit", methods=["POST"])

@@ -104,16 +104,29 @@ class OrphanReport:
 
 
 @dataclass
+class DeadRootReport:
+    """Path roots in the DB that don't exist on disk — likely disconnected/renamed drives."""
+    dead_roots: dict[str, int] = field(default_factory=dict)   # prefix -> track count
+    live_roots: dict[str, int] = field(default_factory=dict)   # prefix -> track count
+
+    @property
+    def has_dead_roots(self) -> bool:
+        return bool(self.dead_roots)
+
+
+@dataclass
 class AuditReport:
     """Combined result of a full audit pass."""
     snapshot: LibrarySnapshot
     paths: PathReport
     orphans: OrphanReport
+    dead_roots: DeadRootReport = field(default_factory=DeadRootReport)
 
     def summary(self, list_cap: int = 10) -> str:
         s = self.snapshot
         p = self.paths
         o = self.orphans
+        d = self.dead_roots
         lines = [
             "═══ REKORDBOX LIBRARY AUDIT ═══",
             f"  Tracks          : {s.total_tracks}",
@@ -140,7 +153,10 @@ class AuditReport:
             f"  Missing files   : {p.missing_count}",
             f"  Streaming tracks: {p.streaming_only}",
             f"  Orphaned files  : {o.orphan_count} (on disk, not in DB)",
+            f"  Dead drive roots: {len(d.dead_roots)}",
         ]
+        for prefix, count in sorted(d.dead_roots.items(), key=lambda x: -x[1]):
+            lines.append(f"    {prefix}  →  {count:,} tracks unreachable")
 
         def _capped_list(items, cap, label):
             if not items:
@@ -286,6 +302,43 @@ def find_orphans(db: Rekordbox6Database, root: Path) -> OrphanReport:
     return report
 
 
+# ─── Dead root detection ──────────────────────────────────────────────────────
+
+def find_dead_roots(db: Rekordbox6Database) -> DeadRootReport:
+    """
+    Group all local track paths in the DB by their volume root, then check
+    which roots exist on disk. Dead roots are drives that are disconnected
+    or have been renamed/remounted.
+
+    On macOS paths like /Volumes/DRIVE/folder/..., the root is /Volumes/DRIVE.
+    For other paths, uses the first two components.
+    """
+    from collections import defaultdict
+    root_counts: dict[str, int] = defaultdict(int)
+
+    for track in db.get_content().all():
+        path_str = track.FolderPath
+        if not path_str or _is_streaming(path_str):
+            continue
+        parts = Path(path_str).parts
+        # macOS: /Volumes/DRIVE_NAME/...
+        if len(parts) >= 3 and parts[1] == "Volumes":
+            prefix = "/" + parts[1] + "/" + parts[2]
+        elif len(parts) >= 2:
+            prefix = parts[0] + parts[1]
+        else:
+            prefix = path_str
+        root_counts[prefix] += 1
+
+    report = DeadRootReport()
+    for prefix, count in root_counts.items():
+        if Path(prefix).exists():
+            report.live_roots[prefix] = count
+        else:
+            report.dead_roots[prefix] = count
+    return report
+
+
 # ─── Full audit ───────────────────────────────────────────────────────────────
 
 def full_audit(
@@ -319,7 +372,10 @@ def full_audit(
         log.warning("Music root not found, skipping orphan scan: %s", scan_root)
         orphans = OrphanReport()
 
-    return AuditReport(snapshot=snap, paths=paths, orphans=orphans)
+    log.info("Detecting dead drive roots...")
+    dead_roots = find_dead_roots(db)
+
+    return AuditReport(snapshot=snap, paths=paths, orphans=orphans, dead_roots=dead_roots)
 
 
 # ─── Smoke test ───────────────────────────────────────────────────────────────
