@@ -21,6 +21,7 @@ import signal
 import subprocess
 import sys
 import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -330,6 +331,30 @@ def api_duplicates():
 
 # ── Duplicate prune routes ────────────────────────────────────────────────────
 
+# Short-lived server-side store for prune path lists.
+# Avoids passing potentially thousands of paths as a query-string (which
+# exceeds waitress's 256 KB header limit on large libraries).
+_prune_token_store: dict[str, list[str]] = {}
+
+
+@app.route("/api/prune/stage", methods=["POST"])
+def api_prune_stage():
+    """
+    Accept a JSON body {"paths": [...]} and return a single-use token.
+    The token is consumed by GET /api/run/prune?token=<uuid>.
+    """
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        paths = data.get("paths", [])
+        if not isinstance(paths, list):
+            return jsonify({"error": "paths must be a list"}), 400
+        token = str(uuid.uuid4())
+        _prune_token_store[token] = paths
+        return jsonify({"token": token})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.route("/api/duplicates/load")
 def api_duplicates_load():
     """
@@ -409,17 +434,15 @@ def api_open_file():
 def api_run_prune():
     """
     Execute a confirmed prune: remove DB entries + move files to Trash.
-    Accepts a JSON-encoded list of file paths as the `paths` query param.
+    Expects a ?token=<uuid> issued by POST /api/prune/stage.
     Returns an SSE stream of progress lines.
 
     All pre-flight checks run inside the worker so this endpoint always
     returns a valid SSE stream — never a bare JSON 4xx response that would
     confuse EventSource and surface only as a silent "Connection error".
     """
-    try:
-        paths: list[str] = json.loads(request.args.get("paths", "[]"))
-    except (json.JSONDecodeError, ValueError):
-        paths = []
+    token = request.args.get("token", "")
+    paths: list[str] = _prune_token_store.pop(token, [])
 
     log_q: queue.Queue = queue.Queue()
 
