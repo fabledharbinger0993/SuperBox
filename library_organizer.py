@@ -48,6 +48,10 @@ MIX_THRESHOLD_SEC = 900.0   # 15 minutes
 _UNSAFE_CHARS = re.compile(r'[\\/:*?"<>|]')
 _MULTI_SPACE  = re.compile(r' {2,}')
 
+# Camelot / Open-Key prefix  e.g. "10A - ", "10A 9A - ", "2B 3B - "
+# Matches one or more  <1-2 digits><A|B>  groups followed by a dash separator.
+_KEY_PREFIX = re.compile(r'^(?:\d{1,2}[ABab]\s+)*\d{1,2}[ABab]\s*[-–]\s*')
+
 
 # ─── Result type ──────────────────────────────────────────────────────────────
 
@@ -66,6 +70,22 @@ def _sanitize_folder(name: str, max_len: int = 100) -> str:
     name = _UNSAFE_CHARS.sub(" ", name)
     name = _MULTI_SPACE.sub(" ", name).strip().strip(".")
     return (name[:max_len] if name else "Unknown")
+
+
+def _normalize_artist(name: str) -> str:
+    """
+    Strip RekordBox / Camelot key prefixes that sometimes get written into
+    artist tags, e.g. "10A 9A - Kenny Dope" → "Kenny Dope".
+
+    Applies the strip in a loop to handle doubled prefixes like
+    "12A 11A - 12A 11A - Brother 2 Brother".
+    """
+    while True:
+        stripped = _KEY_PREFIX.sub("", name).strip()
+        if stripped == name:
+            break
+        name = stripped
+    return name or name  # never return empty
 
 
 def _folder_artist(path: Path) -> str | None:
@@ -89,7 +109,7 @@ def _folder_artist(path: Path) -> str | None:
                 text = getattr(frame, "text", None)
                 val = str(text[0]).strip() if text else str(frame).strip()
                 if val:
-                    return val
+                    return _normalize_artist(val)
 
         # Vorbis-style (FLAC, OGG)
         for key in ("albumartist", "album_artist", "artist"):
@@ -97,7 +117,7 @@ def _folder_artist(path: Path) -> str | None:
             if val:
                 s = str(val[0]).strip() if isinstance(val, list) else str(val).strip()
                 if s:
-                    return s
+                    return _normalize_artist(s)
     except Exception:
         pass
     return None
@@ -127,8 +147,9 @@ def _canonical_dest(
     if track.duration_seconds is not None and track.duration_seconds >= threshold:
         return target / MIX_FOLDER / year / fname
 
-    # Resolve artist for folder naming
-    artist = _folder_artist(src) or track.artist
+    # Resolve artist for folder naming (normalize away any key prefixes)
+    raw_artist = _folder_artist(src) or track.artist
+    artist = _normalize_artist(raw_artist) if raw_artist else None
 
     # No artist — orphaned
     if not artist or not artist.strip():
@@ -255,8 +276,18 @@ def organize_library(
         final, action = _resolve_dest(track.path, dest)
 
         if final is None:
-            msg = "duplicate — skipped" if action == "skipped" else "no rename slot found"
-            return MoveResult(src=track.path, dest=dest, action=action, reason=msg)
+            if action == "skipped":
+                # Identical copy already at canonical destination.
+                # Remove the source so the source tree can be pruned cleanly.
+                try:
+                    track.path.unlink()
+                    return MoveResult(src=track.path, dest=dest,
+                                      action="skipped", reason="duplicate removed from source")
+                except Exception as e:
+                    return MoveResult(src=track.path, dest=dest,
+                                      action="error", reason=f"unlink failed: {e}")
+            return MoveResult(src=track.path, dest=dest,
+                              action="error", reason="no rename slot found")
 
         try:
             shutil.move(str(track.path), str(final))
