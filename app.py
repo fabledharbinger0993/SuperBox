@@ -395,23 +395,32 @@ def api_run_prune():
     Execute a confirmed prune: remove DB entries + move files to Trash.
     Accepts a JSON-encoded list of file paths as the `paths` query param.
     Returns an SSE stream of progress lines.
-    """
-    err = _require_rb_closed()
-    if err:
-        return err
 
+    All pre-flight checks run inside the worker so this endpoint always
+    returns a valid SSE stream — never a bare JSON 4xx response that would
+    confuse EventSource and surface only as a silent "Connection error".
+    """
     try:
         paths: list[str] = json.loads(request.args.get("paths", "[]"))
     except (json.JSONDecodeError, ValueError):
-        return jsonify({"error": "paths must be a JSON array"}), 400
-
-    if not paths:
-        return jsonify({"error": "no files selected"}), 400
+        paths = []
 
     log_q: queue.Queue = queue.Queue()
 
     def _worker() -> None:
         try:
+            # Pre-flight checks emitted as log lines so the browser always
+            # receives a well-formed SSE stream (no bare JSON 4xx response).
+            if _rb_is_running():
+                log_q.put(("line", "[ERROR] Rekordbox is open — close it before pruning."))
+                log_q.put(("done", 1))
+                return
+
+            if not paths:
+                log_q.put(("line", "[ERROR] No files were passed to the prune endpoint."))
+                log_q.put(("done", 1))
+                return
+
             from pruner import prune_files          # noqa: PLC0415
             from db_connection import write_db      # noqa: PLC0415
             from config import DJMT_DB as _DB      # noqa: PLC0415

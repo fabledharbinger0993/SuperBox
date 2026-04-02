@@ -33,7 +33,6 @@ from pathlib import Path
 
 import librosa
 import numpy as np
-import pyloudnorm as pyln
 import soundfile as sf
 from mutagen import File as MutagenFile
 from mutagen.id3 import TBPM, TKEY
@@ -131,6 +130,7 @@ def _detect_key(path: Path) -> str | None:
 
 def _measure_lufs(path: Path) -> float | None:
     try:
+        import pyloudnorm as pyln  # lazy — avoids scipy circular import at module load  # noqa: PLC0415
         data, rate = sf.read(str(path))
         meter = pyln.Meter(rate)
         lufs = meter.integrated_loudness(data)

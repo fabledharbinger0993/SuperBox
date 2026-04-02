@@ -343,12 +343,17 @@ details[open] > summary { color: var(--text); }
   height: 44px;
   background: #08081a;
   border-top: 1px solid var(--border-hi);
-  display: none;
+  display: flex;
   align-items: center;
   padding: 0 18px;
   gap: 0;
 }
-#scan-bar.active { display: flex; }
+#scan-bar .scan-bar-item,
+#scan-bar .scan-bar-right { opacity: 0; pointer-events: none; transition: opacity .2s; }
+#scan-bar.active .scan-bar-item,
+#scan-bar.active .scan-bar-right { opacity: 1; pointer-events: auto; }
+#scan-bar-idle { transition: opacity .2s; }
+#scan-bar.active #scan-bar-idle { opacity: 0; pointer-events: none; }
 body.log-open #scan-bar { bottom: var(--log-h); }
 
 .scan-bar-item {
@@ -673,7 +678,7 @@ body.log-open #scan-bar { bottom: var(--log-h); }
 /* ── Owl / Glossary key system ─────────────────────────────────────────── */
 #owl-btn {
   position: fixed;
-  bottom: 28px; right: 28px;
+  bottom: calc(44px + 28px); right: 28px;
   z-index: 9999;
   display: flex; align-items: center; gap: 7px;
   background: var(--surface-hi);
@@ -942,7 +947,7 @@ body.log-open #scan-bar { bottom: var(--log-h); }
 /* ── Lightbulb / Welcome button ─────────────────────────────────────────── */
 #lightbulb-btn {
   position: fixed;
-  bottom: 28px; right: 112px;
+  bottom: calc(44px + 28px); right: 112px;
   z-index: 9999;
   display: flex; align-items: center; gap: 7px;
   background: var(--surface-hi);
@@ -961,21 +966,17 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   border-color: var(--accent);
   color: var(--accent);
 }
-body.log-open #lightbulb-btn          { bottom: calc(var(--log-h) + 28px); }
-body.scan-active #lightbulb-btn        { bottom: calc(44px + 28px); }
-body.log-open.scan-active #lightbulb-btn { bottom: calc(var(--log-h) + 44px + 28px); }
-body.log-open #owl-btn                 { bottom: calc(var(--log-h) + 28px); }
-body.scan-active #owl-btn              { bottom: calc(44px + 28px); }
-body.log-open.scan-active #owl-btn     { bottom: calc(var(--log-h) + 44px + 28px); }
-body.log-open #owl-hover-panel         { bottom: calc(var(--log-h) + 74px); }
-body.scan-active #owl-hover-panel      { bottom: calc(44px + 74px); }
-body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 74px); }
+/* Scan bar is always visible (44px), so base offset already includes it */
+body.log-open #lightbulb-btn               { bottom: calc(var(--log-h) + 44px + 28px); }
+body.log-open #owl-btn                     { bottom: calc(var(--log-h) + 44px + 28px); }
+body.log-open #owl-hover-panel             { bottom: calc(var(--log-h) + 44px + 74px); }
+body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 76px); }
 
 /* ── Session summary pills ──────────────────────────────────────────────── */
 #session-pills-container {
   position: fixed;
   right: 28px;
-  bottom: 76px;
+  bottom: calc(44px + 76px);
   z-index: 9998;
   display: flex;
   flex-direction: column-reverse;
@@ -984,9 +985,7 @@ body.log-open.scan-active #owl-hover-panel { bottom: calc(var(--log-h) + 44px + 
   pointer-events: none;
   transition: bottom .25s;
 }
-body.log-open #session-pills-container             { bottom: calc(var(--log-h) + 76px); }
-body.scan-active #session-pills-container          { bottom: calc(44px + 76px); }
-body.log-open.scan-active #session-pills-container { bottom: calc(var(--log-h) + 44px + 76px); }
+/* scan-active rules removed — base offsets already include the 44px scan bar */
 .summary-pill {
   pointer-events: all;
   display: inline-flex; align-items: center; gap: 6px;
@@ -1186,7 +1185,7 @@ body.log-open.scan-active #session-pills-container { bottom: calc(var(--log-h) +
 /* hover panel */
 #owl-hover-panel {
   position: fixed;
-  bottom: 74px; right: 28px;
+  bottom: calc(44px + 74px); right: 28px;
   z-index: 9998;
   width: 290px;
   max-height: 440px;
@@ -1814,6 +1813,9 @@ body.log-open.scan-active #session-pills-container { bottom: calc(var(--log-h) +
       <div class="rb-block-msg" id="prune-rb-block">
         <span>⚠</span> RekordBox is open. Close it before pruning.
       </div>
+
+      <!-- Inline status shown after a prune attempt -->
+      <div id="prune-status-msg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:6px;font-size:.83rem;font-weight:600;"></div>
     </div>
   </div>
 
@@ -2223,6 +2225,8 @@ body.log-open.scan-active #session-pills-container { bottom: calc(var(--log-h) +
 
 <!-- ══ Scan bar ═══════════════════════════════════════════════════════════ -->
 <div id="scan-bar">
+  <!-- Shown only when idle (no active scan) -->
+  <span id="scan-bar-idle" style="font-family:var(--mono);font-size:.72rem;color:var(--text-dim);letter-spacing:.05em;">SuperBox — Ready</span>
   <div class="scan-bar-item">
     <span class="scan-bar-label">Remaining</span>
     <span class="scan-bar-val" id="sb-remaining">—</span>
@@ -2761,9 +2765,12 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false,
           card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       }
-      // Always show the report modal on success when there's a report block
+      // On success, store the report and add a pill — don't auto-open the modal.
+      // The user can click the pill to open it, or it stays in the step card body.
       if (data.exit_code === 0 && reportBuffer.length > 0) {
-        openReportModal(logTitle, reportBuffer.join('\n'), capturedReportPath);
+        const reportText = reportBuffer.join('\n');
+        sessionReports[logTitle] = { text: reportText, reportPath: capturedReportPath };
+        _addOrUpdateSummaryPill(logTitle);
       }
       if (onDone) onDone(data.exit_code);
     }
@@ -3081,6 +3088,17 @@ function pruneStep2() {
   _openConfirm('confirm-step2');
 }
 
+function _showPruneStatus(msg, isError) {
+  const el = document.getElementById('prune-status-msg');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.style.background    = isError ? 'rgba(239,68,68,.15)'  : 'rgba(34,197,94,.15)';
+  el.style.border        = isError ? '1px solid rgba(239,68,68,.4)' : '1px solid rgba(34,197,94,.4)';
+  el.style.color         = isError ? 'var(--danger)' : 'var(--safe)';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 async function executePrune() {
   // Live RB check — surface the warning and block if open
   await refreshStatus();
@@ -3089,14 +3107,29 @@ async function executePrune() {
     return;
   }
 
+  // Guard: another operation is already in progress — make it visible
+  if (isRunning) {
+    _showPruneStatus('⚠ Another operation is still running. Wait for it to finish, then try again.', true);
+    cancelPrune();
+    return;
+  }
+
   cancelPrune();   // close all confirm panels
+
+  // Hide any previous status before starting
+  const statusEl = document.getElementById('prune-status-msg');
+  if (statusEl) statusEl.style.display = 'none';
 
   const paths = [...pruneSelected];
   const url   = '/api/run/prune?paths=' + encodeURIComponent(JSON.stringify(paths));
-  runCommand(url, `Prune — ${paths.length} duplicate${paths.length > 1 ? 's' : ''} moved to Trash`, () => {
-    // Clear state after successful prune so the UI doesn't show stale data
-    pruneSelected.clear();
-    _updatePruneSummary();
+  runCommand(url, `Prune — ${paths.length} duplicate${paths.length > 1 ? 's' : ''} moved to Trash`, (exitCode) => {
+    if (exitCode === 0) {
+      pruneSelected.clear();
+      _updatePruneSummary();
+      _showPruneStatus(`✓ Prune complete — ${paths.length} file${paths.length > 1 ? 's' : ''} sent to Trash. Check the report for details.`, false);
+    } else {
+      _showPruneStatus('✗ Prune failed — see the log panel (View Output) for details.', true);
+    }
   });
 }
 

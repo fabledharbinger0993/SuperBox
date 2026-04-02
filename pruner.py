@@ -98,7 +98,7 @@ def load_report(csv_path: Path, db=None) -> list[DupeGroup]:
     db_paths: set[str] = set()
     if db is not None:
         try:
-            db_paths = {row.FolderPath for row in db.get_content()}
+            db_paths = {row.FolderPath for row in db.get_content().all()}
         except Exception:
             pass  # DB unavailable — just skip in_db flagging
 
@@ -182,10 +182,10 @@ def prune_files(
         try:
             # Materialise the query (.all()) so we iterate over row objects,
             # not a SQLAlchemy Query object (which is always truthy even when empty).
-            rows = list(db.get_content(FolderPath=path))
+            rows = db.get_content(FolderPath=path).all()
             if rows:
                 for row in rows:
-                    db.session.delete(row)
+                    db.delete(row)
                 db_removed += 1
                 emit(f"    DB ✓  {Path(path).name}")
             else:
@@ -195,11 +195,11 @@ def prune_files(
             errors.append(msg)
             emit(f"    DB ✗  {msg}")
 
-    # Explicitly commit so changes persist regardless of whether
-    # Rekordbox6Database.close() auto-commits.
+    # Commit using pyrekordbox's db.commit() — consistent with all other modules,
+    # handles USN auto-increment and masterPlaylists6.xml sync.
     if db_removed > 0:
         try:
-            db.session.commit()
+            db.commit()
             emit(f"  ✓ {db_removed} database entries committed.")
         except Exception as exc:
             msg = f"DB commit failed — files will NOT be moved: {exc}"
