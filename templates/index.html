@@ -1668,6 +1668,16 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
         <label>Music Folder Path</label>
         <input type="text" id="normalize-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
       </div>
+      <div class="field">
+        <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
+        <select id="normalize-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+          <option value="1">1 — sequential (safe, slowest)</option>
+          <option value="2">2 workers</option>
+          <option value="4" selected>4 workers (recommended)</option>
+          <option value="6">6 workers (fast)</option>
+          <option value="8">8 workers (max — all cores)</option>
+        </select>
+      </div>
       <div class="btn-row">
         <button class="btn btn-neon" onclick="runNormalize()">Normalize Loudness</button>
       </div>
@@ -2906,7 +2916,9 @@ function runNormalize() {
   );
   if (!confirmed) return;
   // no_bpm + no_key: normalize step is loudness-only; tag detection runs in Step 2
+  const workers = document.getElementById('normalize-workers')?.value || '4';
   const p = new URLSearchParams({ path, no_bpm: '1', no_key: '1' });
+  if (parseInt(workers) > 1) p.set('workers', workers);
   runCommand(`/api/run/process?${p}`, 'Normalize — Loudness to −8.0 LUFS', null, true);
 }
 

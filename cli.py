@@ -312,6 +312,7 @@ def cmd_process(args: argparse.Namespace) -> None:
             detect_key=detect_key,
             normalise=normalise,
             force=args.force,
+            max_workers=max(1, args.workers),
         )
     except Exception:
         log.exception("Processing failed")
@@ -519,6 +520,13 @@ Examples:
             "Suppress loudness normalisation. "
             "BPM/key tag writes still occur unless --no-bpm/--no-key are also set."
         ),
+    )
+    p_process.add_argument(
+        "--workers", "-w",
+        metavar="N",
+        type=int,
+        default=1,
+        help="Parallel ffmpeg workers for loudness measurement/normalisation (default: 1)",
     )
     p_process.set_defaults(func=cmd_process)
 
