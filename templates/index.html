@@ -403,6 +403,20 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   line-height: 1;
 }
 .scan-bar-dismiss:hover { color: var(--text); }
+.scan-bar-interrupt-btn {
+  background: none; border: 1px solid var(--caution); color: var(--caution);
+  border-radius: 4px; padding: 2px 9px; font-size: .72rem; cursor: pointer;
+  white-space: nowrap; display: none;
+}
+.scan-bar-interrupt-btn:hover { background: color-mix(in srgb, var(--caution) 12%, transparent); }
+.scan-bar-interrupt-btn:disabled { opacity: .5; cursor: default; }
+.scan-bar-emergency-btn {
+  background: none; border: 1px solid var(--danger); color: var(--danger);
+  border-radius: 4px; padding: 2px 9px; font-size: .72rem; cursor: pointer;
+  white-space: nowrap; display: none;
+}
+.scan-bar-emergency-btn:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.scan-bar-emergency-btn:disabled { opacity: .5; cursor: default; }
 
 /* ── Log panel ───────────────────────────────────────────────────────────── */
 #log-panel {
@@ -2253,6 +2267,12 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
     <span id="scan-bar-title"></span>
     <div id="scan-bar-spinner"></div>
     <button class="scan-bar-view-btn" onclick="reopenLog()">▸ Output</button>
+    <button class="scan-bar-interrupt-btn" id="scan-bar-interrupt"
+            onclick="interruptScan()"
+            title="Ask the scan to stop gracefully (keeps server running)">⏸ Interrupt</button>
+    <button class="scan-bar-emergency-btn" id="scan-bar-emergency"
+            onclick="emergencyStop()"
+            title="Force-kill this scan immediately (server stays running)">⚡ Emergency Stop</button>
     <button class="scan-bar-dismiss" id="scan-bar-dismiss" style="display:none" onclick="dismissScanBar()" title="Dismiss">✕</button>
   </div>
 </div>
@@ -2427,6 +2447,34 @@ function welcomeDenyPermission() {
   document.getElementById('welcome-letsgo-btn').textContent = 'Continue without folders';
 }
 
+async function interruptScan() {
+  if (!isRunning) return;
+  if (!confirm('Ask the scan to stop gracefully?\n\nThe process will receive a stop signal and try to clean up. The server will remain running.')) return;
+  const btn = document.getElementById('scan-bar-interrupt');
+  btn.textContent = '⏸ Stopping…'; btn.disabled = true;
+  try {
+    await fetch('/api/cancel', { method: 'POST' });
+    appendLog('⏸ Interrupt signal sent — waiting for process to exit…', 'warn');
+  } catch(e) {
+    appendLog('[ERROR] Could not send interrupt signal.', 'error');
+    btn.textContent = '⏸ Interrupt'; btn.disabled = false;
+  }
+}
+
+async function emergencyStop() {
+  if (!isRunning) return;
+  if (!confirm('Force-kill the scan immediately?\n\nThis will hard-terminate the process. Any in-progress writes may be incomplete.\n\nThe server will remain running.')) return;
+  const btn = document.getElementById('scan-bar-emergency');
+  btn.textContent = '⚡ Killing…'; btn.disabled = true;
+  try {
+    await fetch('/api/cancel/force', { method: 'POST' });
+    appendLog('⚡ Emergency stop — process force-killed. Server is still running.', 'error');
+  } catch(e) {
+    appendLog('[ERROR] Could not send kill signal.', 'error');
+    btn.textContent = '⚡ Emergency Stop'; btn.disabled = false;
+  }
+}
+
 async function quitSuperBox() {
   const msg = isRunning
     ? '⚠️ A scan is still running.\n\nShutting down now will cancel it mid-process. Are you sure?'
@@ -2574,6 +2622,11 @@ let scanWarnings = 0;
 
 function showScanBar(title) {
   scanWarnings = 0;
+  // Reset interrupt/emergency buttons for fresh use
+  const ib = document.getElementById('scan-bar-interrupt');
+  ib.textContent = '⏸ Interrupt'; ib.disabled = false; ib.style.display = 'inline-block';
+  const eb = document.getElementById('scan-bar-emergency');
+  eb.textContent = '⚡ Emergency Stop'; eb.disabled = false; eb.style.display = 'inline-block';
   document.getElementById('sb-remaining').textContent = '—';
   document.getElementById('sb-clean').textContent     = '0';
   document.getElementById('sb-edited').textContent    = '0';
@@ -2594,6 +2647,8 @@ function updateScanBar(p) {
 }
 function finishScanBar() {
   document.getElementById('scan-bar-spinner').classList.remove('active');
+  document.getElementById('scan-bar-interrupt').style.display = 'none';
+  document.getElementById('scan-bar-emergency').style.display = 'none';
   document.getElementById('scan-bar-dismiss').style.display = 'inline-block';
 }
 function dismissScanBar() {
@@ -2837,7 +2892,8 @@ function runNormalize() {
     'Continue?'
   );
   if (!confirmed) return;
-  const p = new URLSearchParams({ path });
+  // no_bpm + no_key: normalize step is loudness-only; tag detection runs in Step 2
+  const p = new URLSearchParams({ path, no_bpm: '1', no_key: '1' });
   runCommand(`/api/run/process?${p}`, 'Normalize — Loudness to −8.0 LUFS', null, true);
 }
 

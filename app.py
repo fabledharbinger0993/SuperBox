@@ -33,6 +33,10 @@ if str(_REPO_ROOT) not in sys.path:
 
 app = Flask(__name__)
 
+# ── Active-process tracker (interrupt / emergency-stop) ───────────────────────
+_proc_lock: threading.Lock = threading.Lock()
+_active_proc: "subprocess.Popen | None" = None
+
 # ── Paths ──────────────────────────────────────────────────────────────────────
 
 REPO_ROOT = _REPO_ROOT
@@ -90,7 +94,11 @@ def _stream(cmd: list[str]):
     Each event is a JSON object:
       {"line": "..."}          — a line of output
       {"done": true, "exit_code": N}  — command finished
+
+    Registers the process in _active_proc so /api/cancel endpoints can
+    send signals to it mid-run.
     """
+    global _active_proc
     try:
         process = subprocess.Popen(
             cmd,
@@ -101,11 +109,19 @@ def _stream(cmd: list[str]):
             cwd=str(REPO_ROOT),
             env=_subprocess_env(),
         )
-        for line in iter(process.stdout.readline, ""):
-            yield f"data: {json.dumps({'line': line.rstrip()})}\n\n"
-        process.wait()
-        yield f"data: {json.dumps({'done': True, 'exit_code': process.returncode})}\n\n"
+        with _proc_lock:
+            _active_proc = process
+        try:
+            for line in iter(process.stdout.readline, ""):
+                yield f"data: {json.dumps({'line': line.rstrip()})}\n\n"
+            process.wait()
+            yield f"data: {json.dumps({'done': True, 'exit_code': process.returncode})}\n\n"
+        finally:
+            with _proc_lock:
+                _active_proc = None
     except Exception as exc:
+        with _proc_lock:
+            _active_proc = None
         yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}', 'done': True, 'exit_code': 1})}\n\n"
 
 
@@ -503,6 +519,30 @@ def api_audit_path_roots():
         })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
+
+# ── Scan cancellation ─────────────────────────────────────────────────────────
+
+@app.route("/api/cancel", methods=["POST"])
+def api_cancel():
+    """Send SIGTERM to the active subprocess (graceful interrupt / checkpoint)."""
+    with _proc_lock:
+        proc = _active_proc
+    if proc is None:
+        return jsonify({"ok": False, "error": "No active scan"}), 404
+    proc.terminate()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/cancel/force", methods=["POST"])
+def api_cancel_force():
+    """Send SIGKILL to the active subprocess (emergency stop — server stays running)."""
+    with _proc_lock:
+        proc = _active_proc
+    if proc is None:
+        return jsonify({"ok": False, "error": "No active scan"}), 404
+    proc.kill()
+    return jsonify({"ok": True})
 
 
 # ── Quit ──────────────────────────────────────────────────────────────────────

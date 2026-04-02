@@ -110,12 +110,12 @@ def _detect_key(path: Path) -> str | None:
         y, sr = librosa.load(str(path), duration=ANALYSIS_DURATION, mono=True)
         chroma = librosa.feature.chroma_cqt(y=y, sr=sr).mean(axis=1)
         scores: dict[str, float] = {}
-        for i, note in enumerate(_NOTES):
+        for i, note in enumerate(NOTES):
             rolled = np.roll(chroma, -i)
-            scores[note + "maj"] = float(np.corrcoef(rolled, _KS_MAJOR)[0, 1])
-            scores[note + "min"] = float(np.corrcoef(rolled, _KS_MINOR)[0, 1])
+            scores[note + "maj"] = float(np.corrcoef(rolled, KS_MAJOR)[0, 1])
+            scores[note + "min"] = float(np.corrcoef(rolled, KS_MINOR)[0, 1])
         best = max(scores, key=scores.get)  # type: ignore[arg-type]
-        camelot = _LIBROSA_TO_CAMELOT.get(best)
+        camelot = LIBROSA_TO_CAMELOT.get(best)
         if camelot is None:
             log.warning("No Camelot mapping for detected key %r", best)
             return None
@@ -516,15 +516,11 @@ def process_directory(
                 tags_written += 1
         elif r.ok:
             clean += 1
-        # Build scan index entry — duration via librosa if BPM was detected
+        # Build scan index entry — duration via soundfile header (fast, no decode)
         try:
-            duration_sec = None
-            if r.bpm_detected is not None or r.skipped_bpm:
-                y, sr = librosa.load(str(r.path), duration=30.0, mono=True)
-                # librosa.get_duration is fast since audio is already loaded
-                duration_sec = round(librosa.get_duration(y=y, sr=sr), 1)
+            duration_sec = round(sf.info(str(r.path)).duration, 1)
         except Exception:
-            pass
+            duration_sec = None
         try:
             file_size = r.path.stat().st_size
         except OSError:
