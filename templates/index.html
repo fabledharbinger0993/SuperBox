@@ -3202,7 +3202,25 @@ async function executePrune() {
   if (statusEl) statusEl.style.display = 'none';
 
   const paths = [...pruneSelected];
-  const url   = '/api/run/prune?paths=' + encodeURIComponent(JSON.stringify(paths));
+
+  // Stage the paths server-side to avoid blowing the 256 KB header limit
+  // when passing thousands of file paths as a query string.
+  let token;
+  try {
+    const res = await fetch('/api/prune/stage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.token) throw new Error(data.error || 'stage failed');
+    token = data.token;
+  } catch (e) {
+    _showPruneStatus(`✗ Could not stage prune — ${e.message}`, true);
+    return;
+  }
+
+  const url = `/api/run/prune?token=${encodeURIComponent(token)}`;
   runCommand(url, `Prune — ${paths.length} duplicate${paths.length > 1 ? 's' : ''} moved to Trash`, (exitCode) => {
     if (exitCode === 0) {
       pruneSelected.clear();
