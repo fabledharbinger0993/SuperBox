@@ -4,1317 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SuperBox — rekordbox-toolkit</title>
-<style>
-/* ── Design tokens ─────────────────────────────────────────────────────── */
-:root {
-  --bg:            #07070f;
-  --surface:       #0d0d1a;
-  --surface-hi:    #13132a;
-  --border:        #1a1a30;
-  --border-hi:     #252540;
-
-  --text:          #dde3f0;
-  --text-muted:    #5a6280;
-  --text-dim:      #3a4060;
-
-  --safe:          #34d399;
-  --safe-dim:      rgba(52,211,153,.12);
-  --safe-border:   rgba(52,211,153,.25);
-
-  --caution:       #fbbf24;
-  --caution-dim:   rgba(251,191,36,.1);
-  --caution-border:rgba(251,191,36,.25);
-
-  --warn:          #f97316;
-  --warn-dim:      rgba(249,115,22,.1);
-  --warn-border:   rgba(249,115,22,.25);
-
-  --danger:        #f87171;
-  --danger-dim:    rgba(248,113,113,.1);
-  --danger-border: rgba(248,113,113,.25);
-
-  --accent:        #818cf8;
-  --accent-dim:    rgba(129,140,248,.1);
-
-  --mono: 'JetBrains Mono','Fira Code','Cascadia Code',ui-monospace,monospace;
-  --sans: system-ui,-apple-system,'Segoe UI',sans-serif;
-
-  --radius: 8px;
-  --log-h: 340px;
-}
-
-/* ── Reset ─────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  line-height: 1.6;
-  min-height: 100vh;
-  padding-bottom: calc(var(--log-h) + 48px);
-}
-body.scan-active { padding-bottom: calc(var(--log-h) + 48px + 44px); }
-body::before {
-  content: '';
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(60vw, 60vh);
-  height: min(60vw, 60vh);
-  background: url('/static/SRB-bg-update.png') center / contain no-repeat;
-  opacity: 0.04;
-  pointer-events: none;
-  z-index: 0;
-}
-a { color: var(--accent); text-decoration: none; }
-button { cursor: pointer; font-family: inherit; }
-input, select {
-  font-family: var(--mono);
-  font-size: .85rem;
-  background: var(--surface);
-  border: 1px solid var(--border-hi);
-  border-radius: 5px;
-  color: var(--text);
-  padding: 7px 10px;
-  width: 100%;
-  transition: border-color .15s;
-}
-input:focus, select:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-input::placeholder { color: var(--text-dim); }
-label { display: block; color: var(--text-muted); font-size: .78rem;
-        letter-spacing: .04em; text-transform: uppercase; margin-bottom: 5px; }
-
-/* ── Header ────────────────────────────────────────────────────────────── */
-header {
-  position: sticky; top: 0; z-index: 100;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 28px;
-  height: 96px;
-}
-.brand {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 1.1rem; font-weight: 700; letter-spacing: .06em;
-  color: var(--text);
-}
-.brand span { color: var(--accent); }
-.brand-logo {
-  width: 36px; height: 36px; object-fit: contain;
-  mix-blend-mode: screen;         /* white bg disappears on dark surface */
-  filter: brightness(1.1);
-}
-.brand-divider {
-  width: 1px; height: 22px;
-  background: var(--border-hi);
-  margin: 0 2px;
-}
-.brand-sub {
-  font-size: .68rem; font-weight: 400; letter-spacing: .04em;
-  color: var(--text-dim); text-transform: uppercase;
-  line-height: 1.2;
-}
-.brand-sub strong { display: block; color: var(--text-muted); font-weight: 600; }
-.status-bar { display: flex; align-items: center; gap: 20px; }
-.status-pill {
-  display: flex; align-items: center; gap: 7px;
-  font-size: .78rem; color: var(--text-muted);
-}
-.dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--text-dim);
-  flex-shrink: 0;
-}
-.dot.safe  { background: var(--safe);   box-shadow: 0 0 6px var(--safe); }
-.dot.danger{ background: var(--danger); box-shadow: 0 0 6px var(--danger); }
-.dot.pulse { animation: pulse 2s infinite; }
-@keyframes pulse {
-  0%,100% { opacity: 1; } 50% { opacity: .35; }
-}
-
-/* ── Workflow rail ─────────────────────────────────────────────────────── */
-.workflow-rail {
-  position: sticky; top: 96px; z-index: 90;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 0 28px;
-  display: flex; align-items: stretch; gap: 0;
-  overflow-x: auto;
-}
-.workflow-rail::-webkit-scrollbar { display: none; }
-.step-tab {
-  display: flex; align-items: center; gap: 9px;
-  padding: 12px 18px;
-  color: var(--text-muted);
-  font-size: .8rem;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color .15s, border-color .15s;
-  background: none; border-top: none; border-left: none; border-right: none;
-}
-.step-tab:hover { color: var(--text); }
-.step-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.step-num {
-  width: 20px; height: 20px; border-radius: 50%;
-  background: var(--border-hi);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .7rem; font-weight: 700; flex-shrink: 0;
-}
-.step-tab.active .step-num { background: var(--accent); color: #fff; }
-
-/* ── Main layout ───────────────────────────────────────────────────────── */
-main { max-width: 1080px; margin: 0 auto; padding: 32px 28px; }
-.section-title {
-  font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--text-dim); margin-bottom: 20px; margin-top: 40px;
-  padding-bottom: 8px; border-bottom: 1px solid var(--border);
-}
-
-/* ── Tool cards ────────────────────────────────────────────────────────── */
-.card {
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  margin-bottom: 16px;
-  overflow: hidden;
-}
-.card-head {
-  display: flex; align-items: flex-start; gap: 16px;
-  padding: 20px 22px;
-}
-.card-icon {
-  width: 40px; height: 40px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; flex-shrink: 0;
-}
-.card-icon img { width: 40px; height: 40px; object-fit: contain; }
-
-.card-meta { flex: 1; }
-.card-title { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
-.card-blurb { color: var(--text-muted); font-size: .88rem; line-height: 1.5; }
-
-.risk-badge {
-  flex-shrink: 0;
-  padding: 3px 9px; border-radius: 20px;
-  font-size: .7rem; font-weight: 600; letter-spacing: .05em;
-  text-transform: uppercase; margin-top: 2px;
-}
-.risk-badge.safe   { background: var(--safe-dim);   color: var(--safe);   border: 1px solid var(--safe-border); }
-.risk-badge.caution{ background: var(--caution-dim); color: var(--caution); border: 1px solid var(--caution-border); }
-.risk-badge.warn   { background: var(--warn-dim);   color: var(--warn);   border: 1px solid var(--warn-border); }
-.risk-badge.danger { background: var(--danger-dim); color: var(--danger); border: 1px solid var(--danger-border); }
-
-/* ── Expandable explanations ───────────────────────────────────────────── */
-.explainers { border-top: 1px solid var(--border); }
-details { border-bottom: 1px solid var(--border); }
-details:last-child { border-bottom: none; }
-summary {
-  list-style: none;
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 22px;
-  font-size: .8rem; color: var(--text-muted);
-  cursor: pointer;
-  user-select: none;
-  transition: color .15s;
-}
-summary:hover { color: var(--text); }
-summary::after {
-  content: '▸'; margin-left: auto;
-  transition: transform .2s;
-  font-size: .7rem;
-}
-details[open] > summary::after { transform: rotate(90deg); }
-details[open] > summary { color: var(--text); }
-.explain-body {
-  padding: 12px 22px 16px;
-  font-size: .85rem; color: var(--text-muted);
-  line-height: 1.65;
-  background: var(--surface-hi);
-}
-.explain-body p { margin-bottom: 8px; }
-.explain-body p:last-child { margin-bottom: 0; }
-.explain-body ul { margin: 8px 0 8px 18px; }
-.explain-body li { margin-bottom: 4px; }
-.explain-body strong { color: var(--text); }
-.explain-body code {
-  font-family: var(--mono); font-size: .82em;
-  background: var(--border); padding: 1px 5px; border-radius: 3px;
-  color: var(--accent);
-}
-
-/* ── Card form body ────────────────────────────────────────────────────── */
-.card-form {
-  padding: 18px 22px 20px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-hi);
-}
-.field { margin-bottom: 14px; }
-.field:last-child { margin-bottom: 0; }
-.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.checkbox-row {
-  display: flex; flex-wrap: wrap; gap: 14px;
-  padding: 6px 0;
-}
-.checkbox-label {
-  display: flex; align-items: center; gap: 7px;
-  font-size: .82rem; color: var(--text-muted);
-  cursor: pointer; text-transform: none; letter-spacing: 0;
-  margin-bottom: 0;
-}
-.checkbox-label input[type=checkbox] {
-  width: auto; padding: 0;
-  accent-color: var(--accent);
-}
-.checkbox-label:hover { color: var(--text); }
-
-/* ── Buttons ───────────────────────────────────────────────────────────── */
-.btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-.btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  border: none; border-radius: 6px;
-  padding: 8px 16px;
-  font-size: .83rem; font-weight: 700;
-  color: #000;
-  transition: opacity .15s, transform .1s;
-}
-.btn:hover:not(:disabled) { opacity: .85; }
-.btn:active:not(:disabled) { transform: scale(.97); }
-.btn:disabled { opacity: .35; cursor: not-allowed; }
-.btn-primary {
-  background: var(--accent);
-  border: 1px solid rgba(129,140,248,.5);
-}
-.btn-ghost {
-  background: transparent;
-  border: 1px solid var(--border-hi);
-  color: var(--text-muted);
-}
-.btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--text-muted); }
-/* Normalize, Find Duplicates — unified purple like btn-primary */
-.btn-danger-action {
-  background: var(--accent);
-  border: 1px solid rgba(129,140,248,.5);
-}
-/* Relocate step flow button — unified purple */
-.btn-warn-action {
-  background: var(--accent);
-  border: 1px solid rgba(129,140,248,.5);
-}
-/* Neon variant — Convert & Relocate primary actions */
-.btn-neon {
-  background: var(--accent);
-  border: 1px solid rgba(129,140,248,.6);
-  box-shadow: 0 0 8px rgba(129,140,248,.55), 0 0 18px rgba(129,140,248,.25);
-  text-shadow: 0 0 6px rgba(180,160,255,.45);
-  transition: opacity .15s, transform .1s, box-shadow .2s;
-}
-.btn-neon:hover:not(:disabled) {
-  opacity: 1;
-  box-shadow: 0 0 12px rgba(129,140,248,.75), 0 0 28px rgba(129,140,248,.35);
-  text-shadow: 0 0 8px rgba(180,160,255,.65);
-}
-/* Keep prune danger buttons visually distinct — safety signal */
-.btn-prune-danger {
-  background: var(--danger-dim);
-  border: 1px solid var(--danger-border);
-  color: var(--danger);
-}
-
-/* rb-blocked message */
-.rb-block-msg {
-  display: none;
-  align-items: center; gap: 8px;
-  padding: 8px 12px; border-radius: 6px;
-  background: var(--danger-dim); border: 1px solid var(--danger-border);
-  color: var(--danger); font-size: .82rem;
-  margin-top: 12px;
-}
-.rb-block-msg.visible { display: flex; }
-
-/* ── Scan bar ───────────────────────────────────────────────────────────── */
-#scan-bar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 190;
-  height: 44px;
-  background: #08081a;
-  border-top: 1px solid var(--border-hi);
-  display: flex;
-  align-items: center;
-  padding: 0 18px;
-  gap: 0;
-}
-#scan-bar .scan-bar-item,
-#scan-bar .scan-bar-right { opacity: 0; pointer-events: none; transition: opacity .2s; }
-#scan-bar.active .scan-bar-item,
-#scan-bar.active .scan-bar-right { opacity: 1; pointer-events: auto; }
-#scan-bar-idle { transition: opacity .2s; }
-#scan-bar.active #scan-bar-idle { opacity: 0; pointer-events: none; }
-body.log-open #scan-bar { bottom: var(--log-h); }
-
-.scan-bar-item {
-  display: flex; align-items: center; gap: 6px;
-  font-family: var(--mono); font-size: .75rem;
-  padding: 0 18px 0 0;
-  border-right: 1px solid var(--border);
-  margin-right: 18px;
-  white-space: nowrap;
-}
-.scan-bar-item:last-of-type { border-right: none; margin-right: 0; }
-.scan-bar-label { color: var(--text-muted); }
-.scan-bar-val   { color: var(--text); font-weight: 600; min-width: 2.5ch; }
-.scan-bar-note  { color: var(--text-dim); font-size: .68rem; }
-.scan-bar-val.safe    { color: var(--safe); }
-.scan-bar-val.caution { color: var(--caution); }
-.scan-bar-val.danger  { color: var(--danger); }
-
-.scan-bar-right {
-  margin-left: auto;
-  display: flex; align-items: center; gap: 10px;
-}
-#scan-bar-title {
-  font-size: .72rem; color: var(--text-dim);
-  white-space: nowrap; overflow: hidden;
-  text-overflow: ellipsis; max-width: 220px;
-}
-#scan-bar-spinner {
-  width: 12px; height: 12px;
-  border: 2px solid var(--border-hi);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-  display: none;
-  flex-shrink: 0;
-}
-#scan-bar-spinner.active { display: block; }
-.scan-bar-view-btn {
-  background: var(--accent-dim); border: 1px solid var(--accent);
-  color: var(--accent); border-radius: 4px;
-  padding: 2px 9px; font-size: .72rem; cursor: pointer;
-  white-space: nowrap;
-}
-.scan-bar-dismiss {
-  background: none; border: none; color: var(--text-dim);
-  font-size: .95rem; cursor: pointer; padding: 2px 4px;
-  line-height: 1;
-}
-.scan-bar-dismiss:hover { color: var(--text); }
-.scan-bar-interrupt-btn {
-  background: none; border: 1px solid var(--caution); color: var(--caution);
-  border-radius: 4px; padding: 2px 9px; font-size: .72rem; cursor: pointer;
-  white-space: nowrap; display: none;
-}
-.scan-bar-interrupt-btn:hover { background: color-mix(in srgb, var(--caution) 12%, transparent); }
-.scan-bar-interrupt-btn:disabled { opacity: .5; cursor: default; }
-.scan-bar-emergency-btn {
-  background: none; border: 1px solid var(--danger); color: var(--danger);
-  border-radius: 4px; padding: 2px 9px; font-size: .72rem; cursor: pointer;
-  white-space: nowrap; display: none;
-}
-.scan-bar-emergency-btn:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
-.scan-bar-emergency-btn:disabled { opacity: .5; cursor: default; }
-
-/* ── Log panel ───────────────────────────────────────────────────────────── */
-#log-panel {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-  height: var(--log-h);
-  background: #050508;
-  border-top: 1px solid var(--border-hi);
-  display: flex; flex-direction: column;
-  transform: translateY(100%);
-  transition: transform .25s cubic-bezier(.4,0,.2,1);
-}
-#log-panel.open { transform: translateY(0); }
-.log-bar {
-  display: flex; align-items: center;
-  padding: 0 18px;
-  height: 38px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  gap: 10px;
-}
-.log-bar-title { font-size: .78rem; color: var(--text-muted); flex: 1; }
-.log-bar-title strong { color: var(--text); }
-#log-spinner {
-  width: 14px; height: 14px;
-  border: 2px solid var(--border-hi);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .7s linear infinite;
-  display: none;
-}
-#log-spinner.active { display: block; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.log-close-btn {
-  background: none; border: none; color: var(--text-dim);
-  font-size: 1rem; padding: 4px 6px;
-  transition: color .15s;
-}
-.log-close-btn:hover { color: var(--text); }
-#log-output {
-  flex: 1; overflow-y: auto;
-  padding: 12px 18px;
-  font-family: var(--mono); font-size: .8rem;
-  line-height: 1.6;
-}
-#log-output::-webkit-scrollbar { width: 4px; }
-#log-output::-webkit-scrollbar-track { background: transparent; }
-#log-output::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
-.log-line { white-space: pre-wrap; word-break: break-all; }
-.log-line.warn    { color: var(--caution); }
-.log-line.error   { color: var(--danger); }
-.log-line.success { color: var(--safe); }
-.log-line.header  { color: var(--accent); font-weight: 600; }
-.log-line.dim     { color: var(--text-dim); }
-.log-line.normal  { color: #9aa5c0; }
-.log-exit-ok    { color: var(--safe);   margin-top: 8px; font-weight: 600; }
-.log-exit-fail  { color: var(--danger); margin-top: 8px; font-weight: 600; }
-
-/* ── Report cards ──────────────────────────────────────────────────────── */
-.report-card {
-  margin: 18px 22px 4px;
-  padding: 14px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border-hi);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius);
-}
-.report-card.hidden { display: none; }
-.report-card-label {
-  font-size: .68rem; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--accent); margin-bottom: 10px; font-family: var(--sans);
-  display: flex; align-items: center; gap: 6px;
-}
-.report-card-label::before { content: '▸'; }
-.report-card pre {
-  font-family: var(--mono); font-size: .8rem; line-height: 1.7;
-  color: var(--text); white-space: pre-wrap; word-break: break-all; margin: 0;
-}
-
-/* ── Misc ──────────────────────────────────────────────────────────────── */
-.divider-label {
-  display: flex; align-items: center; gap: 12px;
-  color: var(--text-dim); font-size: .75rem;
-  letter-spacing: .08em; text-transform: uppercase;
-  margin: 28px 0 16px;
-}
-.divider-label::before, .divider-label::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
-
-/* ── Prune duplicates UI ───────────────────────────────────────────────── */
-.prune-toolbar {
-  display: flex; align-items: center; gap: 10px;
-  flex-wrap: wrap; margin-bottom: 4px;
-}
-.prune-selectall-row {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 0 6px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 8px;
-}
-.prune-selectall-btn {
-  display: flex; align-items: center; gap: 7px;
-  background: transparent;
-  border: 1px solid var(--border-hi);
-  border-radius: 5px;
-  padding: 5px 12px;
-  font-size: .78rem; color: var(--text-muted);
-  transition: all .15s; cursor: pointer;
-}
-.prune-selectall-btn:hover { color: var(--text); border-color: var(--text-muted); }
-.prune-selectall-btn.active-keep   { background:var(--safe-dim);    color:var(--safe);    border-color:var(--safe-border); }
-.prune-selectall-btn.active-lower  { background:var(--danger-dim);  color:var(--danger);  border-color:var(--danger-border); }
-.prune-selectall-btn .sa-dot {
-  width:8px; height:8px; border-radius:50%;
-  background: currentColor; opacity:.6; flex-shrink:0;
-}
-.prune-count-label {
-  margin-left: auto; font-size: .78rem; color: var(--text-dim);
-}
-
-/* groups list */
-#prune-groups { margin-top: 4px; }
-.prune-group {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  margin-bottom: 10px;
-  overflow: hidden;
-}
-.prune-group-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--surface-hi);
-  border-bottom: 1px solid var(--border);
-  font-size: .78rem;
-}
-.prune-group-title { color: var(--text-muted); font-family: var(--mono); }
-.prune-group-count {
-  font-size: .7rem; color: var(--text-dim);
-  background: var(--border); padding: 1px 7px; border-radius: 10px;
-}
-
-/* entry rows */
-.prune-row-keep, .prune-row-lower {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 10px;
-  transition: background .1s;
-}
-.prune-row-keep  { background: rgba(52,211,153,.03); }
-.prune-row-lower { background: transparent; padding-left: 32px; border-top: 1px solid var(--border); }
-.prune-row-keep:hover  { background: rgba(52,211,153,.06); }
-.prune-row-lower:hover { background: rgba(248,113,113,.04); }
-
-.prune-cb { width:15px; height:15px; accent-color:var(--danger); flex-shrink:0; cursor:pointer; }
-.prune-cb.keep-cb { accent-color: var(--safe); }
-.prune-star { color: var(--safe); font-size:.8rem; flex-shrink:0; width:14px; }
-
-.prune-fname {
-  font-family: var(--mono); font-size: .78rem; color: var(--text);
-  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.prune-row-lower .prune-fname { color: var(--text-muted); }
-
-.fmt-badge {
-  font-size:.65rem; font-weight:700; padding:1px 6px; border-radius:3px;
-  flex-shrink:0; letter-spacing:.04em;
-}
-.fmt-lossless { background:rgba(52,211,153,.15); color:var(--safe); }
-.fmt-lossy    { background:rgba(251,191,36,.1);  color:var(--caution); }
-.prune-meta { font-size:.72rem; color:var(--text-dim); flex-shrink:0; white-space:nowrap; }
-.rank-badge {
-  font-size:.65rem; font-weight:700; padding:1px 5px; border-radius:3px;
-  flex-shrink:0; letter-spacing:.03em;
-}
-.rank-pn  { background:rgba(129,140,248,.12); color:var(--accent); }
-.rank-mik { background:rgba(251,191,36,.1);   color:var(--caution); }
-.rank-raw { background:var(--border);          color:var(--text-dim); }
-.prune-indb { font-size:.65rem; color:var(--accent); background:var(--accent-dim);
-              padding:1px 5px; border-radius:3px; flex-shrink:0; }
-.prune-missing { font-size:.65rem; color:var(--danger); flex-shrink:0; }
-
-.prune-preview-btn {
-  background:none; border:1px solid var(--border-hi); border-radius:4px;
-  color:var(--text-dim); font-size:.7rem; padding:2px 7px;
-  cursor:pointer; flex-shrink:0; transition:all .12s;
-}
-.prune-preview-btn:hover { color:var(--safe); border-color:var(--safe-border); }
-
-/* action bar */
-.prune-action-bar {
-  display:flex; align-items:center; gap:10px;
-  padding: 12px 0 0; border-top: 1px solid var(--border);
-  margin-top: 12px;
-}
-.prune-selected-count { font-size:.82rem; color:var(--text-muted); flex:1; }
-.prune-selected-count strong { color:var(--danger); }
-
-/* ── Confirmation panels — positioned at different screen corners ─────── */
-/* Each step is a fixed-position panel. Deliberately NOT overlapping.     */
-/* The action button in each panel is in a different corner so the user   */
-/* must move the cursor to proceed — no muscle-memory clicking through.   */
-.confirm-panel {
-  position: fixed;
-  z-index: 8000;
-  width: 360px;
-  background: #0d0d22;
-  border: 1px solid var(--border-hi);
-  border-radius: var(--radius);
-  box-shadow: 0 12px 48px rgba(0,0,0,.8);
-  display: none;
-  flex-direction: column;
-  overflow: hidden;
-  animation: cardIn .2s cubic-bezier(.4,0,.2,1);
-}
-.confirm-panel.open { display: flex; }
-
-/* Step 1 — bottom-right. Action button at BOTTOM-RIGHT. */
-#confirm-step1 { bottom: 48px; right: 28px; }
-/* Step 2 — top-left. Action button at TOP-RIGHT of panel. */
-#confirm-step2 { top: 100px; left: 28px; width: 440px; max-height: 60vh; }
-/* Step 3 — center-top. Action button at BOTTOM-LEFT of panel. */
-#confirm-step3 { top: 100px; left: 50%; transform: translateX(-50%); }
-
-.confirm-panel-head {
-  display:flex; align-items:center; gap:8px;
-  padding: 11px 14px;
-  background: var(--surface-hi);
-  border-bottom: 1px solid var(--border);
-  flex-shrink:0;
-}
-.confirm-step-num {
-  width:22px; height:22px; border-radius:50%;
-  background: var(--danger-dim); border:1px solid var(--danger-border);
-  color:var(--danger); font-size:.72rem; font-weight:700;
-  display:flex; align-items:center; justify-content:center; flex-shrink:0;
-}
-.confirm-panel-title { font-size:.85rem; font-weight:600; flex:1; }
-.confirm-panel-cancel {
-  background:none; border:none; color:var(--text-dim);
-  font-size:.85rem; cursor:pointer; padding:0 3px;
-}
-.confirm-panel-cancel:hover { color:var(--text); }
-
-.confirm-panel-body { padding:13px 15px; font-size:.83rem; color:var(--text-muted); line-height:1.6; }
-.confirm-panel-body strong { color:var(--text); }
-.confirm-panel-body .confirm-detail { font-size:.78rem; color:var(--text-dim); margin-top:8px; }
-
-.confirm-file-list {
-  flex:1; overflow-y:auto; padding:8px 14px;
-  font-family:var(--mono); font-size:.75rem; color:var(--text-dim);
-  border-top:1px solid var(--border); border-bottom:1px solid var(--border);
-  max-height:240px;
-}
-.confirm-file-list::-webkit-scrollbar { width:3px; }
-.confirm-file-list::-webkit-scrollbar-thumb { background:var(--border-hi); }
-.confirm-file-item { padding:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.confirm-file-item::before { content:"→ "; color:var(--danger); }
-
-.confirm-panel-footer { padding:10px 14px; flex-shrink:0; }
-
-/* footer layouts vary per step so cursor must travel */
-#confirm-step1 .confirm-panel-footer { display:flex; justify-content:flex-end; gap:8px; }
-#confirm-step2 .confirm-panel-footer { display:flex; justify-content:space-between; align-items:center; gap:8px; }
-#confirm-step3 .confirm-panel-footer { display:flex; justify-content:flex-start; gap:8px; }
-
-/* overlay backdrop */
-#confirm-backdrop {
-  position:fixed; inset:0; z-index:7999;
-  background:rgba(0,0,0,.45);
-  display:none;
-}
-#confirm-backdrop.open { display:block; }
-
-/* ── Owl / Glossary key system ─────────────────────────────────────────── */
-#owl-btn {
-  position: fixed;
-  bottom: calc(44px + 28px); right: 28px;
-  z-index: 9999;
-  display: flex; align-items: center; gap: 7px;
-  background: var(--surface-hi);
-  border: 1px solid var(--border-hi);
-  border-radius: 24px;
-  padding: 8px 13px 8px 10px;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: .78rem; font-weight: 600; letter-spacing: .05em;
-  transition: background .2s, border-color .2s, color .2s, bottom .25s;
-  user-select: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,.55);
-}
-#owl-btn:hover, #owl-btn.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.owl-icon { font-size: 1.1rem; line-height: 1; }
-
-/* ── Settings modal ─────────────────────────────────────────────────────── */
-#settings-backdrop {
-  position: fixed; inset: 0; z-index: 10000;
-  background: rgba(0,0,0,.72);
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px;
-}
-#settings-backdrop.hidden { display: none; }
-#settings-modal {
-  background: var(--surface);
-  border: 1px solid var(--border-hi);
-  border-radius: 12px;
-  width: 100%; max-width: 560px;
-  max-height: 90vh;
-  box-shadow: 0 24px 80px rgba(0,0,0,.8);
-  display: flex; flex-direction: column;
-  overflow: hidden;
-}
-
-/* ── Settings button ────────────────────────────────────────────────────── */
-#settings-btn {
-  background: none; 
-  border: 1px solid var(--border-hi); 
-  color: var(--text-muted);
-  border-radius: 5px; 
-  padding: 4px 12px; 
-  font-size: .78rem; 
-  cursor: pointer;
-  letter-spacing: .04em; 
-  margin-right: 6px;
-}
-
-#settings-btn:hover { 
-  border-color: var(--accent); 
-  color: var(--accent); 
-}
-
-/* Header */
-.settings-header {
-  padding: 22px 28px 18px;
-  border-bottom: 1px solid var(--border);
-  display: flex; 
-  align-items: center; 
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-
-.settings-header h2 { 
-  font-size: 1.05rem; 
-  font-weight: 700; 
-  margin: 0; 
-}
-
-.settings-close {
-  background: none; 
-  border: none; 
-  color: var(--text-dim);
-  font-size: 1.2rem; 
-  cursor: pointer; 
-  padding: 2px 4px; 
-  line-height: 1;
-}
-
-.settings-close:hover { 
-  color: var(--text); 
-}
-
-/* Body */
-.settings-body { 
-  padding: 24px 28px; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 20px; 
-  overflow-y: auto; 
-  flex: 1; 
-  min-width: 0;
-}
-
-/* Sections */
-.settings-section {
-  min-width: 0;
-}
-
-.settings-section h3 {
-  font-size: .75rem; 
-  font-weight: 700; 
-  letter-spacing: .1em;
-  text-transform: uppercase; 
-  color: var(--accent); 
-  margin: 0 0 12px;
-}
-.settings-section { min-width: 0; }
-
-/* Radio group */
-.settings-radio-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.settings-radio {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  background: var(--surface-hi); 
-  border: 1px solid var(--border);
-  border-radius: 7px; 
-  padding: 11px 14px; 
-  cursor: pointer;
-  transition: border-color .15s;
-  width: 100%; 
-  box-sizing: border-box;
-}
-
-.settings-radio:has(input:checked) { 
-  border-color: var(--accent); 
-}
-
-.settings-radio input[type="radio"] {
-  width: 16px;
-  height: 16px;
-  margin-top: 3px;
-  accent-color: var(--accent);
-  flex-shrink: 0;
-}
-
-.settings-radio > div { 
-  flex: 1; 
-  min-width: 0; 
-}
-
-.settings-radio-label { 
-  font-size: .83rem; 
-  font-weight: 600; 
-  color: var(--text); 
-}
-
-.settings-radio-desc { 
-  font-size: .78rem; 
-  color: var(--text-muted); 
-  margin-top: 2px; 
-  line-height: 1.5; 
-  word-break: break-word;
-  overflow-wrap: anywhere; 
-}
-
-/* Custom path */
-#settings-custom-path {
-  display: none; 
-  margin-top: 8px;
-}
-
-#settings-custom-path input {
-  width: 100%; 
-  box-sizing: border-box;
-  background: var(--surface-hi); 
-  border: 1px solid var(--border-hi);
-  border-radius: 6px; 
-  padding: 8px 12px;
-  color: var(--text); 
-  font-size: .83rem;
-}
-
-#settings-custom-path input:focus { 
-  outline: none; 
-  border-color: var(--accent); 
-}
-
-/* Warnings */
-.settings-warnings {
-  display: none;
-  background: rgba(239,68,68,.07);
-  border: 1px solid rgba(239,68,68,.25);
-  border-radius: 7px; 
-  padding: 14px 16px;
-  margin-top: 4px;
-}
-
-.settings-warnings h4 {
-  font-size: .75rem; 
-  font-weight: 700; 
-  color: var(--danger);
-  letter-spacing: .06em; 
-  text-transform: uppercase; 
-  margin: 0 0 10px;
-}
-
-.settings-warn-item {
-  font-size: .79rem; 
-  color: var(--text-muted);
-  line-height: 1.55; 
-  margin-bottom: 7px; 
-  padding-left: 16px; 
-  position: relative;
-}
-
-.settings-warn-item:last-child { 
-  margin-bottom: 0; 
-}
-
-.settings-warn-item::before { 
-  content: '⚠'; 
-  position: absolute; 
-  left: 0; 
-  color: var(--caution); 
-}
-
-/* Footer */
-.settings-footer {
-  padding: 0 28px 24px;
-  display: flex; 
-  justify-content: flex-end; 
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.settings-save {
-  background: var(--accent); 
-  border: none; 
-  color: #fff;
-  border-radius: 7px; 
-  padding: 9px 24px;
-  font-size: .83rem; 
-  font-weight: 600; 
-  cursor: pointer;
-}
-
-.settings-save:hover { 
-  opacity: .88; 
-}
-
-.settings-cancel {
-  background: none; 
-  border: 1px solid var(--border-hi); 
-  color: var(--text-muted);
-  border-radius: 7px; 
-  padding: 9px 18px; 
-  font-size: .83rem; 
-  cursor: pointer;
-}
-
-.settings-cancel:hover { 
-  opacity: .88; 
-}
-/* ── Lightbulb / Welcome button ─────────────────────────────────────────── */
-#lightbulb-btn {
-  position: fixed;
-  bottom: calc(44px + 28px); right: 112px;
-  z-index: 9999;
-  display: flex; align-items: center; gap: 7px;
-  background: var(--surface-hi);
-  border: 1px solid var(--border-hi);
-  border-radius: 24px;
-  padding: 8px 13px 8px 10px;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: .78rem; font-weight: 600; letter-spacing: .05em;
-  transition: background .2s, border-color .2s, color .2s, bottom .25s;
-  user-select: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,.55);
-}
-#lightbulb-btn:hover {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-/* Scan bar is always visible (44px), so base offset already includes it */
-body.log-open #lightbulb-btn               { bottom: calc(var(--log-h) + 44px + 28px); }
-body.log-open #owl-btn                     { bottom: calc(var(--log-h) + 44px + 28px); }
-body.log-open #owl-hover-panel             { bottom: calc(var(--log-h) + 44px + 74px); }
-body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 76px); }
-
-/* ── Session summary pills ──────────────────────────────────────────────── */
-#session-pills-container {
-  position: fixed;
-  right: 28px;
-  bottom: calc(44px + 76px);
-  z-index: 9998;
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 8px;
-  align-items: flex-end;
-  pointer-events: none;
-  transition: bottom .25s;
-}
-/* scan-active rules removed — base offsets already include the 44px scan bar */
-.summary-pill {
-  pointer-events: all;
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--accent);
-  border: 1px solid rgba(129,140,248,.6);
-  border-radius: 24px;
-  padding: 7px 14px 7px 12px;
-  font-size: .76rem; font-weight: 700; letter-spacing: .04em;
-  color: #000;
-  cursor: pointer;
-  box-shadow: 0 0 8px rgba(129,140,248,.55), 0 0 18px rgba(129,140,248,.25);
-  text-shadow: 0 0 6px rgba(180,160,255,.45);
-  transition: box-shadow .2s, opacity .15s;
-  user-select: none;
-  white-space: nowrap;
-}
-.summary-pill:hover {
-  box-shadow: 0 0 12px rgba(129,140,248,.75), 0 0 28px rgba(129,140,248,.4);
-  text-shadow: 0 0 8px rgba(180,160,255,.65);
-}
-.summary-pill-icon { font-size: .9rem; line-height: 1; }
-
-/* ── Welcome modal ───────────────────────────────────────────────────────── */
-#welcome-backdrop {
-  position: fixed; inset: 0; z-index: 10000;
-  background: rgba(0,0,0,.72);
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px;
-}
-#welcome-backdrop.hidden { display: none; }
-#welcome-modal {
-  background: var(--surface);
-  border: 1px solid var(--border-hi);
-  border-radius: 12px;
-  width: 100%; max-width: 680px;
-  max-height: 82vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 80px rgba(0,0,0,.8);
-}
-.welcome-header {
-  padding: 28px 32px 20px;
-  border-bottom: 1px solid var(--border);
-  position: sticky; top: 0;
-  background: var(--surface);
-  z-index: 1;
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-}
-.welcome-header-text h2 {
-  font-size: 1.25rem; font-weight: 700; color: var(--text);
-  margin: 0 0 4px;
-}
-.welcome-header-text p {
-  font-size: .82rem; color: var(--text-muted); margin: 0;
-}
-.welcome-close {
-  background: none; border: none; color: var(--text-dim);
-  font-size: 1.2rem; cursor: pointer; padding: 2px 4px; flex-shrink: 0;
-  line-height: 1;
-}
-.welcome-close:hover { color: var(--text); }
-.welcome-body {
-  padding: 24px 32px 32px;
-  display: flex; flex-direction: column; gap: 24px;
-}
-.welcome-section h3 {
-  font-size: .78rem; font-weight: 700; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--accent);
-  margin: 0 0 10px;
-}
-.welcome-section p {
-  font-size: .85rem; color: var(--text-muted); line-height: 1.7; margin: 0 0 8px;
-}
-.welcome-section p:last-child { margin-bottom: 0; }
-.welcome-tool-row {
-  display: flex; flex-direction: column; gap: 8px;
-}
-.welcome-tool {
-  background: var(--surface-hi);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 10px 14px;
-}
-.welcome-tool-name {
-  font-family: var(--mono); font-size: .8rem; font-weight: 600;
-  color: var(--accent); margin-bottom: 3px;
-}
-.welcome-tool-desc {
-  font-size: .8rem; color: var(--text-muted); line-height: 1.5;
-}
-.welcome-compare-row {
-  display: flex; flex-direction: column; gap: 8px;
-}
-.welcome-compare {
-  background: var(--surface-hi);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 10px 14px;
-}
-.welcome-compare-name {
-  font-size: .82rem; font-weight: 600; color: var(--text); margin-bottom: 3px;
-}
-.welcome-compare-desc {
-  font-size: .8rem; color: var(--text-muted); line-height: 1.5;
-}
-.welcome-permission {
-  margin: 0 32px;
-  background: var(--surface-hi);
-  border: 1px solid var(--border-hi);
-  border-radius: 8px;
-  padding: 16px 18px;
-}
-.welcome-permission h4 {
-  font-size: .78rem; font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--caution);
-  margin: 0 0 8px;
-}
-.welcome-permission p {
-  font-size: .82rem; color: var(--text-muted); line-height: 1.6; margin: 0 0 12px;
-}
-.welcome-permission code {
-  font-family: var(--mono); font-size: .78em;
-  background: var(--border); padding: 1px 5px; border-radius: 3px;
-  color: var(--text);
-}
-.welcome-permission-tree {
-  font-family: var(--mono); font-size: .76rem; color: var(--text-dim);
-  line-height: 1.8; margin: 0 0 14px;
-  padding: 10px 12px;
-  background: var(--bg); border-radius: 5px;
-  border: 1px solid var(--border);
-}
-.welcome-permission-tree .hl { color: var(--accent); }
-.welcome-permission-btns {
-  display: flex; gap: 10px;
-}
-.welcome-footer {
-  padding: 16px 32px 28px;
-  display: flex; justify-content: flex-end;
-}
-.welcome-got-it {
-  background: var(--accent); border: none; color: #fff;
-  border-radius: 7px; padding: 10px 28px;
-  font-size: .85rem; font-weight: 600; letter-spacing: .04em;
-  cursor: pointer;
-}
-.welcome-got-it:hover { opacity: .88; }
-.welcome-got-it:disabled { opacity: .4; cursor: not-allowed; }
-
-/* ── Step completion report modal ─────────────────────────────────────── */
-#report-modal-backdrop {
-  position: fixed; inset: 0; z-index: 11000;
-  background: rgba(0,0,0,.78);
-  display: flex; align-items: center; justify-content: center;
-  padding: 24px;
-}
-#report-modal-backdrop.hidden { display: none; }
-#report-modal {
-  background: var(--surface);
-  border: 1px solid var(--border-hi);
-  border-radius: 12px;
-  width: 100%; max-width: 700px;
-  max-height: 82vh;
-  overflow-y: auto;
-  box-shadow: 0 24px 80px rgba(0,0,0,.9);
-  display: flex; flex-direction: column;
-}
-.rmod-header {
-  padding: 24px 28px 18px;
-  border-bottom: 1px solid var(--border);
-  position: sticky; top: 0;
-  background: var(--surface);
-  z-index: 1;
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-}
-.rmod-header-text h2 {
-  font-size: 1.1rem; font-weight: 700; color: var(--text); margin: 0 0 6px;
-}
-.rmod-save-path {
-  font-family: var(--mono); font-size: .73rem; color: var(--accent);
-  margin: 0; word-break: break-all; line-height: 1.5;
-}
-.rmod-body {
-  padding: 22px 28px 16px; flex: 1;
-}
-.rmod-body pre {
-  font-family: var(--mono); font-size: .8rem; line-height: 1.8;
-  color: var(--text); white-space: pre-wrap; word-break: break-all; margin: 0;
-}
-.rmod-footer {
-  padding: 14px 28px 24px;
-  display: flex; justify-content: flex-end;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-  gap: 12px;
-}
-
-/* hover panel */
-#owl-hover-panel {
-  position: fixed;
-  bottom: calc(44px + 74px); right: 28px;
-  z-index: 9998;
-  width: 290px;
-  max-height: 440px;
-  background: #0d0d20;
-  border: 1px solid var(--border-hi);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 36px rgba(0,0,0,.65);
-  display: flex; flex-direction: column;
-  overflow: hidden;
-  opacity: 0; pointer-events: none;
-  transform: translateY(10px) scale(.97);
-  transition: opacity .2s, transform .2s, bottom .25s;
-}
-#owl-hover-panel.visible {
-  opacity: 1; pointer-events: all;
-  transform: translateY(0) scale(1);
-}
-.owl-panel-head {
-  padding: 10px 14px 8px;
-  font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--text-dim); border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.owl-panel-head em {
-  font-style: normal; font-size: .67rem; color: var(--text-dim);
-}
-.owl-panel-list { overflow-y: auto; flex: 1; padding: 6px 0; }
-.owl-panel-list::-webkit-scrollbar { width: 3px; }
-.owl-panel-list::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 2px; }
-.owl-group-label {
-  padding: 8px 14px 3px;
-  font-size: .63rem; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--text-dim);
-}
-.owl-item {
-  display: flex; align-items: baseline; gap: 8px;
-  padding: 5px 14px; margin: 1px 4px;
-  cursor: pointer; border-radius: 4px;
-  transition: background .1s;
-}
-.owl-item:hover { background: var(--accent-dim); }
-.owl-item.pinned .owl-term { color: var(--accent); }
-.owl-term {
-  font-family: var(--mono); font-size: .79rem; font-weight: 600;
-  color: var(--text); white-space: nowrap; flex-shrink: 0;
-  min-width: 80px;
-}
-.owl-short { font-size: .74rem; color: var(--text-muted);
-             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* floating definition cards */
-.gls-card {
-  position: fixed;
-  z-index: 1000;
-  width: 288px;
-  background: #0a0a1e;
-  border: 1px solid var(--border-hi);
-  border-radius: var(--radius);
-  box-shadow: 0 8px 40px rgba(0,0,0,.72);
-  overflow: hidden;
-  animation: cardIn .18s cubic-bezier(.4,0,.2,1);
-  cursor: default;
-}
-@keyframes cardIn {
-  from { opacity:0; transform:scale(.93) translateY(8px); }
-  to   { opacity:1; transform:scale(1)  translateY(0); }
-}
-.gls-card:hover { z-index: 9997 !important;
-                  border-color: rgba(129,140,248,.35); }
-.gls-card-head {
-  display: flex; align-items: center; gap: 8px;
-  padding: 9px 11px 8px;
-  background: var(--surface-hi);
-  border-bottom: 1px solid var(--border);
-}
-.gls-card-term {
-  font-family: var(--mono); font-size: .87rem; font-weight: 700;
-  color: var(--accent); flex: 1;
-}
-.gls-card-cat {
-  font-size: .63rem; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--text-dim); flex-shrink: 0;
-}
-.gls-card-close {
-  background: none; border: none; color: var(--text-dim);
-  font-size: .88rem; padding: 0 2px; cursor: pointer; line-height: 1;
-  flex-shrink: 0;
-}
-.gls-card-close:hover { color: var(--text); }
-.gls-card-body {
-  padding: 11px 13px 13px;
-  font-size: .81rem; line-height: 1.65; color: var(--text-muted);
-}
-.gls-card-body p { margin-bottom: 6px; }
-.gls-card-body p:last-child { margin-bottom: 0; }
-.gls-card-body strong { color: var(--text); }
-.gls-card-body code {
-  font-family: var(--mono); font-size: .78em;
-  background: var(--border); padding: 1px 4px; border-radius: 3px;
-  color: var(--accent);
-}
-.gls-card-body ul { margin: 5px 0 5px 15px; }
-.gls-card-body li { margin-bottom: 3px; }
-
-/* Gear / settings trigger button */
-#settings-btn {
-  background: none; border: 1px solid var(--border-hi);
-  color: var(--text-muted); border-radius: 6px;
-  padding: 5px 10px; font-size: .82rem; cursor: pointer;
-  display: flex; align-items: center; gap: 5px;
-  transition: background .15s, border-color .15s, color .15s;
-}
-#settings-btn:hover { background: var(--surface-hi); border-color: var(--accent); color: var(--accent); }
-</style>
+<link rel="stylesheet" href="/static/superbox.css">
 </head>
 <body>
 
@@ -1355,6 +45,15 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
   </div>
 </header>
 
+<!-- ══ Brew update banner ═══════════════════════════════════════════════════ -->
+<div id="brew-banner">
+  <span class="brew-icon">🍺</span>
+  <span class="brew-msg" id="brew-msg">Homebrew updates available.</span>
+  <button class="brew-btn" onclick="runBrewUpgrade()">Update Now</button>
+  <button class="brew-link" onclick="brewCheckNow()">Check Again</button>
+  <button class="brew-dismiss" onclick="brewDismiss()" title="Dismiss until next check">✕</button>
+</div>
+
 <!-- ══ Workflow rail ════════════════════════════════════════════════════════ -->
 <nav class="workflow-rail" id="workflow-rail">
   <button class="step-tab active" data-target="step-audit">
@@ -1383,6 +82,12 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
   </button>
   <button class="step-tab" data-target="step-convert">
     <span class="step-num">⊕</span> Convert
+  </button>
+  <button class="step-tab" data-target="step-organize">
+    <span class="step-num">⊕</span> Organize
+  </button>
+  <button class="step-tab" data-target="step-pipeline" style="border-color:var(--accent);color:var(--accent)">
+    <span class="step-num" style="background:var(--accent);color:#fff">▶</span> Pipeline
   </button>
 </nav>
 
@@ -1441,10 +146,6 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
       <div class="btn-row">
         <button class="btn btn-neon" onclick="runAudit()">Execute Audit</button>
       </div>
-    </div>
-    <div id="audit-result" class="report-card hidden">
-      <div class="report-card-label">Audit Result</div>
-      <pre id="audit-result-pre"></pre>
     </div>
   </div>
 
@@ -1508,10 +209,6 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
       <div class="btn-row">
         <button class="btn btn-neon" onclick="runProcess()">Detect BPM &amp; Key</button>
       </div>
-    </div>
-    <div id="process-result" class="report-card hidden">
-      <div class="report-card-label">Tag Tracks Result</div>
-      <pre id="process-result-pre"></pre>
     </div>
   </div>
 
@@ -1990,10 +687,244 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
           </select>
         </div>
       </div>
+      <div class="field">
+        <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
+        <select id="convert-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+          <option value="1">1 — sequential (safe, slowest)</option>
+          <option value="2">2 workers</option>
+          <option value="4" selected>4 workers (recommended)</option>
+          <option value="6">6 workers (fast)</option>
+          <option value="8">8 workers (max — all cores)</option>
+        </select>
+      </div>
       <div class="btn-row">
         <button class="btn btn-neon" id="btn-convert" onclick="runConvert()">Start Converting</button>
       </div>
     </div>
+  </div>
+
+
+  <!-- ── Organize Library ──────────────────────────────────────────────── -->
+  <div class="card" id="step-organize">
+    <div class="card-head">
+      <div class="card-icon"><img src="/static/icon-organizer.png" alt="Organize"></div>
+      <div class="card-meta">
+        <div class="card-title">Organize Library — Consolidate into Artist / Album / Track</div>
+        <div class="card-blurb">Scans one or more folders (no matter how deeply nested) and moves or copies every track to the correct Artist / Album / Track location. Merges duplicate artist folders, creates missing folders, and prunes empty ones.</div>
+      </div>
+      <span class="risk-badge warn" id="organize-risk-badge">Moves Files</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>What structure does this create?</summary>
+        <div class="explain-body">
+          <pre style="font-size:.8rem;line-height:1.6;margin:0">Target Root/
+├── Artist Name/
+│   └── Album or Release Name/
+│       └── track.mp3
+├── Orphaned Tracks/       ← no artist tag
+│   └── 2023/
+│       └── track.mp3
+└── Live Sets &amp; Mixes/    ← duration ≥ mix threshold
+    └── 2024/
+        └── mix.mp3</pre>
+          <p style="margin-top:8px">Joint releases (e.g. "Artist A &amp; Artist B") get their own folder under that combined name. Tracks without an album tag sit directly in the artist folder.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Is this safe to run?</summary>
+        <div class="explain-body">
+          <p><strong>Always run a Dry Run first.</strong> Dry Run scans everything and shows exactly where each file would go — nothing is moved. Review the output in the terminal log, then uncheck Dry Run and run again to execute.</p>
+          <p>Files already at their correct canonical location are skipped. If a filename clash is detected, the incoming file is renamed with a numeric suffix (_1, _2 …) rather than overwriting.</p>
+        </div>
+      </details>
+      <details>
+        <summary>How does it handle artist name variations?</summary>
+        <div class="explain-body">
+          <p>It reads the <strong>Album Artist</strong> tag (TPE2) first, which is typically the primary artist without "feat." credits. If that's missing it falls back to the Track Artist tag (TPE1). This means "Daft Punk feat. Pharrell Williams" lands in the <em>Daft Punk</em> folder, not a separate "feat." folder.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What counts as a Mix / Live Set?</summary>
+        <div class="explain-body">
+          <p>Any track whose duration is at or above the Mix Threshold (default 15 minutes) is routed to <strong>Live Sets &amp; Mixes / YYYY /</strong> instead of the normal Artist tree. Adjust the threshold if your library has long studio tracks you don't want caught.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field-row">
+        <div class="field" style="flex:2">
+          <label>Source folders to scan</label>
+          <div id="organize-source-list" style="display:flex;flex-direction:column;gap:6px;">
+            <div class="org-source-row" style="display:flex;gap:6px;align-items:center;">
+              <input type="text" class="org-source-input" placeholder="/Volumes/DJMT" style="flex:1">
+            </div>
+          </div>
+          <button type="button" onclick="orgAddSource()" style="margin-top:6px;background:none;border:1px dashed var(--border-hi);color:var(--text-dim);border-radius:var(--radius);padding:5px 12px;font-size:.8rem;cursor:pointer;width:100%;text-align:left;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">+ Add another source folder</button>
+        </div>
+        <div class="field" style="flex:2">
+          <label>Target — organised library root</label>
+          <input type="text" id="organize-target" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Mode</label>
+          <select id="organize-mode" onchange="orgUpdateMode(this.value)" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+            <option value="assimilate" selected>Full Library Assimilation — move files, clean up source</option>
+            <option value="integrate">Full Library Integration — copy files only, source untouched</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Mix Threshold <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— tracks longer than this go to Live Sets &amp; Mixes</span></label>
+          <select id="organize-mix-threshold" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+            <option value="10">10 minutes</option>
+            <option value="15" selected>15 minutes (default)</option>
+            <option value="20">20 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">60 minutes</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— I/O threads</span></label>
+          <select id="organize-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+            <option value="1" selected>1 — sequential (safe)</option>
+            <option value="2">2 workers</option>
+            <option value="4">4 workers</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-top:4px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;">
+          <input type="checkbox" id="organize-dry-run" checked style="width:16px;height:16px;accent-color:var(--accent);">
+          Dry Run — preview without touching any files <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">(recommended — uncheck to execute)</span>
+        </label>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-neon" id="btn-organize" onclick="runOrganize()">Scan &amp; Organize</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Pipeline Builder ──────────────────────────────────────────────── -->
+  <div class="card" id="step-pipeline" style="max-width:100%">
+    <div class="card-head">
+      <div class="card-icon" style="background:var(--accent-dim)"><span style="font-size:1.3rem">▶</span></div>
+      <div class="card-meta">
+        <div class="card-title">Pipeline — Run Steps in Any Order, Start to Finish</div>
+        <div class="card-blurb">Pick which steps to run and in what order. Each step uses the settings you've already configured in its own card. You can run a single step or chain all of them — SuperBox handles the rest.</div>
+      </div>
+      <span class="risk-badge caution">Chains Steps</span>
+    </div>
+
+    <div class="pipeline-builder">
+
+      <!-- Left column: available actions -->
+      <div class="pipeline-actions">
+        <div class="pipe-col-label">Available steps — click to add</div>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('organize')" title="Move files into Artist / Album / Track folders">
+          <span class="pipe-action-icon">🗂</span>
+          <span class="pipe-action-text">
+            <strong>Sort into Folders</strong>
+            <span>Moves files into Artist / Album / Track order</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('process')" title="Write BPM and Key tags into every file">
+          <span class="pipe-action-icon">🏷</span>
+          <span class="pipe-action-text">
+            <strong>Tag Tracks</strong>
+            <span>Writes BPM and musical key into each file</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('normalize')" title="Re-encode tracks that are too loud or too quiet">
+          <span class="pipe-action-icon">📢</span>
+          <span class="pipe-action-text">
+            <strong>Balance Loudness</strong>
+            <span>Brings every track to the same volume level</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('duplicates')" title="Find identical recordings no matter how they're named">
+          <span class="pipe-action-icon">🔎</span>
+          <span class="pipe-action-text">
+            <strong>Find Duplicates</strong>
+            <span>Scans for files that are the same recording</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('prune')" title="Remove the copies confirmed in Find Duplicates">
+          <span class="pipe-action-icon">✂️</span>
+          <span class="pipe-action-text">
+            <strong>Remove Duplicates</strong>
+            <span>Deletes copies found by Find Duplicates</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('convert')" title="Change every file to your chosen audio format">
+          <span class="pipe-action-icon">🔄</span>
+          <span class="pipe-action-text">
+            <strong>Convert Format</strong>
+            <span>Changes files to AIFF, MP3, WAV, or FLAC</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('relocate')" title="Tell RekordBox where everything moved to">
+          <span class="pipe-action-icon">📍</span>
+          <span class="pipe-action-text">
+            <strong>Update RekordBox</strong>
+            <span>Syncs RekordBox after files have been moved</span>
+          </span>
+        </button>
+
+        <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--border)">
+          <button class="btn" style="width:100%;font-size:.8rem;padding:8px;" onclick="pipelineLoadRecommended()">★ Load recommended order</button>
+        </div>
+      </div>
+
+      <!-- Right column: pipeline queue -->
+      <div class="pipeline-queue-wrap">
+        <div class="pipe-col-label">
+          Your pipeline — runs top to bottom
+          <button onclick="pipelineClear()" style="float:right;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:.8rem;padding:0" title="Remove all steps">Clear all</button>
+        </div>
+
+        <div id="pipeline-queue" class="pipeline-queue">
+          <div class="pipe-empty" id="pipe-empty-msg">
+            No steps added yet.<br>
+            <span style="font-size:.8rem;color:var(--text-dim)">Click an action on the left to start building.</span>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;padding:10px 12px;background:var(--surface-hi);border:1px solid var(--border);border-radius:var(--radius);font-size:.8rem;color:var(--text-dim);line-height:1.5" id="pipe-config-note" class="hidden">
+          Each step uses the settings from its card above. Change paths, workers, or format options in the individual step cards — the pipeline picks them up automatically.
+        </div>
+
+        <div style="margin-top:12px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;font-size:.9rem;margin-bottom:12px">
+            <input type="checkbox" id="pipeline-dry-run" checked style="width:16px;height:16px;accent-color:var(--accent)">
+            Dry Run — show what would happen without changing anything
+          </label>
+          <div class="btn-row">
+            <button class="btn btn-neon" id="btn-pipeline" onclick="runPipeline()" style="flex:1;justify-content:center">▶ Run Pipeline</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Recommended order explanation (shown after loading preset) -->
+    <div id="pipe-recommended-note" class="hidden" style="margin-top:16px;padding:12px 16px;background:var(--surface-hi);border:1px solid var(--border);border-radius:var(--radius);font-size:.82rem;line-height:1.6;color:var(--text-dim)">
+      <strong style="color:var(--text)">Why this order?</strong><br>
+      Sort first so files are in the right place before tagging. Tag before finding duplicates so you can review copies by name. Find duplicates before converting — no point converting a file you're about to delete. Convert last (before updating RekordBox) so you're only working with files you're keeping.
+    </div>
+
   </div>
 
 </main>
@@ -2102,6 +1033,22 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
 
         </div>
 
+        <!-- Excluded dirs -->
+        <div style="margin-top:18px; padding-top:18px; border-top:1px solid var(--border);">
+          <label style="display:block; font-size:.82rem; color:var(--text-muted); margin-bottom:6px;">
+            🚫 Excluded folder names
+            <span style="color:var(--text-dim); font-weight:400;"> — one per line, folder name only (not full path)</span>
+          </label>
+          <textarea id="settings-excluded-dirs" rows="4"
+            style="width:100%; background:var(--surface); border:1px solid var(--border-hi);
+                   color:var(--text); border-radius:6px; padding:8px 10px; font-family:var(--mono);
+                   font-size:.8rem; resize:vertical;"
+            placeholder="ollama&#10;DJMT PRIMARY_PROCESSING_LOGIC&#10;POST PROCESS ZIP ARCHIVE"></textarea>
+          <div style="font-size:.75rem; color:var(--text-dim); margin-top:4px;">
+            Folders with these names are skipped during all scans (Tag Tracks, Normalize, Convert, Audit). Use this to exclude nested drive copies, app data, or any non-music folder inside your music root.
+          </div>
+        </div>
+
         <div class="settings-warnings" id="settings-warnings">
           <h4>Features affected when logging is disabled</h4>
           <div class="settings-warn-item">
@@ -2126,6 +1073,27 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
       <button class="settings-save" onclick="saveSettings()">Save &amp; Restart</button>
     </div>
 
+  </div>
+</div>
+
+<!-- ══ Path picker modal ═════════════════════════════════════════════════════ -->
+<div id="path-backdrop" class="hidden">
+  <div id="path-modal-box">
+    <h3>What are you here to do?</h3>
+    <p class="path-sub">Your library is ready when you are.</p>
+    <div class="path-options">
+      <button class="path-opt" onclick="choosePath('manual')">
+        <span class="path-opt-icon">🎛</span>
+        <span class="path-opt-title">Manual tools</span>
+        <span class="path-opt-desc">Pick any tool on its own — convert files, find duplicates, fix paths, check library health. One thing at a time, full control.</span>
+      </button>
+      <button class="path-opt" onclick="choosePath('pipeline')">
+        <span class="path-opt-icon">▶</span>
+        <span class="path-opt-title">Build a pipeline</span>
+        <span class="path-opt-desc">Design a step-by-step workflow and run it all at once — or just a few steps. Load the recommended order or build your own.</span>
+      </button>
+    </div>
+    <button class="path-skip" onclick="choosePath('manual')">skip, take me to the tools →</button>
   </div>
 </div>
 
@@ -2372,6 +1340,8 @@ function openSettings() {
     const mode = cfg.archive_mode || 'auto';
     document.querySelector(`input[name="archive-mode"][value="${mode}"]`).checked = true;
     document.getElementById('settings-custom-input').value = cfg.custom_archive || '';
+    const excluded = Array.isArray(cfg.excluded_dirs) ? cfg.excluded_dirs : [];
+    document.getElementById('settings-excluded-dirs').value = excluded.join('\n');
     _settingsUpdateUI(mode);
   }).catch(() => {
     document.querySelector('input[name="archive-mode"][value="auto"]').checked = true;
@@ -2402,7 +1372,12 @@ async function saveSettings() {
     const res  = await fetch('/api/settings', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ archive_mode: mode, custom_archive_dir: custom }),
+      body: JSON.stringify({
+        archive_mode: mode,
+        custom_archive_dir: custom,
+        excluded_dirs: document.getElementById('settings-excluded-dirs').value
+          .split('\n').map(s => s.trim()).filter(Boolean),
+      }),
     });
     const data = await res.json();
     if (data.ok) {
@@ -2485,6 +1460,61 @@ async function emergencyStop() {
   }
 }
 
+/* ── Homebrew update banner ─────────────────────────────────────────────────── */
+
+let _brewDismissed = false;
+
+async function brewCheckStatus() {
+  try {
+    const res = await fetch('/api/brew/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    _brewRender(data);
+  } catch (_) {}
+}
+
+async function brewCheckNow() {
+  document.getElementById('brew-msg').textContent = 'Checking for Homebrew updates…';
+  document.getElementById('brew-banner').style.display = 'flex';
+  _brewDismissed = false;
+  try {
+    const res = await fetch('/api/brew/check', { method: 'POST' });
+    const data = await res.json();
+    _brewRender(data);
+  } catch (e) {
+    document.getElementById('brew-msg').textContent = 'Could not reach brew — check manually.';
+  }
+}
+
+function _brewRender(data) {
+  const banner   = document.getElementById('brew-banner');
+  const msgEl    = document.getElementById('brew-msg');
+  if (_brewDismissed) return;
+  const outdated = data.outdated || [];
+  if (!outdated.length) {
+    banner.style.display = 'none';
+    return;
+  }
+  const list = outdated.map(p =>
+    `<strong>${p.name}</strong> ${p.installed} → ${p.current}`
+  ).join(' &nbsp;·&nbsp; ');
+  msgEl.innerHTML = `Homebrew updates available for SuperBox packages: ${list}`;
+  banner.style.display = 'flex';
+}
+
+function brewDismiss() {
+  _brewDismissed = true;
+  document.getElementById('brew-banner').style.display = 'none';
+}
+
+function runBrewUpgrade() {
+  brewDismiss();
+  runCommand('/api/run/brew-upgrade', 'Homebrew — Upgrade SuperBox Packages');
+}
+
+// Check on page load (non-blocking — banner appears only if updates found)
+brewCheckStatus();
+
 async function quitSuperBox() {
   const msg = isRunning
     ? '⚠️ A scan is still running.\n\nShutting down now will cancel it mid-process. Are you sure?'
@@ -2528,12 +1558,27 @@ async function refreshStatus() {
 }
 refreshStatus();
 setInterval(refreshStatus, 6000);
-// Show welcome on first visit
+// First visit: show welcome (one-time onboarding)
+// Every visit after: show the lightweight path picker
 if (!localStorage.getItem('superbox-welcome-seen')) {
   openWelcome();
-} else if (localStorage.getItem('superbox-archive-permission') === 'granted') {
+} else {
   // Re-run archive setup silently on every launch in case drive was remounted
-  fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
+  if (localStorage.getItem('superbox-archive-permission') === 'granted') {
+    fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
+  }
+  document.getElementById('path-backdrop').classList.remove('hidden');
+}
+
+function choosePath(mode) {
+  document.getElementById('path-backdrop').classList.add('hidden');
+  if (mode === 'pipeline') {
+    const tab = document.querySelector('[data-target="step-pipeline"]');
+    if (tab) {
+      tab.click();
+      document.getElementById('step-pipeline')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
 }
 
 /* ── Config prefill + localStorage persistence ─────────────────────────────── */
@@ -2552,7 +1597,7 @@ async function prefillDefaults() {
   // Fields that map to the music root
   const rootFields = [
     'process-path','import-path',
-    'link-path','normalize-path','dupes-path','relocate-new','convert-path',
+    'link-path','normalize-path','dupes-path','relocate-new','convert-path','organize-target',
   ];
   // Fields that are optional overrides (audit root) — prefill but don't force
   const optionalFields = ['audit-root'];
@@ -2740,7 +1785,7 @@ function toggleLog() {
 }
 
 /* ── SSE runner ────────────────────────────────────────────────────────────── */
-function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false, reportTarget = null) {
+function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false) {
   if (isRunning) return;
   initLog(logTitle);
   showScanBar(logTitle);
@@ -2750,7 +1795,7 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false,
   appendLog(`▸ ${logTitle}`, 'dim');
   appendLog('', 'dim');
 
-  // Report block capture — detect ═══ ... ═══ blocks in the CLI output
+  // Report block capture — delimited by SUPERBOX_REPORT_BEGIN / SUPERBOX_REPORT_END
   let reportBuffer = [];
   let inReport = false;
   let capturedReportPath = null;   // set by SUPERBOX_REPORT_PATH: line
@@ -2762,20 +1807,10 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false,
     if (data.line !== undefined) {
       const line = data.line;
 
-      // Detect report block boundaries (═══ TITLE ═══ opener / ═══...═══ closer)
-      if (/^═{3,}/.test(line)) {
-        if (!inReport) {
-          // Opening line — start capture
-          inReport = true;
-          reportBuffer = [line];
-        } else {
-          // Closing line — end capture
-          reportBuffer.push(line);
-          inReport = false;
-        }
-      } else if (inReport) {
-        reportBuffer.push(line);
-      }
+      // Detect report block boundaries
+      if (line === 'SUPERBOX_REPORT_BEGIN') { inReport = true; reportBuffer = []; return; }
+      if (line === 'SUPERBOX_REPORT_END')   { inReport = false; return; }
+      if (inReport) reportBuffer.push(line);
 
       // Machine-readable report path — capture silently, don't echo to log
       if (line.startsWith('SUPERBOX_REPORT_PATH: ')) {
@@ -2833,19 +1868,8 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false,
       } else {
         appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
       }
-      // Render captured report block into the step's inline report card
-      if (reportTarget && reportBuffer.length > 0) {
-        const card = document.getElementById(reportTarget);
-        const pre  = document.getElementById(reportTarget + '-pre');
-        if (card && pre) {
-          pre.textContent = reportBuffer.join('\n');
-          card.classList.remove('hidden');
-          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }
-      // On success, store the report and add a pill — don't auto-open the modal.
-      // The user can click the pill to open it, or it stays in the step card body.
-      if (data.exit_code === 0 && reportBuffer.length > 0) {
+      // Store the report as a bottom-right pill — click to open as popup.
+      if (reportBuffer.length > 0) {
         const reportText = reportBuffer.join('\n');
         sessionReports[logTitle] = { text: reportText, reportPath: capturedReportPath };
         _addOrUpdateSummaryPill(logTitle);
@@ -2886,9 +1910,7 @@ function setAllButtons(disabled) {
 function runAudit() {
   const root = document.getElementById('audit-root').value.trim();
   const params = root ? `?root=${encodeURIComponent(root)}` : '';
-  const el = document.getElementById('audit-result');
-  if (el) el.classList.add('hidden');
-  runCommand(`/api/run/audit${params}`, 'Audit — Library Health Check', null, true, false, 'audit-result');
+  runCommand(`/api/run/audit${params}`, 'Audit — Library Health Check', null, true);
 }
 
 
@@ -2902,7 +1924,7 @@ function runProcess() {
   p.set('no_normalize', '1');  // Step 2 is tags-only; normalize is Step 5
   const el = document.getElementById('process-result');
   if (el) el.classList.add('hidden');
-  runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection', null, true, false, 'process-result');
+  runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection', null, true, false);
 }
 
 function runNormalize() {
@@ -2919,7 +1941,9 @@ function runNormalize() {
   const workers = document.getElementById('normalize-workers')?.value || '4';
   const p = new URLSearchParams({ path, no_bpm: '1', no_key: '1' });
   if (parseInt(workers) > 1) p.set('workers', workers);
-  runCommand(`/api/run/process?${p}`, 'Normalize — Loudness to −8.0 LUFS', null, true);
+  const el = document.getElementById('normalize-result');
+  if (el) el.classList.add('hidden');
+  runCommand(`/api/run/process?${p}`, 'Normalize — Loudness to −8.0 LUFS', null, true, false);
 }
 
 function runImportDry() {
@@ -2970,8 +1994,310 @@ function runConvert() {
   const format = document.getElementById('convert-format').value.trim();
   if (!path) { alert('Enter a music folder path first.'); return; }
   if (!format) { alert('Select a target format.'); return; }
+  const workers = document.getElementById('convert-workers')?.value || '4';
   const p = new URLSearchParams({ path, format });
+  if (parseInt(workers) > 1) p.set('workers', workers);
   runCommand(`/api/run/convert?${p}`, `Converting Audio Files to ${format.toUpperCase()}`);
+}
+
+/* ── Pipeline Builder ──────────────────────────────────────────────────────── */
+
+const PIPE_STEPS = {
+  organize:   { name: 'Sort into Folders',  icon: '🗂',  desc: 'Move files into Artist / Album / Track' },
+  process:    { name: 'Tag Tracks',          icon: '🏷',  desc: 'Write BPM and Key into each file' },
+  normalize:  { name: 'Balance Loudness',    icon: '📢',  desc: 'Bring every track to the same volume' },
+  duplicates: { name: 'Find Duplicates',     icon: '🔎',  desc: 'Scan for files that are the same recording' },
+  prune:      { name: 'Remove Duplicates',   icon: '✂️', desc: 'Delete copies found in previous step' },
+  convert:    { name: 'Convert Format',      icon: '🔄',  desc: 'Change files to AIFF, MP3, WAV, or FLAC' },
+  relocate:   { name: 'Update RekordBox',    icon: '📍',  desc: 'Sync RekordBox after files have moved' },
+};
+
+const RECOMMENDED = ['organize','process','normalize','duplicates','prune','convert','relocate'];
+
+let pipelineSteps = [];   // [{id, type}]
+let pipeUid = 0;
+
+function pipelineAddStep(type) {
+  pipelineSteps.push({ id: ++pipeUid, type });
+  pipelineRender();
+}
+
+function pipelineRemoveStep(id) {
+  pipelineSteps = pipelineSteps.filter(s => s.id !== id);
+  pipelineRender();
+}
+
+function pipelineMoveStep(id, dir) {
+  const i = pipelineSteps.findIndex(s => s.id === id);
+  if (i < 0) return;
+  const j = i + dir;
+  if (j < 0 || j >= pipelineSteps.length) return;
+  [pipelineSteps[i], pipelineSteps[j]] = [pipelineSteps[j], pipelineSteps[i]];
+  pipelineRender();
+}
+
+function pipelineClear() {
+  pipelineSteps = [];
+  pipelineRender();
+  document.getElementById('pipe-recommended-note').classList.add('hidden');
+}
+
+function pipelineLoadRecommended() {
+  pipelineSteps = RECOMMENDED.map(type => ({ id: ++pipeUid, type }));
+  pipelineRender();
+  document.getElementById('pipe-recommended-note').classList.remove('hidden');
+}
+
+function pipelineRender() {
+  const queue   = document.getElementById('pipeline-queue');
+  const empty   = document.getElementById('pipe-empty-msg');
+  const note    = document.getElementById('pipe-config-note');
+
+  if (pipelineSteps.length === 0) {
+    queue.innerHTML = '';
+    queue.appendChild(empty);
+    empty.classList.remove('hidden');
+    note.classList.add('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+  note.classList.remove('hidden');
+
+  queue.innerHTML = '';
+  pipelineSteps.forEach((step, i) => {
+    const def = PIPE_STEPS[step.type] || { name: step.type, icon: '⚙', desc: '' };
+    const el  = document.createElement('div');
+    el.className = 'pipe-step';
+    el.id = `pipe-step-${step.id}`;
+    el.innerHTML = `
+      <div class="pipe-step-num">${i + 1}</div>
+      <div class="pipe-step-body">
+        <div class="pipe-step-name">${def.icon} ${def.name}</div>
+        <div class="pipe-step-desc">${def.desc}</div>
+      </div>
+      <div class="pipe-step-controls">
+        <button onclick="pipelineMoveStep(${step.id}, -1)" title="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button onclick="pipelineMoveStep(${step.id},  1)" title="Move down" ${i === pipelineSteps.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="pipe-remove" onclick="pipelineRemoveStep(${step.id})" title="Remove">✕</button>
+      </div>`;
+    queue.appendChild(el);
+  });
+}
+
+function _pipelineReadConfig(type) {
+  /* Read current values from the existing step card inputs */
+  const musicRoot = document.getElementById('process-path')?.value.trim() || '';
+  switch (type) {
+    case 'organize':
+      return {
+        sources:       Array.from(document.querySelectorAll('.org-source-input'))
+                         .map(i => i.value.trim()).filter(Boolean),
+        target:        document.getElementById('organize-target')?.value.trim()  || musicRoot,
+        mode:          document.getElementById('organize-mode')?.value || 'assimilate',
+        mix_threshold: document.getElementById('organize-mix-threshold')?.value  || '15',
+        workers:       parseInt(document.getElementById('organize-workers')?.value || '1'),
+      };
+    case 'process':
+      return {
+        path:    musicRoot,
+        workers: parseInt(document.getElementById('normalize-workers')?.value || '1'),
+        no_normalize: true,
+      };
+    case 'normalize':
+      return {
+        path:    musicRoot,
+        workers: parseInt(document.getElementById('normalize-workers')?.value || '1'),
+      };
+    case 'duplicates':
+      return {
+        path:    document.getElementById('dupes-path')?.value.trim() || musicRoot,
+        workers: 1,
+      };
+    case 'prune':
+      return {};
+    case 'convert':
+      return {
+        path:    document.getElementById('convert-path')?.value.trim() || musicRoot,
+        format:  document.getElementById('convert-format')?.value || 'aiff',
+        workers: parseInt(document.getElementById('convert-workers')?.value || '1'),
+      };
+    case 'relocate':
+      return {
+        old_root: document.getElementById('relocate-old')?.value.trim() || '',
+        new_root: document.getElementById('relocate-new')?.value.trim() || '',
+      };
+    default:
+      return {};
+  }
+}
+
+async function runPipeline() {
+  if (pipelineSteps.length === 0) {
+    alert('Add at least one step to the pipeline first.');
+    return;
+  }
+  if (isRunning) return;
+
+  const dryRun = document.getElementById('pipeline-dry-run').checked;
+  const steps  = pipelineSteps.map(s => ({
+    type:   s.type,
+    name:   (PIPE_STEPS[s.type] || {}).name || s.type,
+    config: _pipelineReadConfig(s.type),
+  }));
+
+  const label = dryRun ? 'Pipeline — Dry Run (preview only)' : 'Running Pipeline';
+
+  /* Reset step visual state */
+  pipelineSteps.forEach(s => {
+    const el = document.getElementById(`pipe-step-${s.id}`);
+    if (el) el.className = 'pipe-step';
+  });
+
+  /* Set up the shared log/bar/spinner using existing helpers */
+  initLog(label);
+  showScanBar(label);
+  isRunning = true;
+  setSpinner(true);
+  setAllButtons(true);
+  appendLog(`▸ ${label}`, 'dim');
+  appendLog('', 'dim');
+
+  let reportBuffer    = [];
+  let inReport        = false;
+  let stepIdMap       = {};
+  pipelineSteps.forEach((s, i) => { stepIdMap[i + 1] = `pipe-step-${s.id}`; });
+
+  const finish = (exitCode, failedStep) => {
+    isRunning = false;
+    setSpinner(false);
+    setAllButtons(false);
+    finishScanBar();
+    appendLog('', '');
+    if (failedStep) {
+      appendLog(`✗ Pipeline stopped — "${failedStep}" had an error.`, 'log-exit-fail');
+    } else if (exitCode === 0) {
+      appendLog(dryRun
+        ? '✓ Preview complete. Uncheck Dry Run and run again to execute.'
+        : '✓ Pipeline complete.', 'log-exit-ok');
+    } else {
+      appendLog(`✗ Exited with code ${exitCode}`, 'log-exit-fail');
+    }
+    if (reportBuffer.length > 0) {
+      sessionReports[label] = { text: reportBuffer.join('\n'), reportPath: null };
+      _addOrUpdateSummaryPill(label);
+    }
+  };
+
+  try {
+    const resp = await fetch('/api/run/pipeline', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ dry_run: dryRun, steps }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: resp.statusText }));
+      appendLog('Pipeline error: ' + (err.error || resp.statusText), 'error');
+      finish(1, null);
+      return;
+    }
+
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let   buf     = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+
+      for (const part of parts) {
+        const dataLine = part.split('\n').find(l => l.startsWith('data: '));
+        if (!dataLine) continue;
+        try {
+          const ev = JSON.parse(dataLine.slice(6));
+
+          if (ev.step_start !== undefined) {
+            const el = document.getElementById(stepIdMap[ev.step_start]);
+            if (el) el.className = 'pipe-step running';
+            appendLog('', '');
+            appendLog(`── Step ${ev.step_start} / ${ev.total_steps}: ${ev.step_name} ──`, 'dim');
+
+          } else if (ev.step_end !== undefined) {
+            const el = document.getElementById(stepIdMap[ev.step_end]);
+            if (el) el.className = ev.exit_code === 0 ? 'pipe-step done' : 'pipe-step failed';
+
+          } else if (ev.line !== undefined) {
+            const line = ev.line;
+            if (line === 'SUPERBOX_REPORT_BEGIN') { inReport = true; reportBuffer = []; }
+            else if (line === 'SUPERBOX_REPORT_END') { inReport = false; }
+            else if (line.startsWith('SUPERBOX_PROGRESS: ')) {
+              try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
+            } else if (line.startsWith('SUPERBOX_REPORT_PATH: ')) {
+              /* silently capture */
+            } else {
+              if (inReport) reportBuffer.push(line);
+              appendLog(line, classifyLine(line));
+            }
+
+          } else if (ev.done) {
+            finish(ev.exit_code || 0, ev.failed_step || null);
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (err) {
+    appendLog('[Connection error] ' + err.message, 'error');
+    finish(1, null);
+  }
+}
+
+function orgAddSource() {
+  const list = document.getElementById('organize-source-list');
+  const row  = document.createElement('div');
+  row.className = 'org-source-row';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  row.innerHTML = `<input type="text" class="org-source-input" placeholder="/Volumes/AnotherDrive" style="flex:1"><button type="button" onclick="this.closest('.org-source-row').remove()" style="background:none;border:1px solid var(--border-hi);color:var(--text-dim);border-radius:var(--radius);padding:4px 9px;font-size:.8rem;cursor:pointer;flex-shrink:0;" title="Remove this source">✕</button>`;
+  list.appendChild(row);
+  row.querySelector('input').focus();
+}
+
+function orgUpdateMode(val) {
+  const badge = document.getElementById('organize-risk-badge');
+  if (badge) {
+    if (val === 'integrate') {
+      badge.textContent = 'Copies Files';
+      badge.className   = 'risk-badge safe';
+    } else {
+      badge.textContent = 'Moves Files';
+      badge.className   = 'risk-badge warn';
+    }
+  }
+}
+
+function runOrganize() {
+  const sources  = Array.from(document.querySelectorAll('.org-source-input'))
+                        .map(i => i.value.trim()).filter(Boolean);
+  const target   = document.getElementById('organize-target').value.trim();
+  const dryRun   = document.getElementById('organize-dry-run').checked;
+  const workers  = document.getElementById('organize-workers')?.value || '1';
+  const threshold = document.getElementById('organize-mix-threshold')?.value || '15';
+  const mode     = document.getElementById('organize-mode')?.value || 'assimilate';
+  if (!sources.length) { alert('Enter at least one source folder path.'); return; }
+  if (!target) { alert('Enter a target (library root) folder path.'); return; }
+  const p = new URLSearchParams();
+  sources.forEach(s => p.append('source', s));
+  p.set('target', target);
+  if (!dryRun) p.set('no_dry_run', '1');
+  if (mode !== 'assimilate') p.set('mode', mode);
+  if (parseInt(workers) > 1) p.set('workers', workers);
+  if (threshold !== '15') p.set('mix_threshold', threshold);
+  const modeLabel = mode === 'integrate' ? 'Integration (copies only, source untouched)' : 'Assimilation (move + clean source)';
+  const label = dryRun ? `Organize — Dry Run · ${modeLabel}` : `Organize — ${modeLabel}`;
+  runCommand(`/api/run/organize?${p}`, label);
 }
 
 /* ── Prune Duplicates ──────────────────────────────────────────────────────── */
@@ -3202,7 +2528,25 @@ async function executePrune() {
   if (statusEl) statusEl.style.display = 'none';
 
   const paths = [...pruneSelected];
-  const url   = '/api/run/prune?paths=' + encodeURIComponent(JSON.stringify(paths));
+
+  // Stage the paths server-side to avoid blowing the 256 KB header limit
+  // when passing thousands of file paths as a query string.
+  let token;
+  try {
+    const res = await fetch('/api/prune/stage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.token) throw new Error(data.error || 'stage failed');
+    token = data.token;
+  } catch (e) {
+    _showPruneStatus(`✗ Could not stage prune — ${e.message}`, true);
+    return;
+  }
+
+  const url = `/api/run/prune?token=${encodeURIComponent(token)}`;
   runCommand(url, `Prune — ${paths.length} duplicate${paths.length > 1 ? 's' : ''} moved to Trash`, (exitCode) => {
     if (exitCode === 0) {
       pruneSelected.clear();

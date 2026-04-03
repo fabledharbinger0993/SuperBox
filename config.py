@@ -127,7 +127,25 @@ AUDIO_EXTENSIONS = {".mp3", ".aiff", ".aif", ".wav", ".flac", ".m4a", ".ogg", ".
 
 # Files to skip when scanning (macOS metadata, hidden files)
 SKIP_PREFIXES = ("._", ".")
-SKIP_DIRS = {"PIONEER", "__MACOSX", ".Spotlight-V100", ".fseventsd"}
+
+# Base set of directory names to never descend into while scanning the music root.
+# Covers Pioneer system folders, macOS internals, and common non-music app data.
+SKIP_DIRS: set[str] = {
+    # Pioneer / DJ system
+    "PIONEER", "PIONEER REC",
+    # macOS internals
+    "__MACOSX", ".Spotlight-V100", ".fseventsd", ".DocumentRevisions-V100",
+    ".TemporaryItems", ".Trashes",
+    # Common non-music app data that ends up inside music drives
+    "ollama", "SuperBox Archive",
+    # Processing artifacts left by SuperBox or other tools
+    "DJMT PRIMARY_PROCESSING_LOGIC", "POST PROCESS ZIP ARCHIVE",
+}
+
+# Merge in any user-specified exclusions from config.json ("excluded_dirs" key)
+_user_excluded: list = _cfg.get("excluded_dirs", [])
+if _user_excluded:
+    SKIP_DIRS = SKIP_DIRS | set(_user_excluded)
 
 # Batch size for database commits — one commit per N tracks
 BATCH_SIZE: int = 250

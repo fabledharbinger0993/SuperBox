@@ -9,16 +9,21 @@ from here, not the other way around. Keep it that way.
 Config file schema
 ------------------
 {
-  "local_db":      "/Users/name/Library/Pioneer/rekordbox/master.db",
-  "device_db":     "/Volumes/MYDRIVE/PIONEER/Master/master.db",
-  "music_root":    "/Volumes/MYDRIVE/MY MUSIC",
-  "backup_dir":    "/Users/name/.rekordbox-toolkit/backups",
-  "target_lufs":   -8.0,
-  "lufs_tolerance": 0.5
+  "local_db":        "/Users/name/Library/Pioneer/rekordbox/master.db",
+  "device_db":       "/Volumes/MYDRIVE/PIONEER/Master/master.db",
+  "music_root":      "/Volumes/MYDRIVE/MY MUSIC",
+  "backup_dir":      "/Users/name/.rekordbox-toolkit/backups",
+  "target_lufs":     -8.0,
+  "lufs_tolerance":  0.5,
+  "excluded_dirs":   ["ollama", "DJMT PRIMARY_PROCESSING_LOGIC"]
 }
 
 Required keys: local_db, device_db, music_root, backup_dir
-Optional keys: target_lufs, lufs_tolerance (filled from DEFAULTS if absent)
+Optional keys: target_lufs, lufs_tolerance, excluded_dirs (filled from DEFAULTS if absent)
+
+excluded_dirs: list of folder *names* (not paths) to skip when scanning the music
+root. Useful for non-music directories that live inside the music root, such as
+app data folders or nested drive copies. Names are matched case-sensitively.
 
 Public interface
 ----------------
@@ -53,6 +58,7 @@ DEFAULTS: dict = {
     "lufs_tolerance":  0.5,
     "archive_mode":        "auto",
     "custom_archive_dir":  "",
+    "excluded_dirs":       [],   # extra folder names to skip when scanning music root
 }
 
 # Smart defaults for the setup wizard (platform-aware where relevant)

@@ -156,9 +156,11 @@ def prune_files(
       1. Create recovery folder in Trash.
       2. Remove DB entries (with the backup already created by write_db).
       3. Move files to recovery folder.
+      4. Delete any source folders that are now empty (walks up toward
+         home but never removes home itself or anything above it).
 
     Returns a summary dict:
-      { db_removed, files_moved, skipped, errors, trash_dir }
+      { db_removed, files_moved, folders_removed, skipped, errors, trash_dir }
     """
 
     def emit(msg: str) -> None:
@@ -222,6 +224,7 @@ def prune_files(
 
     # ── Step 2: Move files to recovery folder ──────────────────────────────
     emit("  Moving files to recovery folder…")
+    source_parents: set[Path] = set()
     for path in file_paths:
         p = Path(path)
         if not p.exists():
@@ -234,6 +237,7 @@ def prune_files(
             if dest.exists():
                 dest = trash_dir / f"{p.stem}__{p.parent.name}{p.suffix}"
             shutil.move(str(p), str(dest))
+            source_parents.add(p.parent)
             files_moved += 1
             emit(f"    Moved ✓  {p.name}")
         except Exception as exc:
@@ -242,9 +246,44 @@ def prune_files(
             emit(f"    Move ✗  {msg}")
 
     emit("")
+
+    # ── Step 3: Remove empty source folders ───────────────────────────────
+    folders_removed = 0
+    if source_parents:
+        emit("  Cleaning up empty source folders…")
+        home = Path.home()
+        # Process deepest paths first so we bubble upward correctly
+        for parent in sorted(source_parents, key=lambda p: len(p.parts), reverse=True):
+            folder = parent
+            while folder != home and folder.is_relative_to(home):
+                if not folder.exists():
+                    folder = folder.parent
+                    continue
+                try:
+                    contents = list(folder.iterdir())
+                except PermissionError:
+                    break
+                if contents:
+                    break  # not empty — stop climbing
+                try:
+                    folder.rmdir()
+                    folders_removed += 1
+                    emit(f"    Removed ✓  {folder.name}/  ({folder.parent})")
+                    folder = folder.parent
+                except Exception as exc:
+                    emit(f"    Could not remove {folder.name}/: {exc}")
+                    break
+        if folders_removed:
+            emit(f"  ✓ {folders_removed} empty folder(s) removed.")
+        else:
+            emit("  No empty folders to clean up.")
+        emit("")
+
     emit("═══ PRUNE SUMMARY ═══")
     emit(f"  Database entries removed : {db_removed}")
     emit(f"  Files moved to recovery  : {files_moved}")
+    if folders_removed:
+        emit(f"  Empty folders removed    : {folders_removed}")
     if skipped:
         emit(f"  Skipped (not on disk)    : {skipped}")
     if errors:
@@ -255,9 +294,10 @@ def prune_files(
     emit("═════════════════════")
 
     return {
-        "db_removed":  db_removed,
-        "files_moved": files_moved,
-        "skipped":     skipped,
-        "errors":      errors,
-        "trash_dir":   str(trash_dir),
+        "db_removed":      db_removed,
+        "files_moved":     files_moved,
+        "folders_removed": folders_removed,
+        "skipped":         skipped,
+        "errors":          errors,
+        "trash_dir":       str(trash_dir),
     }
