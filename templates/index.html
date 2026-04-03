@@ -137,6 +137,38 @@ header {
   0%,100% { opacity: 1; } 50% { opacity: .35; }
 }
 
+/* ── Brew update banner ────────────────────────────────────────────────── */
+#brew-banner {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 24px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  font-size: .82rem;
+  color: var(--text);
+}
+#brew-banner .brew-icon { font-size: 1rem; flex-shrink: 0; }
+#brew-banner .brew-msg  { flex: 1; line-height: 1.4; }
+#brew-banner .brew-msg strong { color: var(--accent); }
+#brew-banner .brew-btn {
+  background: var(--accent); color: #000;
+  border: none; border-radius: var(--radius);
+  padding: 4px 14px; font-size: .78rem; font-weight: 600;
+  cursor: pointer; flex-shrink: 0; letter-spacing: .03em;
+}
+#brew-banner .brew-btn:hover { opacity: .85; }
+#brew-banner .brew-link {
+  background: none; border: 1px solid var(--border-hi); color: var(--text-muted);
+  border-radius: var(--radius); padding: 4px 12px; font-size: .78rem;
+  cursor: pointer; flex-shrink: 0; letter-spacing: .03em;
+}
+#brew-banner .brew-link:hover { color: var(--text); }
+#brew-banner .brew-dismiss {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1rem; cursor: pointer; padding: 0 4px; flex-shrink: 0;
+}
+
 /* ── Workflow rail ─────────────────────────────────────────────────────── */
 .workflow-rail {
   position: sticky; top: 96px; z-index: 90;
@@ -1526,6 +1558,15 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
     </button>
   </div>
 </header>
+
+<!-- ══ Brew update banner ═══════════════════════════════════════════════════ -->
+<div id="brew-banner">
+  <span class="brew-icon">🍺</span>
+  <span class="brew-msg" id="brew-msg">Homebrew updates available.</span>
+  <button class="brew-btn" onclick="runBrewUpgrade()">Update Now</button>
+  <button class="brew-link" onclick="brewCheckNow()">Check Again</button>
+  <button class="brew-dismiss" onclick="brewDismiss()" title="Dismiss until next check">✕</button>
+</div>
 
 <!-- ══ Workflow rail ════════════════════════════════════════════════════════ -->
 <nav class="workflow-rail" id="workflow-rail">
@@ -2932,6 +2973,61 @@ async function emergencyStop() {
     btn.textContent = '⚡ Emergency Stop'; btn.disabled = false;
   }
 }
+
+/* ── Homebrew update banner ─────────────────────────────────────────────────── */
+
+let _brewDismissed = false;
+
+async function brewCheckStatus() {
+  try {
+    const res = await fetch('/api/brew/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    _brewRender(data);
+  } catch (_) {}
+}
+
+async function brewCheckNow() {
+  document.getElementById('brew-msg').textContent = 'Checking for Homebrew updates…';
+  document.getElementById('brew-banner').style.display = 'flex';
+  _brewDismissed = false;
+  try {
+    const res = await fetch('/api/brew/check', { method: 'POST' });
+    const data = await res.json();
+    _brewRender(data);
+  } catch (e) {
+    document.getElementById('brew-msg').textContent = 'Could not reach brew — check manually.';
+  }
+}
+
+function _brewRender(data) {
+  const banner   = document.getElementById('brew-banner');
+  const msgEl    = document.getElementById('brew-msg');
+  if (_brewDismissed) return;
+  const outdated = data.outdated || [];
+  if (!outdated.length) {
+    banner.style.display = 'none';
+    return;
+  }
+  const list = outdated.map(p =>
+    `<strong>${p.name}</strong> ${p.installed} → ${p.current}`
+  ).join(' &nbsp;·&nbsp; ');
+  msgEl.innerHTML = `Homebrew updates available for SuperBox packages: ${list}`;
+  banner.style.display = 'flex';
+}
+
+function brewDismiss() {
+  _brewDismissed = true;
+  document.getElementById('brew-banner').style.display = 'none';
+}
+
+function runBrewUpgrade() {
+  brewDismiss();
+  runCommand('/api/run/brew-upgrade', 'Homebrew — Upgrade SuperBox Packages');
+}
+
+// Check on page load (non-blocking — banner appears only if updates found)
+brewCheckStatus();
 
 async function quitSuperBox() {
   const msg = isRunning

@@ -34,6 +34,13 @@ if str(_REPO_ROOT) not in sys.path:
 
 app = Flask(__name__)
 
+# ── Homebrew update checker (background, weekly) ──────────────────────────────
+from brew_updater import start_background_checker as _start_brew_checker, \
+                         check_now as _brew_check_now, \
+                         get_status as _brew_get_status, \
+                         BREW_DEPS as _BREW_DEPS
+_start_brew_checker()
+
 # ── Active-process tracker (interrupt / emergency-stop) ───────────────────────
 _proc_lock: threading.Lock = threading.Lock()
 _active_proc: "subprocess.Popen | None" = None
@@ -775,6 +782,41 @@ def api_cancel_force():
         return jsonify({"ok": False, "error": "No active scan"}), 404
     proc.kill()
     return jsonify({"ok": True})
+
+
+# ── Homebrew update routes ────────────────────────────────────────────────────
+
+@app.route("/api/brew/status")
+def api_brew_status():
+    """Return the cached brew-outdated status (never blocks)."""
+    return jsonify(_brew_get_status())
+
+
+@app.route("/api/brew/check", methods=["POST"])
+def api_brew_check():
+    """Trigger an immediate brew-outdated check and return the result."""
+    status = _brew_check_now()
+    return jsonify(status)
+
+
+@app.route("/api/run/brew-upgrade")
+def api_brew_upgrade():
+    """
+    SSE stream of ``brew upgrade <packages>`` for the packages SuperBox uses.
+    Only upgrades known-outdated packages reported by the last cached check.
+    """
+    outdated = _brew_get_status().get("outdated", [])
+    names    = [p["name"] for p in outdated if p.get("name")]
+    if not names:
+        # Nothing to do — return an immediate SSE end event
+        def _nothing():
+            yield "data: No outdated SuperBox packages found.\n\n"
+            yield "data: [DONE]\n\n"
+        return Response(_nothing(), mimetype="text/event-stream",
+                        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    cmd = ["brew", "upgrade"] + names
+    return _sse_response(cmd)
 
 
 # ── Quit ──────────────────────────────────────────────────────────────────────
