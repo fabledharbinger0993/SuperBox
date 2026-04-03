@@ -86,6 +86,9 @@
   <button class="step-tab" data-target="step-organize">
     <span class="step-num">⊕</span> Organize
   </button>
+  <button class="step-tab" data-target="step-novelty">
+    <span class="step-num">★</span> Novelty
+  </button>
   <button class="step-tab" data-target="step-pipeline" style="border-color:var(--accent);color:var(--accent)">
     <span class="step-num" style="background:var(--accent);color:#fff">▶</span> Pipeline
   </button>
@@ -806,6 +809,62 @@
       </div>
       <div class="btn-row">
         <button class="btn btn-neon" id="btn-organize" onclick="runOrganize()">Scan &amp; Organize</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Novelty Scanner ───────────────────────────────────────────────── -->
+  <div class="card" id="step-novelty">
+    <div class="card-head">
+      <div class="card-icon"><img src="/static/icon-novelty.png" alt="Novelty Scanner"></div>
+      <div class="card-meta">
+        <div class="card-title">Novelty Scanner — Capture Unique Tracks from Any Drive</div>
+        <div class="card-blurb">Scans a source drive for tracks that don't exist anywhere in your home library and copies every one of them across. When in doubt, it copies. Use this to safely rescue one-of-a-kind recordings from backup drives before anything gets lost.</div>
+      </div>
+      <span class="risk-badge safe">SAFE</span>
+    </div>
+    <div class="explainers">
+      <details>
+        <summary>How is this different from Find Duplicates?</summary>
+        <div class="explain-body">
+          <p>Find Duplicates is cold-blooded — it only flags a track as a duplicate when it's highly confident. That strictness protects you from accidental deletion.</p>
+          <p>The Novelty Scanner flips the logic: a track is copied unless we're highly confident it's already in your library. One extra copy on disk costs nothing. A missing irreplaceable recording costs everything.</p>
+          <p><strong>Uses your existing scan index</strong> — tracks already fingerprinted during a BPM/key run skip straight past Chromaprint, making the scan much faster on large libraries.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Dry Run vs Live Run</summary>
+        <div class="explain-body">
+          <p>Dry Run (default) scans and reports what would be copied without touching anything. The source drive is <strong>never modified</strong> in either mode — this tool only copies, never moves.</p>
+          <p>Live Run copies novel tracks into your destination using the same Artist / Album / Track structure as the Library Organizer. Already-structured files keep their folder layout.</p>
+        </div>
+      </details>
+    </div>
+    <div class="card-form">
+      <div class="field">
+        <label>Source Drive / Folder</label>
+        <input type="text" id="novelty-source" placeholder="/Volumes/Passport">
+      </div>
+      <div class="field">
+        <label>Destination (Home Library)</label>
+        <input type="text" id="novelty-dest" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="field">
+        <div class="checkbox-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="novelty-dry-run" checked>
+            Dry Run (preview only — nothing will be copied)
+          </label>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-novelty" onclick="runNovelty()">
+          <img src="/static/icon-novelty.png" style="width:16px;height:16px;filter:brightness(0) invert(1)" alt="">
+          Scan for Novel Tracks
+        </button>
+      </div>
+      <div class="rb-block-msg" id="novelty-rb-block">
+        <span>⚠</span> Close Rekordbox before running a live scan.
       </div>
     </div>
   </div>
@@ -1598,11 +1657,12 @@ async function prefillDefaults() {
   const rootFields = [
     'process-path','import-path',
     'link-path','normalize-path','dupes-path','relocate-new','convert-path','organize-target',
+    'novelty-dest',
   ];
   // Fields that are optional overrides (audit root) — prefill but don't force
   const optionalFields = ['audit-root'];
   // Relocate old root — user-specific, just restore from localStorage
-  const freeFields = ['relocate-old','dupes-output'];
+  const freeFields = ['relocate-old','dupes-output','novelty-source'];
 
   // Restore any previously saved value for every tracked field first
   [...rootFields, ...optionalFields, ...freeFields].forEach(id => {
@@ -2004,6 +2064,7 @@ function runConvert() {
 
 const PIPE_STEPS = {
   organize:   { name: 'Sort into Folders',  icon: '🗂',  desc: 'Move files into Artist / Album / Track' },
+  novelty:    { name: 'Novelty Scan',       icon: '★',   desc: 'Copy unique tracks from source to home library' },
   process:    { name: 'Tag Tracks',          icon: '🏷',  desc: 'Write BPM and Key into each file' },
   normalize:  { name: 'Balance Loudness',    icon: '📢',  desc: 'Bring every track to the same volume' },
   duplicates: { name: 'Find Duplicates',     icon: '🔎',  desc: 'Scan for files that are the same recording' },
@@ -2298,6 +2359,23 @@ function runOrganize() {
   const modeLabel = mode === 'integrate' ? 'Integration (copies only, source untouched)' : 'Assimilation (move + clean source)';
   const label = dryRun ? `Organize — Dry Run · ${modeLabel}` : `Organize — ${modeLabel}`;
   runCommand(`/api/run/organize?${p}`, label);
+}
+
+/* ── Novelty Scanner ───────────────────────────────────────────────────────── */
+function runNovelty() {
+  const source  = document.getElementById('novelty-source').value.trim();
+  const dest    = document.getElementById('novelty-dest').value.trim();
+  const dryRun  = document.getElementById('novelty-dry-run').checked;
+  if (!source) { alert('Enter a source drive or folder path.'); return; }
+  if (!dest)   { alert('Enter a destination (home library) path.'); return; }
+  const p = new URLSearchParams();
+  p.set('source', source);
+  p.set('dest', dest);
+  if (!dryRun) p.set('no_dry_run', '1');
+  const label = dryRun
+    ? 'Novelty Scan — Dry Run (nothing will be copied)'
+    : 'Novelty Scan — Copying novel tracks to destination';
+  runCommand(`/api/run/novelty?${p}`, label);
 }
 
 /* ── Prune Duplicates ──────────────────────────────────────────────────────── */

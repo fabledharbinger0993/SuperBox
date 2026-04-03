@@ -602,6 +602,73 @@ def cmd_organize(args: argparse.Namespace) -> None:
         log.warning("%d files had errors — check log above", errors)
 
 
+def cmd_novelty(args: argparse.Namespace) -> None:
+    """Find tracks that only exist on the source and copy them to the destination."""
+    from pathlib import Path
+    from novelty_scanner import scan_novel
+
+    primary = Path(args.source)
+    extra   = [Path(p) for p in (getattr(args, "also_scan", None) or [])]
+    sources = [primary] + extra
+    dest    = Path(args.dest)
+    dry_run = not args.no_dry_run
+
+    for s in sources:
+        if not s.is_dir():
+            log.error("SOURCE is not a directory: %s", s)
+            sys.exit(1)
+    if not dest.is_dir():
+        try:
+            dest.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            log.error("Cannot create destination %s: %s", dest, e)
+            sys.exit(1)
+
+    max_workers = max(1, getattr(args, "workers", 1))
+
+    if dry_run:
+        log.info("DRY RUN — no files will be copied. Pass --no-dry-run to execute.")
+
+    log.info(
+        "Novel scan  sources=%s  dest=%s  dry_run=%s  workers=%d",
+        [str(s) for s in sources], dest, dry_run, max_workers,
+    )
+
+    result = scan_novel(
+        sources, dest,
+        dry_run=dry_run,
+        max_workers=max_workers,
+    )
+
+    novel   = len(result.novel)
+    present = len(result.present)
+    errors  = len(result.errors)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    verb = "would be copied" if dry_run else "copied"
+
+    lines = [
+        "Novel Track Scan complete.",
+        "",
+        f"{result.total_src} tracks scanned on source.",
+        f"Destination index: {result.dest_index_size} tracks.",
+        "",
+    ]
+    if novel:
+        lines.append(f"  {novel} novel tracks {verb} to destination.")
+    if present:
+        lines.append(f"  {present} tracks confirmed already present — skipped.")
+    if errors:
+        lines.append(f"  {errors} errors — check log above.")
+    if dry_run:
+        lines += ["", "Nothing has been copied. Uncheck \"Dry Run\" and run again to execute."]
+
+    _emit_report("\n".join(lines), "Novelty Scan", f"novelty_{timestamp}.txt")
+
+    if errors > 0:
+        log.warning("%d files had errors — check log above", errors)
+
+
 # ─── Argument parser ──────────────────────────────────────────────────────────
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -804,6 +871,44 @@ Examples:
         ),
     )
     p_organize.set_defaults(func=cmd_organize)
+
+    # ── novelty ───────────────────────────────────────────────────────────────
+    p_novelty = subparsers.add_parser(
+        "novelty",
+        help="Find and copy tracks that exist only on the source (not in destination)",
+    )
+    p_novelty.add_argument(
+        "source",
+        metavar="SOURCE",
+        help="Drive or directory to scan for novel tracks",
+    )
+    p_novelty.add_argument(
+        "dest",
+        metavar="DEST",
+        help="Home library root to copy novel tracks into",
+    )
+    p_novelty.add_argument(
+        "--no-dry-run",
+        action="store_true",
+        default=False,
+        help="Actually copy files. Default is dry-run (preview only).",
+    )
+    p_novelty.add_argument(
+        "--workers", "-w",
+        metavar="N",
+        type=int,
+        default=1,
+        help="Parallel workers (default: 1)",
+    )
+    p_novelty.add_argument(
+        "--also-scan",
+        metavar="PATH",
+        action="append",
+        default=[],
+        dest="also_scan",
+        help="Additional source directory (can be repeated)",
+    )
+    p_novelty.set_defaults(func=cmd_novelty)
 
     return parser
 

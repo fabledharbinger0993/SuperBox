@@ -520,6 +520,27 @@ def api_relocate():
     return _sse_response(cmd)
 
 
+@app.route("/api/run/novelty")
+def api_novelty():
+    sources = [s.strip() for s in request.args.getlist("source") if s.strip()]
+    dest    = request.args.get("dest", "").strip()
+    if not sources or not dest:
+        return jsonify({"error": "at least one source and a dest are required"}), 400
+
+    cmd = [sys.executable, str(CLI_PATH), "novelty", sources[0], dest]
+    for extra in sources[1:]:
+        cmd += ["--also-scan", extra]
+
+    if request.args.get("no_dry_run") == "1":
+        cmd.append("--no-dry-run")
+
+    workers = request.args.get("workers", "1").strip()
+    if workers.isdigit() and int(workers) > 1:
+        cmd += ["--workers", workers]
+
+    return _sse_response(cmd)
+
+
 @app.route("/api/run/duplicates")
 def api_duplicates():
     path = request.args.get("path", "").strip()
