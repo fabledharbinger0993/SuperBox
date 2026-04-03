@@ -87,13 +87,22 @@ class NovelScanResult:
 # ─── Index helpers ────────────────────────────────────────────────────────────
 
 def _load_scan_index() -> dict[str, dict]:
-    """Load ~/rekordbox-toolkit/scan_index.json if it exists."""
+    """Load ~/rekordbox-toolkit/scan_index.json if it exists.
+
+    scan_index.json is written as a JSON array of objects, each with a
+    "path" key. Convert to {path: entry} dict for O(1) lookup.
+    """
     p = Path.home() / "rekordbox-toolkit" / "scan_index.json"
     if not p.exists():
         return {}
     try:
         with open(p) as f:
-            return json.load(f)
+            data = json.load(f)
+        if isinstance(data, list):
+            return {e["path"]: e for e in data if "path" in e}
+        if isinstance(data, dict):
+            return data
+        return {}
     except Exception as exc:
         log.warning("Could not load scan_index.json: %s", exc)
         return {}
