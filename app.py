@@ -34,6 +34,13 @@ if str(_REPO_ROOT) not in sys.path:
 
 app = Flask(__name__)
 
+# ── Homebrew update checker (background, weekly) ──────────────────────────────
+from brew_updater import start_background_checker as _start_brew_checker, \
+                         check_now as _brew_check_now, \
+                         get_status as _brew_get_status, \
+                         BREW_DEPS as _BREW_DEPS
+_start_brew_checker()
+
 # ── Active-process tracker (interrupt / emergency-stop) ───────────────────────
 _proc_lock: threading.Lock = threading.Lock()
 _active_proc: "subprocess.Popen | None" = None
@@ -343,10 +350,19 @@ def api_pipeline():
         name   = s.get("name", stype)
 
         if stype == "organize":
+            src_list = cfg.get("sources") or [cfg.get("source", "")]
+            if isinstance(src_list, str):
+                src_list = [src_list]
             cmd = [sys.executable, str(CLI_PATH), "organize",
-                   cfg.get("source", ""), cfg.get("target", "")]
+                   src_list[0], cfg.get("target", "")]
+            for extra in src_list[1:]:
+                if extra:
+                    cmd += ["--also-scan", extra]
             if not dry_run:
                 cmd.append("--no-dry-run")
+            org_mode = cfg.get("mode", "assimilate")
+            if org_mode == "integrate":
+                cmd += ["--mode", "integrate"]
             if cfg.get("mix_threshold"):
                 cmd += ["--mix-threshold", str(cfg["mix_threshold"])]
             if cfg.get("workers", 1) > 1:
@@ -407,15 +423,21 @@ def api_pipeline():
 
 @app.route("/api/run/organize")
 def api_organize():
-    source = request.args.get("source", "").strip()
-    target = request.args.get("target", "").strip()
-    if not source or not target:
-        return jsonify({"error": "source and target are required"}), 400
+    sources = [s.strip() for s in request.args.getlist("source") if s.strip()]
+    target  = request.args.get("target", "").strip()
+    if not sources or not target:
+        return jsonify({"error": "at least one source and a target are required"}), 400
 
-    cmd = [sys.executable, str(CLI_PATH), "organize", source, target]
+    cmd = [sys.executable, str(CLI_PATH), "organize", sources[0], target]
+    for extra in sources[1:]:
+        cmd += ["--also-scan", extra]
 
     if request.args.get("no_dry_run") == "1":
         cmd.append("--no-dry-run")
+
+    org_mode = request.args.get("mode", "assimilate").strip()
+    if org_mode == "integrate":
+        cmd += ["--mode", "integrate"]
 
     workers = request.args.get("workers", "1").strip()
     if workers.isdigit() and int(workers) > 1:
@@ -760,6 +782,41 @@ def api_cancel_force():
         return jsonify({"ok": False, "error": "No active scan"}), 404
     proc.kill()
     return jsonify({"ok": True})
+
+
+# ── Homebrew update routes ────────────────────────────────────────────────────
+
+@app.route("/api/brew/status")
+def api_brew_status():
+    """Return the cached brew-outdated status (never blocks)."""
+    return jsonify(_brew_get_status())
+
+
+@app.route("/api/brew/check", methods=["POST"])
+def api_brew_check():
+    """Trigger an immediate brew-outdated check and return the result."""
+    status = _brew_check_now()
+    return jsonify(status)
+
+
+@app.route("/api/run/brew-upgrade")
+def api_brew_upgrade():
+    """
+    SSE stream of ``brew upgrade <packages>`` for the packages SuperBox uses.
+    Only upgrades known-outdated packages reported by the last cached check.
+    """
+    outdated = _brew_get_status().get("outdated", [])
+    names    = [p["name"] for p in outdated if p.get("name")]
+    if not names:
+        # Nothing to do — return an immediate SSE end event
+        def _nothing():
+            yield "data: No outdated SuperBox packages found.\n\n"
+            yield "data: [DONE]\n\n"
+        return Response(_nothing(), mimetype="text/event-stream",
+                        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    cmd = ["brew", "upgrade"] + names
+    return _sse_response(cmd)
 
 
 # ── Quit ──────────────────────────────────────────────────────────────────────

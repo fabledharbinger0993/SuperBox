@@ -137,6 +137,38 @@ header {
   0%,100% { opacity: 1; } 50% { opacity: .35; }
 }
 
+/* ── Brew update banner ────────────────────────────────────────────────── */
+#brew-banner {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 24px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  font-size: .82rem;
+  color: var(--text);
+}
+#brew-banner .brew-icon { font-size: 1rem; flex-shrink: 0; }
+#brew-banner .brew-msg  { flex: 1; line-height: 1.4; }
+#brew-banner .brew-msg strong { color: var(--accent); }
+#brew-banner .brew-btn {
+  background: var(--accent); color: #000;
+  border: none; border-radius: var(--radius);
+  padding: 4px 14px; font-size: .78rem; font-weight: 600;
+  cursor: pointer; flex-shrink: 0; letter-spacing: .03em;
+}
+#brew-banner .brew-btn:hover { opacity: .85; }
+#brew-banner .brew-link {
+  background: none; border: 1px solid var(--border-hi); color: var(--text-muted);
+  border-radius: var(--radius); padding: 4px 12px; font-size: .78rem;
+  cursor: pointer; flex-shrink: 0; letter-spacing: .03em;
+}
+#brew-banner .brew-link:hover { color: var(--text); }
+#brew-banner .brew-dismiss {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1rem; cursor: pointer; padding: 0 4px; flex-shrink: 0;
+}
+
 /* ── Workflow rail ─────────────────────────────────────────────────────── */
 .workflow-rail {
   position: sticky; top: 96px; z-index: 90;
@@ -1527,6 +1559,15 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
   </div>
 </header>
 
+<!-- ══ Brew update banner ═══════════════════════════════════════════════════ -->
+<div id="brew-banner">
+  <span class="brew-icon">🍺</span>
+  <span class="brew-msg" id="brew-msg">Homebrew updates available.</span>
+  <button class="brew-btn" onclick="runBrewUpgrade()">Update Now</button>
+  <button class="brew-link" onclick="brewCheckNow()">Check Again</button>
+  <button class="brew-dismiss" onclick="brewDismiss()" title="Dismiss until next check">✕</button>
+</div>
+
 <!-- ══ Workflow rail ════════════════════════════════════════════════════════ -->
 <nav class="workflow-rail" id="workflow-rail">
   <button class="step-tab active" data-target="step-audit">
@@ -2183,9 +2224,9 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
       <div class="card-icon"><img src="/static/icon-relocate.png" alt="Organize"></div>
       <div class="card-meta">
         <div class="card-title">Organize Library — Consolidate into Artist / Album / Track</div>
-        <div class="card-blurb">Scans any folder (no matter how deeply nested) and moves every track to the correct Artist / Album / Track location. Merges duplicate artist folders, creates missing folders, and prunes empty ones.</div>
+        <div class="card-blurb">Scans one or more folders (no matter how deeply nested) and moves or copies every track to the correct Artist / Album / Track location. Merges duplicate artist folders, creates missing folders, and prunes empty ones.</div>
       </div>
-      <span class="risk-badge warn">Moves Files</span>
+      <span class="risk-badge warn" id="organize-risk-badge">Moves Files</span>
     </div>
 
     <div class="explainers">
@@ -2228,13 +2269,27 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
 
     <div class="card-form">
       <div class="field-row">
-        <div class="field">
-          <label>Source — folder to scan</label>
-          <input type="text" id="organize-source" placeholder="/Volumes/DJMT">
+        <div class="field" style="flex:2">
+          <label>Source folders to scan</label>
+          <div id="organize-source-list" style="display:flex;flex-direction:column;gap:6px;">
+            <div class="org-source-row" style="display:flex;gap:6px;align-items:center;">
+              <input type="text" class="org-source-input" placeholder="/Volumes/DJMT" style="flex:1">
+            </div>
+          </div>
+          <button type="button" onclick="orgAddSource()" style="margin-top:6px;background:none;border:1px dashed var(--border-hi);color:var(--text-dim);border-radius:var(--radius);padding:5px 12px;font-size:.8rem;cursor:pointer;width:100%;text-align:left;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">+ Add another source folder</button>
         </div>
-        <div class="field">
+        <div class="field" style="flex:2">
           <label>Target — organised library root</label>
           <input type="text" id="organize-target" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Mode</label>
+          <select id="organize-mode" onchange="orgUpdateMode(this.value)" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+            <option value="assimilate" selected>Full Library Assimilation — move files, clean up source</option>
+            <option value="integrate">Full Library Integration — copy files only, source untouched</option>
+          </select>
         </div>
       </div>
       <div class="field-row">
@@ -2249,7 +2304,7 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
           </select>
         </div>
         <div class="field">
-          <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— I/O threads for the move phase</span></label>
+          <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— I/O threads</span></label>
           <select id="organize-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
             <option value="1" selected>1 — sequential (safe)</option>
             <option value="2">2 workers</option>
@@ -2260,7 +2315,7 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
       <div class="field" style="margin-top:4px">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;">
           <input type="checkbox" id="organize-dry-run" checked style="width:16px;height:16px;accent-color:var(--accent);">
-          Dry Run — preview moves without touching any files <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">(recommended — uncheck to execute)</span>
+          Dry Run — preview without touching any files <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">(recommended — uncheck to execute)</span>
         </label>
       </div>
       <div class="btn-row">
@@ -2919,6 +2974,61 @@ async function emergencyStop() {
   }
 }
 
+/* ── Homebrew update banner ─────────────────────────────────────────────────── */
+
+let _brewDismissed = false;
+
+async function brewCheckStatus() {
+  try {
+    const res = await fetch('/api/brew/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    _brewRender(data);
+  } catch (_) {}
+}
+
+async function brewCheckNow() {
+  document.getElementById('brew-msg').textContent = 'Checking for Homebrew updates…';
+  document.getElementById('brew-banner').style.display = 'flex';
+  _brewDismissed = false;
+  try {
+    const res = await fetch('/api/brew/check', { method: 'POST' });
+    const data = await res.json();
+    _brewRender(data);
+  } catch (e) {
+    document.getElementById('brew-msg').textContent = 'Could not reach brew — check manually.';
+  }
+}
+
+function _brewRender(data) {
+  const banner   = document.getElementById('brew-banner');
+  const msgEl    = document.getElementById('brew-msg');
+  if (_brewDismissed) return;
+  const outdated = data.outdated || [];
+  if (!outdated.length) {
+    banner.style.display = 'none';
+    return;
+  }
+  const list = outdated.map(p =>
+    `<strong>${p.name}</strong> ${p.installed} → ${p.current}`
+  ).join(' &nbsp;·&nbsp; ');
+  msgEl.innerHTML = `Homebrew updates available for SuperBox packages: ${list}`;
+  banner.style.display = 'flex';
+}
+
+function brewDismiss() {
+  _brewDismissed = true;
+  document.getElementById('brew-banner').style.display = 'none';
+}
+
+function runBrewUpgrade() {
+  brewDismiss();
+  runCommand('/api/run/brew-upgrade', 'Homebrew — Upgrade SuperBox Packages');
+}
+
+// Check on page load (non-blocking — banner appears only if updates found)
+brewCheckStatus();
+
 async function quitSuperBox() {
   const msg = isRunning
     ? '⚠️ A scan is still running.\n\nShutting down now will cancel it mid-process. Are you sure?'
@@ -3495,8 +3605,10 @@ function _pipelineReadConfig(type) {
   switch (type) {
     case 'organize':
       return {
-        source:        document.getElementById('organize-source')?.value.trim()  || musicRoot,
+        sources:       Array.from(document.querySelectorAll('.org-source-input'))
+                         .map(i => i.value.trim()).filter(Boolean),
         target:        document.getElementById('organize-target')?.value.trim()  || musicRoot,
+        mode:          document.getElementById('organize-mode')?.value || 'assimilate',
         mix_threshold: document.getElementById('organize-mix-threshold')?.value  || '15',
         workers:       parseInt(document.getElementById('organize-workers')?.value || '1'),
       };
@@ -3657,19 +3769,48 @@ async function runPipeline() {
   }
 }
 
+function orgAddSource() {
+  const list = document.getElementById('organize-source-list');
+  const row  = document.createElement('div');
+  row.className = 'org-source-row';
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  row.innerHTML = `<input type="text" class="org-source-input" placeholder="/Volumes/AnotherDrive" style="flex:1"><button type="button" onclick="this.closest('.org-source-row').remove()" style="background:none;border:1px solid var(--border-hi);color:var(--text-dim);border-radius:var(--radius);padding:4px 9px;font-size:.8rem;cursor:pointer;flex-shrink:0;" title="Remove this source">✕</button>`;
+  list.appendChild(row);
+  row.querySelector('input').focus();
+}
+
+function orgUpdateMode(val) {
+  const badge = document.getElementById('organize-risk-badge');
+  if (badge) {
+    if (val === 'integrate') {
+      badge.textContent = 'Copies Files';
+      badge.className   = 'risk-badge safe';
+    } else {
+      badge.textContent = 'Moves Files';
+      badge.className   = 'risk-badge warn';
+    }
+  }
+}
+
 function runOrganize() {
-  const source   = document.getElementById('organize-source').value.trim();
+  const sources  = Array.from(document.querySelectorAll('.org-source-input'))
+                        .map(i => i.value.trim()).filter(Boolean);
   const target   = document.getElementById('organize-target').value.trim();
   const dryRun   = document.getElementById('organize-dry-run').checked;
   const workers  = document.getElementById('organize-workers')?.value || '1';
   const threshold = document.getElementById('organize-mix-threshold')?.value || '15';
-  if (!source) { alert('Enter a source folder path.'); return; }
+  const mode     = document.getElementById('organize-mode')?.value || 'assimilate';
+  if (!sources.length) { alert('Enter at least one source folder path.'); return; }
   if (!target) { alert('Enter a target (library root) folder path.'); return; }
-  const p = new URLSearchParams({ source, target });
+  const p = new URLSearchParams();
+  sources.forEach(s => p.append('source', s));
+  p.set('target', target);
   if (!dryRun) p.set('no_dry_run', '1');
+  if (mode !== 'assimilate') p.set('mode', mode);
   if (parseInt(workers) > 1) p.set('workers', workers);
   if (threshold !== '15') p.set('mix_threshold', threshold);
-  const label = dryRun ? 'Organize Library — Dry Run (preview only)' : 'Organize Library — Moving Files';
+  const modeLabel = mode === 'integrate' ? 'Integration (copies only, source untouched)' : 'Assimilation (move + clean source)';
+  const label = dryRun ? `Organize — Dry Run · ${modeLabel}` : `Organize — ${modeLabel}`;
   runCommand(`/api/run/organize?${p}`, label);
 }
 

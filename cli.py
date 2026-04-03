@@ -504,12 +504,16 @@ def cmd_organize(args: argparse.Namespace) -> None:
     from pathlib import Path
     from library_organizer import organize_library, MIX_FOLDER, ORPHAN_FOLDER
 
-    source = Path(args.source)
-    target = Path(args.target)
+    primary = Path(args.source)
+    extra   = [Path(p) for p in (getattr(args, "also_scan", None) or [])]
+    sources = [primary] + extra
+    target  = Path(args.target)
+    mode    = getattr(args, "mode", "assimilate")
 
-    if not source.is_dir():
-        log.error("SOURCE is not a directory: %s", source)
-        sys.exit(1)
+    for s in sources:
+        if not s.is_dir():
+            log.error("SOURCE is not a directory: %s", s)
+            sys.exit(1)
     if not target.is_dir():
         try:
             target.mkdir(parents=True, exist_ok=True)
@@ -523,15 +527,17 @@ def cmd_organize(args: argparse.Namespace) -> None:
     threshold   = float(getattr(args, "mix_threshold", 15)) * 60.0
 
     if dry_run:
-        log.info("DRY RUN — no files will be moved. Pass --no-dry-run to execute.")
+        log.info("DRY RUN — no files will be touched. Pass --no-dry-run to execute.")
 
+    verb = "copy" if mode == "integrate" else "move"
     log.info(
-        "Organizing  source=%s  target=%s  dry_run=%s  workers=%d  mix_threshold=%.0f min",
-        source, target, dry_run, max_workers, threshold / 60,
+        "Organizing  sources=%s  target=%s  mode=%s  dry_run=%s  workers=%d  mix_threshold=%.0f min",
+        [str(s) for s in sources], target, mode, dry_run, max_workers, threshold / 60,
     )
 
     results = organize_library(
-        source, target,
+        sources, target,
+        mode=mode,
         dry_run=dry_run,
         max_workers=max_workers,
         mix_threshold_sec=threshold,
@@ -542,31 +548,47 @@ def cmd_organize(args: argparse.Namespace) -> None:
     conflicts = sum(1 for r in results if r.action == "conflict_renamed")
     errors    = sum(1 for r in results if r.action == "error")
 
-    label = "Would move" if dry_run else "Moved"
+    src_desc = str(sources[0]) if len(sources) == 1 else f"{len(sources)} source folders"
+    action_verb = "copied" if mode == "integrate" else "moved"
 
     if dry_run:
-        lines = ["Here's what would change.", "", f"{len(results)} files scanned in {source}."]
+        dry_verb = "copy" if mode == "integrate" else "move"
+        mode_note = (
+            "Integration mode — files will be copied to the target; the source drive stays untouched."
+            if mode == "integrate" else
+            "Assimilation mode — files will be moved and the source will be cleaned up."
+        )
+        lines = [
+            "Here's what would change.",
+            "",
+            f"{len(results)} files scanned across {src_desc}.",
+            f"Mode: {mode_note}",
+        ]
         if moved:
-            lines.append(f"  {moved} would be sorted into Artist / Album / Track folders.")
+            lines.append(f"  {moved} would be {dry_verb}ed into Artist / Album / Track folders.")
         if skipped:
             lines.append(f"  {skipped} are exact copies already at the destination — they'd be skipped.")
         if conflicts:
             lines.append(f"  {conflicts} have a name clash — they'd be renamed (e.g. track_1.mp3).")
         if errors:
             lines.append(f"  {errors} had errors — check the log above.")
-        lines += ["", "Nothing has been moved. Uncheck \"Dry Run\" and run again to move the files."]
+        lines += ["", f"Nothing has been {dry_verb}ed. Uncheck \"Dry Run\" and run again to execute."]
     else:
         lines = ["Done organizing.", ""]
         if moved:
-            lines.append(f"{moved} files were sorted into Artist / Album / Track folders.")
+            lines.append(f"{moved} files were {action_verb} into Artist / Album / Track folders.")
         if skipped:
-            lines.append(f"{skipped} were already in the right place — left alone.")
+            lines.append(f"{skipped} were already at the destination — left alone.")
         if conflicts:
             lines.append(f"{conflicts} name clashes were handled by renaming (e.g. track_1.mp3).")
         if errors:
             lines.append(f"{errors} files had errors — check the log above.")
         else:
             lines.append("No errors.")
+        if mode == "integrate":
+            lines.append("Source folders were not modified.")
+        else:
+            lines.append("Empty source folders were cleaned up.")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     _emit_report("\n".join(lines), "Organize", f"organize_{timestamp}.txt")
 
@@ -763,6 +785,23 @@ Examples:
         type=float,
         default=15.0,
         help="Tracks at or above this duration (minutes) go to Live Sets & Mixes (default: 15)",
+    )
+    p_organize.add_argument(
+        "--also-scan",
+        metavar="PATH",
+        action="append",
+        default=[],
+        dest="also_scan",
+        help="Additional source directory to scan (can be repeated for multiple sources)",
+    )
+    p_organize.add_argument(
+        "--mode",
+        choices=["assimilate", "integrate"],
+        default="assimilate",
+        help=(
+            "assimilate: move files, remove source duplicates, prune empty dirs (default). "
+            "integrate: copy files to target only — source drive is never modified."
+        ),
     )
     p_organize.set_defaults(func=cmd_organize)
 

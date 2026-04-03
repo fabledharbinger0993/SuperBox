@@ -195,46 +195,61 @@ def _resolve_dest(src: Path, dest: Path) -> tuple[Path | None, str]:
 # ─── Main organizer ───────────────────────────────────────────────────────────
 
 def organize_library(
-    source: Path,
+    sources: "Path | list[Path]",
     target: Path,
     *,
+    mode: str = "assimilate",
     dry_run: bool = True,
     max_workers: int = 1,
     mix_threshold_sec: float = MIX_THRESHOLD_SEC,
 ) -> list[MoveResult]:
     """
-    Scan source, compute canonical destination for every audio file, and
-    optionally move files into the correct Artist / Album / Track hierarchy.
+    Scan one or more source directories, compute the canonical destination for
+    every audio file, and move or copy files into the Artist / Album / Track
+    hierarchy under *target*.
 
     Parameters
     ----------
-    source : Path
-        Directory to scan. May equal target for in-place reorganisation.
+    sources : Path | list[Path]
+        One directory or a list of directories to scan.  All are scanned in a
+        single pass and their files are merged before processing begins.
     target : Path
         Root of the organised library (e.g. /Volumes/DJMT/DJMT PRIMARY).
+    mode : str
+        ``"assimilate"`` (default) — **move** files to target, delete confirmed
+        source duplicates, and prune empty source directories afterwards.
+        Use this to fully consolidate a library in place.
+
+        ``"integrate"`` — **copy** files to target without touching the source
+        at all.  Nothing is deleted or pruned from any source directory.  Use
+        this when you want to pull music off a second drive without altering it.
     dry_run : bool
-        If True (default), compute and report planned moves without touching
-        the filesystem. Run with dry_run=True first to preview the changes.
+        If True (default), compute and report planned changes without touching
+        the filesystem.  Run with dry_run=True first to preview.
     max_workers : int
-        Parallel I/O workers for the move phase (default 1 = sequential).
+        Parallel I/O workers for the move/copy phase (default 1 = sequential).
     mix_threshold_sec : float
-        Tracks at or above this duration (in seconds) are routed to the
-        Live Sets & Mixes folder instead of the normal Artist / Album tree.
+        Tracks at or above this duration (seconds) are routed to
+        Live Sets & Mixes instead of the normal Artist / Album tree.
         Default 900 = 15 minutes.
     """
     from scanner import scan_directory
 
-    tracks = list(scan_directory(source))
+    source_list: list[Path] = [sources] if isinstance(sources, Path) else list(sources)
+
+    tracks: list = []
+    for s in source_list:
+        tracks.extend(list(scan_directory(s)))
     total  = len(tracks)
     results: list[MoveResult] = []
 
     if total == 0:
-        log.info("No audio files found under %s", source)
+        log.info("No audio files found under %s", source_list)
         return results
 
     log.info(
-        "Organizing %d files  source=%s  target=%s  dry_run=%s  workers=%d",
-        total, source, target, dry_run, max_workers,
+        "Organizing %d files  sources=%s  target=%s  mode=%s  dry_run=%s  workers=%d",
+        total, [str(s) for s in source_list], target, mode, dry_run, max_workers,
     )
 
     done = moved = skipped = conflicts = errors = 0
@@ -277,20 +292,28 @@ def organize_library(
 
         if final is None:
             if action == "skipped":
-                # Identical copy already at canonical destination.
-                # Remove the source so the source tree can be pruned cleanly.
-                try:
-                    track.path.unlink()
+                if mode == "assimilate":
+                    # Identical copy confirmed at canonical destination.
+                    # Remove the source so the source tree can be pruned cleanly.
+                    try:
+                        track.path.unlink()
+                        return MoveResult(src=track.path, dest=dest,
+                                          action="skipped", reason="duplicate removed from source")
+                    except Exception as e:
+                        return MoveResult(src=track.path, dest=dest,
+                                          action="error", reason=f"unlink failed: {e}")
+                else:
+                    # integrate mode — source is never touched
                     return MoveResult(src=track.path, dest=dest,
-                                      action="skipped", reason="duplicate removed from source")
-                except Exception as e:
-                    return MoveResult(src=track.path, dest=dest,
-                                      action="error", reason=f"unlink failed: {e}")
+                                      action="skipped", reason="duplicate at destination — source kept")
             return MoveResult(src=track.path, dest=dest,
                               action="error", reason="no rename slot found")
 
         try:
-            shutil.move(str(track.path), str(final))
+            if mode == "integrate":
+                shutil.copy2(str(track.path), str(final))
+            else:
+                shutil.move(str(track.path), str(final))
             return MoveResult(src=track.path, dest=final, action=action)
         except Exception as e:
             return MoveResult(src=track.path, dest=final,
@@ -331,9 +354,11 @@ def organize_library(
             _tally(r)
             _emit()
 
-    # Prune empty directories from source after actual (non-dry) moves
-    if not dry_run:
-        _prune_empty_dirs(source)
+    # Prune empty directories from all source roots — assimilate mode only.
+    # integrate mode never modifies the source.
+    if not dry_run and mode == "assimilate":
+        for s in source_list:
+            _prune_empty_dirs(s)
 
     return results
 
