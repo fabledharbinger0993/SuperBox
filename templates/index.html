@@ -3325,21 +3325,23 @@ function setupDropZone(input) {
     wrap.appendChild(badge);
   }
 
+  const getWrap = () => input.closest('.drop-wrap');
   input.addEventListener('dragover', e => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
-    input.classList.add('drop-active');
+    getWrap()?.classList.add('drop-active');
   });
-  input.addEventListener('dragleave', () => input.classList.remove('drop-active'));
+  input.addEventListener('dragleave', () => getWrap()?.classList.remove('drop-active'));
   input.addEventListener('drop', e => {
     e.preventDefault();
-    input.classList.remove('drop-active');
+    const wrap = getWrap();
+    wrap?.classList.remove('drop-active');
     const path = _extractDropPath(e);
     if (path) {
       input.value = path;
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.classList.add('drop-filled');
-      input.addEventListener('animationend', () => input.classList.remove('drop-filled'), { once: true });
+      wrap?.classList.add('drop-filled');
+      wrap?.addEventListener('animationend', () => wrap?.classList.remove('drop-filled'), { once: true });
     }
   });
 }

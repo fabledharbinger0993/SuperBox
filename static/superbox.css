@@ -1585,28 +1585,55 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
   flex: 1;
   min-width: 0;
 }
+
+/* Persistent dashed ring — always visible, very subtle. Matches the neon
+   dashed-border icon the user provided; ::after sits just outside the
+   input's own border so they don't fight each other.                       */
+.drop-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1.5px dashed rgba(110, 40, 215, 0.22);
+  border-radius: 7px;
+  pointer-events: none;
+  transition: border-color .18s, box-shadow .18s;
+  z-index: 1;
+}
+/* Hover — brighten slightly so users notice it's interactive */
+.drop-wrap:hover::after {
+  border-color: rgba(110, 40, 215, 0.42);
+}
+/* Active drag — full neon glow replicating the provided icon */
+.drop-wrap.drop-active::after {
+  border-color: rgba(105, 35, 210, 0.95);
+  box-shadow:
+    0 0  6px  2px rgba(120, 50, 230, 0.55),
+    0 0 16px  4px rgba(120, 50, 230, 0.28),
+    0 0 32px  8px rgba(120, 50, 230, 0.12),
+    inset 0 0 10px    rgba(120, 50, 230, 0.08);
+}
+.drop-wrap.drop-active input {
+  background: rgba(100, 40, 200, .06) !important;
+}
+
 .drop-badge {
   position: absolute;
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
   font-size: .6rem;
-  color: var(--text-dim);
+  color: rgba(130, 60, 230, 0.55);
   pointer-events: none;
   letter-spacing: .07em;
   user-select: none;
-  opacity: 0.5;
   font-family: var(--mono);
   transition: opacity .15s;
+  z-index: 2;
 }
-.drop-wrap input.drop-active {
-  border-color: var(--accent) !important;
-  box-shadow: 0 0 0 2px var(--accent-dim);
-  background: rgba(99, 102, 241, .07) !important;
-}
-.drop-wrap input.drop-active ~ .drop-badge { opacity: 0; }
+.drop-wrap.drop-active .drop-badge { opacity: 0; }
+
 @keyframes drop-flash {
-  0%   { background: rgba(52, 211, 153, .22); border-color: var(--safe) !important; }
-  100% { background: var(--surface); border-color: var(--border); }
+  0%   { background: rgba(52, 211, 153, .2); }
+  100% { background: transparent; }
 }
-.drop-wrap input.drop-filled { animation: drop-flash .55s ease forwards; }
+.drop-wrap.drop-filled input { animation: drop-flash .6s ease forwards; }
