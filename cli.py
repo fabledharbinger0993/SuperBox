@@ -103,8 +103,8 @@ def _setup_logging(verbose: bool) -> None:
 # ─── Command handlers ─────────────────────────────────────────────────────────
 
 def cmd_audit(args: argparse.Namespace) -> None:
-    """Run a full read-only audit and print the summary."""
-    from audit import full_audit
+    """Run a full read-only audit (DB + physical scan) and print the summary."""
+    from audit import full_audit, write_physical_scan_report
     from db_connection import read_db
 
     root = Path(args.root) if args.root else MUSIC_ROOT
@@ -115,11 +115,25 @@ def cmd_audit(args: argparse.Namespace) -> None:
             report = full_audit(db, root=root)
         summary_text = report.summary()
         print(summary_text)
-        # Write report to REPORTS_DIR/Audit/
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Write text summary
         report_path = _write_report("Audit", f"audit_{timestamp}.txt", summary_text)
         if report_path:
             print(f"SUPERBOX_REPORT_PATH: {report_path}", flush=True)
+
+        # Write physical scan JSON if collected and requested (or by default)
+        if report.physical and getattr(args, "save_physical", True):
+            try:
+                from config import REPORTS_DIR  # noqa: PLC0415
+                phys_dir = REPORTS_DIR / "Audit"
+            except Exception:
+                phys_dir = Path.home() / "rekordbox-toolkit" / "reports" / "Audit"
+            phys_path = phys_dir / f"physical_scan_{timestamp}.json"
+            written = write_physical_scan_report(report.physical, phys_path)
+            print(f"SUPERBOX_PHYSICAL_SCAN: {written}", flush=True)
+
     except Exception:
         log.exception("Audit failed")
         sys.exit(1)
@@ -729,11 +743,21 @@ Examples:
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
     # ── audit ──
-    p_audit = sub.add_parser("audit", help="Read-only library health check")
+    p_audit = sub.add_parser(
+        "audit",
+        help="Read-only library health check (DB snapshot + physical filesystem scan)",
+    )
     p_audit.add_argument(
         "--root",
         metavar="PATH",
-        help=f"Music root for orphan scan (default: {MUSIC_ROOT})",
+        help=f"Music root for orphan scan + physical inventory (default: {MUSIC_ROOT})",
+    )
+    p_audit.add_argument(
+        "--no-save-physical",
+        dest="save_physical",
+        action="store_false",
+        default=True,
+        help="Skip writing the physical_scan_*.json report file",
     )
     p_audit.set_defaults(func=cmd_audit)
 

@@ -287,6 +287,8 @@ def api_audit():
     root = request.args.get("root", "").strip()
     if root:
         cmd += ["--root", root]
+    if request.args.get("save_physical", "1") == "0":
+        cmd.append("--no-save-physical")
     return _sse_response(cmd)
 
 

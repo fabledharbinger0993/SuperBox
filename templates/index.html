@@ -57,34 +57,34 @@
 <!-- ══ Workflow rail ════════════════════════════════════════════════════════ -->
 <nav class="workflow-rail" id="workflow-rail">
   <button class="step-tab active" data-target="step-audit">
-    <span class="step-num">1</span> Audit
+    <span class="step-num">▣</span> Library Audit
   </button>
   <button class="step-tab" data-target="step-process">
-    <span class="step-num">2</span> Tag Tracks
-  </button>
-  <button class="step-tab" data-target="step-import">
-    <span class="step-num">3</span> Import
-  </button>
-  <button class="step-tab" data-target="step-link">
-    <span class="step-num">4</span> Link Playlists
-  </button>
-  <button class="step-tab" data-target="step-normalize">
-    <span class="step-num">5</span> Normalize
+    <span class="step-num">🏷</span> Tag Tracks
   </button>
   <button class="step-tab" data-target="step-duplicates">
-    <span class="step-num">⊕</span> Duplicates
+    <span class="step-num">🔎</span> Find Duplicates
   </button>
   <button class="step-tab" data-target="step-prune">
-    <span class="step-num">⊕</span> Prune
+    <span class="step-num">✂</span> Prune
   </button>
   <button class="step-tab" data-target="step-relocate">
-    <span class="step-num">⊕</span> Relocate
+    <span class="step-num">📍</span> Relocate
+  </button>
+  <button class="step-tab" data-target="step-import">
+    <span class="step-num">＋</span> Import
+  </button>
+  <button class="step-tab" data-target="step-link">
+    <span class="step-num">🔗</span> Link Playlists
+  </button>
+  <button class="step-tab" data-target="step-normalize">
+    <span class="step-num">📢</span> Normalize
   </button>
   <button class="step-tab" data-target="step-convert">
-    <span class="step-num">⊕</span> Convert
+    <span class="step-num">🔄</span> Convert
   </button>
   <button class="step-tab" data-target="step-organize">
-    <span class="step-num">⊕</span> Organize
+    <span class="step-num">🗂</span> Organize
   </button>
   <button class="step-tab" data-target="step-novelty">
     <span class="step-num">★</span> Novelty
@@ -97,15 +97,15 @@
 <!-- ══ Main ════════════════════════════════════════════════════════════════ -->
 <main>
 
-  <p class="section-title">Recommended Workflow — run in order when adding new music</p>
+  <p class="section-title">Core Pipeline — each tool feeds the next</p>
 
-  <!-- ── Step 1: Audit ──────────────────────────────────────────────────── -->
+    <!-- ── Step 1: Audit ──────────────────────────────────────────────────── -->
   <div class="card" id="step-audit">
     <div class="card-head">
       <div class="card-icon safe"><img src="/static/icon-audit.png" alt="Audit"></div>
       <div class="card-meta">
-        <div class="card-title">Step 1 — Audit Your Library</div>
-        <div class="card-blurb">Before touching anything, get a snapshot of what's already broken. This is read-only — safe to run even with RekordBox open.</div>
+        <div class="card-title">Library Audit — Database &amp; Physical Scan</div>
+        <div class="card-blurb">Two simultaneous passes: a <strong>database audit</strong> (track counts, tag coverage, missing paths, dead drives) and a <strong>physical library scan</strong> (every file on disk, size, format breakdown, orphans, trash-adjacent files). Read-only — safe to run with RekordBox open.</div>
       </div>
       <span class="risk-badge safe">Read-Only</span>
     </div>
@@ -137,7 +137,7 @@
       <strong style="color:var(--danger);">⚠ Disconnected drive detected</strong>
       <div id="dead-roots-detail" style="margin-top:6px; color:var(--text-muted); line-height:1.6;"></div>
       <div style="margin-top:8px; font-size:.78rem; color:var(--text-dim);">
-        The Relocate step has been pre-filled with these paths. Run Audit first, then go to Relocate to fix them.
+        These dead roots have been pre-filled in <strong>Relocate — Fix Broken Paths</strong> below. Run that step next.
       </div>
     </div>
 
@@ -146,18 +146,27 @@
         <label>Music Root (optional — for orphan scan)</label>
         <input type="text" id="audit-root" placeholder="Leave blank to use default from config.py">
       </div>
+      <div class="field">
+        <div class="checkbox-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="audit-save-physical" checked>
+            Save physical scan report (JSON) — used by Organize, Novelty Scanner &amp; Duplicates
+          </label>
+        </div>
+      </div>
       <div class="btn-row">
-        <button class="btn btn-neon" onclick="runAudit()">Execute Audit</button>
+        <button class="btn btn-neon" onclick="runAudit()">Run Library Audit</button>
       </div>
     </div>
   </div>
 
-  <!-- ── Step 2: Process (tags only) ────────────────────────────────────── -->
+
+    <!-- ── Step 2: Process (tags only) ────────────────────────────────────── -->
   <div class="card" id="step-process">
     <div class="card-head">
       <div class="card-icon caution"><img src="/static/icon-tag.png" alt="Tag Tracks"></div>
       <div class="card-meta">
-        <div class="card-title">Step 2 — Detect BPM &amp; Musical Key</div>
+        <div class="card-title">Tag Tracks — Detect BPM &amp; Musical Key</div>
         <div class="card-blurb">Reads each audio file and writes BPM and musical key into the file's tags. Skips files that already have tags — won't overwrite your Mix In Key work unless you ask it to.</div>
       </div>
       <span class="risk-badge caution">Writes Tags</span>
@@ -215,179 +224,8 @@
     </div>
   </div>
 
-  <!-- ── Step 3: Import (with built-in preview) ────────────────────────── -->
-  <div class="card" id="step-import">
-    <div class="card-head">
-      <div class="card-icon warn"><img src="/static/icon-import.png" alt="Import"></div>
-      <div class="card-meta">
-        <div class="card-title">Step 3 — Import Tracks into RekordBox</div>
-        <div class="card-blurb">Preview first to see exactly what will be added — then import. <strong>RekordBox must be closed for the real import.</strong> A timestamped backup is created automatically before anything is written.</div>
-      </div>
-      <span class="risk-badge warn">Writes DB</span>
-    </div>
 
-    <div class="explainers">
-      <details>
-        <summary>What does Preview show?</summary>
-        <div class="explain-body">
-          <p>Preview walks your music folder and checks each file against what's already in the database — no writes, no changes. You'll see:</p>
-          <ul>
-            <li>How many tracks are new (will be imported)</li>
-            <li>How many are already in the DB (will be skipped)</li>
-            <li>Any files it can't read or extract metadata from</li>
-          </ul>
-          <p>Always run Preview first. If the numbers look right, hit Import.</p>
-        </div>
-      </details>
-      <details>
-        <summary>What exactly gets written to the database?</summary>
-        <div class="explain-body">
-          <p>For each new track, it creates a row in <code>DjmdContent</code> with the metadata extracted from the file's tags:</p>
-          <ul>
-            <li>Title, artist, album, genre, year, track number</li>
-            <li>BPM (stored as BPM × 100 — that's how RekordBox expects it)</li>
-            <li>Musical key (translated to RekordBox's internal key ID)</li>
-            <li>Duration, bitrate, sample rate, bit depth, file path</li>
-          </ul>
-          <p>Tracks already in the database are <strong>skipped entirely</strong> — no duplicates created, no overwriting.</p>
-          <p>The operation commits in batches of 250. If anything fails mid-batch, the entire batch rolls back automatically. You won't get half-imported tracks.</p>
-        </div>
-      </details>
-      <details>
-        <summary>What if something goes wrong?</summary>
-        <div class="explain-body">
-          <p>Before the first write, a timestamped copy of <code>master.db</code> is saved to <code>~/rekordbox-toolkit/backups/</code>. If the import fails or something looks wrong afterward, you can restore from that file.</p>
-          <p><strong>RekordBox must be closed</strong> — the server checks this before starting. If it's open, the import will be blocked here before anything is touched.</p>
-          <p>A single bad file will not abort the batch — errors are captured per-file and logged, and the rest of the import continues.</p>
-        </div>
-      </details>
-    </div>
-
-    <div class="card-form">
-      <div class="field">
-        <label>Music Folder Path</label>
-        <input type="text" id="import-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-ghost" onclick="runImportDry()">Preview Import</button>
-        <button class="btn btn-neon" id="btn-import" onclick="runImport()">Import Tracks</button>
-      </div>
-      <div class="rb-block-msg" id="import-rb-block">
-        <span>⚠</span> RekordBox is open. Close it before importing.
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Step 4: Link playlists ──────────────────────────────────────────── -->
-  <div class="card" id="step-link">
-    <div class="card-head">
-      <div class="card-icon warn"><img src="/static/icon-link.png" alt="Link Playlists"></div>
-      <div class="card-meta">
-        <div class="card-title">Step 4 — Link Tracks to Their Playlists</div>
-        <div class="card-blurb">Matches imported tracks to RekordBox playlists based on the folder they live in. If your playlists were built from your folder structure, this connects them automatically.</div>
-      </div>
-      <span class="risk-badge warn">Writes DB</span>
-    </div>
-
-    <div class="explainers">
-      <details>
-        <summary>How does the matching work?</summary>
-        <div class="explain-body">
-          <p>For each track, it walks up the folder path toward your music root and compares folder names against playlist names in the database:</p>
-          <ul>
-            <li><strong>Exact match first</strong> — folder name equals playlist name exactly.</li>
-            <li><strong>Fuzzy match second</strong> — if no exact match, it tries similarity scoring. Threshold is 85% similarity. Only applied to names 4 characters or longer (to avoid false positives on short names).</li>
-          </ul>
-          <p>If no match is found, the track is left unlinked and a warning is logged. No track is ever removed from a playlist it was already in.</p>
-        </div>
-      </details>
-      <details>
-        <summary>What if my folder names don't match my playlist names?</summary>
-        <div class="explain-body">
-          <p>Tracks that can't be matched are logged and left alone — they stay in the database, just not assigned to a playlist. You'll see the count in the output.</p>
-          <p>The fuzzy match handles common differences like trailing spaces, slight spelling variations, or accented characters. If the mismatch is large (e.g. completely different naming conventions), you may need to manually link those tracks in RekordBox.</p>
-        </div>
-      </details>
-    </div>
-
-    <div class="card-form">
-      <div class="field">
-        <label>Music Folder Path</label>
-        <input type="text" id="link-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-neon" id="btn-link" onclick="runLink()">Link Playlists</button>
-      </div>
-      <div class="rb-block-msg" id="link-rb-block">
-        <span>⚠</span> RekordBox is open. Close it before linking.
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Step 5: Normalize ───────────────────────────────────────────────── -->
-  <div class="card" id="step-normalize">
-    <div class="card-head">
-      <div class="card-icon danger"><img src="/static/icon-normalize.png" alt="Normalize"></div>
-      <div class="card-meta">
-        <div class="card-title">Step 5 — Normalize Loudness <em style="font-weight:400;color:var(--text-muted)">(Optional)</em></div>
-        <div class="card-blurb">Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard. <strong>This rewrites the actual audio file.</strong></div>
-      </div>
-      <span class="risk-badge danger">Rewrites Audio</span>
-    </div>
-
-    <div class="explainers">
-      <details>
-        <summary>What exactly happens to my files?</summary>
-        <div class="explain-body">
-          <p>Each file is analyzed for integrated loudness (EBU R128 standard). If it's outside −8.0 LUFS ± 0.5 LUFS, the file is re-encoded:</p>
-          <ul>
-            <li><strong>MP3</strong> → re-encoded at 320 kbps CBR</li>
-            <li><strong>AIFF/WAV</strong> → re-encoded losslessly at the same bit depth as the original</li>
-          </ul>
-          <p>Files already within the tolerance window are <strong>left untouched</strong>.</p>
-          <p>The process: original is renamed to <code>.bak</code>, new file is written, <code>soundfile</code> validates the new file is readable, then — and only then — the <code>.bak</code> is deleted. If validation fails, the <code>.bak</code> is kept and you still have your original.</p>
-        </div>
-      </details>
-      <details>
-        <summary>Should I normalize my files?</summary>
-        <div class="explain-body">
-          <p><strong>Only if inconsistent levels are a real problem for you.</strong> −8.0 LUFS is the correct target for DJ use — it leaves headroom for the mixer and matches what most commercial releases already land at.</p>
-          <p>Things to know before you run this:</p>
-          <ul>
-            <li>This is the highest-risk operation in the toolkit. Back up your drive first.</li>
-            <li>MP3 re-encoding is a lossy process — even at 320 kbps, you're going through an encode cycle. For AIFF/WAV files, re-encoding is lossless.</li>
-            <li>Tracks that are already at the right level are skipped entirely — this will not process your whole library unnecessarily.</li>
-            <li>Do not run this while the drive is in use by RekordBox or during a gig.</li>
-          </ul>
-        </div>
-      </details>
-    </div>
-
-    <div class="card-form">
-      <div class="field">
-        <label>Music Folder Path</label>
-        <input type="text" id="normalize-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
-      </div>
-      <div class="field">
-        <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
-        <select id="normalize-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
-          <option value="1">1 — sequential (safe, slowest)</option>
-          <option value="2">2 workers</option>
-          <option value="4" selected>4 workers (recommended)</option>
-          <option value="6">6 workers (fast)</option>
-          <option value="8">8 workers (max — all cores)</option>
-        </select>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-neon" onclick="runNormalize()">Normalize Loudness</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Standalone tools ──────────────────────────────────────────────── -->
-  <p class="section-title" style="margin-top:48px">Standalone Tools — run any time, independent of the workflow</p>
-
-  <!-- Duplicate detector -->
+    <!-- Duplicate detector -->
   <div class="card" id="step-duplicates">
     <div class="card-head">
       <div class="card-icon safe"><img src="/static/icon-find-duplicate.png" alt="Find Duplicates"></div>
@@ -447,7 +285,8 @@
     </div>
   </div>
 
-  <!-- ── Prune Duplicates ──────────────────────────────────────────────── -->
+
+    <!-- ── Prune Duplicates ──────────────────────────────────────────────── -->
   <div class="card" id="step-prune">
     <div class="card-head">
       <div class="card-icon danger"><img src="/static/icon-prune.png" alt="Prune"></div>
@@ -556,6 +395,7 @@
     </div>
   </div>
 
+
   <!-- ── Confirmation panels (spatially separated, no overlapping) ───── -->
   <div id="confirm-backdrop"></div>
 
@@ -597,7 +437,8 @@
     </div>
   </div>
 
-  <!-- Relocate -->
+
+    <!-- Relocate -->
   <div class="card" id="step-relocate">
     <div class="card-head">
       <div class="card-icon warn"><img src="/static/icon-move.png" alt="Relocate"></div>
@@ -649,6 +490,182 @@
       </div>
     </div>
   </div>
+
+
+    <!-- ── Step 3: Import (with built-in preview) ────────────────────────── -->
+  <div class="card" id="step-import">
+    <div class="card-head">
+      <div class="card-icon warn"><img src="/static/icon-import.png" alt="Import"></div>
+      <div class="card-meta">
+        <div class="card-title">Import — Add Tracks to RekordBox</div>
+        <div class="card-blurb">Preview first to see exactly what will be added — then import. <strong>RekordBox must be closed for the real import.</strong> A timestamped backup is created automatically before anything is written.</div>
+      </div>
+      <span class="risk-badge warn">Writes DB</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>What does Preview show?</summary>
+        <div class="explain-body">
+          <p>Preview walks your music folder and checks each file against what's already in the database — no writes, no changes. You'll see:</p>
+          <ul>
+            <li>How many tracks are new (will be imported)</li>
+            <li>How many are already in the DB (will be skipped)</li>
+            <li>Any files it can't read or extract metadata from</li>
+          </ul>
+          <p>Always run Preview first. If the numbers look right, hit Import.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What exactly gets written to the database?</summary>
+        <div class="explain-body">
+          <p>For each new track, it creates a row in <code>DjmdContent</code> with the metadata extracted from the file's tags:</p>
+          <ul>
+            <li>Title, artist, album, genre, year, track number</li>
+            <li>BPM (stored as BPM × 100 — that's how RekordBox expects it)</li>
+            <li>Musical key (translated to RekordBox's internal key ID)</li>
+            <li>Duration, bitrate, sample rate, bit depth, file path</li>
+          </ul>
+          <p>Tracks already in the database are <strong>skipped entirely</strong> — no duplicates created, no overwriting.</p>
+          <p>The operation commits in batches of 250. If anything fails mid-batch, the entire batch rolls back automatically. You won't get half-imported tracks.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What if something goes wrong?</summary>
+        <div class="explain-body">
+          <p>Before the first write, a timestamped copy of <code>master.db</code> is saved to <code>~/rekordbox-toolkit/backups/</code>. If the import fails or something looks wrong afterward, you can restore from that file.</p>
+          <p><strong>RekordBox must be closed</strong> — the server checks this before starting. If it's open, the import will be blocked here before anything is touched.</p>
+          <p>A single bad file will not abort the batch — errors are captured per-file and logged, and the rest of the import continues.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder Path</label>
+        <input type="text" id="import-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="runImportDry()">Preview Import</button>
+        <button class="btn btn-neon" id="btn-import" onclick="runImport()">Import Tracks</button>
+      </div>
+      <div class="rb-block-msg" id="import-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before importing.
+      </div>
+    </div>
+  </div>
+
+
+    <!-- ── Step 4: Link playlists ──────────────────────────────────────────── -->
+  <div class="card" id="step-link">
+    <div class="card-head">
+      <div class="card-icon warn"><img src="/static/icon-link.png" alt="Link Playlists"></div>
+      <div class="card-meta">
+        <div class="card-title">Link Playlists — Connect Tracks to Folders</div>
+        <div class="card-blurb">Matches imported tracks to RekordBox playlists based on the folder they live in. If your playlists were built from your folder structure, this connects them automatically.</div>
+      </div>
+      <span class="risk-badge warn">Writes DB</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>How does the matching work?</summary>
+        <div class="explain-body">
+          <p>For each track, it walks up the folder path toward your music root and compares folder names against playlist names in the database:</p>
+          <ul>
+            <li><strong>Exact match first</strong> — folder name equals playlist name exactly.</li>
+            <li><strong>Fuzzy match second</strong> — if no exact match, it tries similarity scoring. Threshold is 85% similarity. Only applied to names 4 characters or longer (to avoid false positives on short names).</li>
+          </ul>
+          <p>If no match is found, the track is left unlinked and a warning is logged. No track is ever removed from a playlist it was already in.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What if my folder names don't match my playlist names?</summary>
+        <div class="explain-body">
+          <p>Tracks that can't be matched are logged and left alone — they stay in the database, just not assigned to a playlist. You'll see the count in the output.</p>
+          <p>The fuzzy match handles common differences like trailing spaces, slight spelling variations, or accented characters. If the mismatch is large (e.g. completely different naming conventions), you may need to manually link those tracks in RekordBox.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder Path</label>
+        <input type="text" id="link-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-neon" id="btn-link" onclick="runLink()">Link Playlists</button>
+      </div>
+      <div class="rb-block-msg" id="link-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before linking.
+      </div>
+    </div>
+  </div>
+
+
+
+  <p class="section-title" style="margin-top:48px">Optional &amp; Transformative — run after the core pipeline is clean</p>
+
+    <!-- ── Step 5: Normalize ───────────────────────────────────────────────── -->
+  <div class="card" id="step-normalize">
+    <div class="card-head">
+      <div class="card-icon danger"><img src="/static/icon-normalize.png" alt="Normalize"></div>
+      <div class="card-meta">
+        <div class="card-title">Normalize Loudness <em style="font-weight:400;color:var(--text-muted)">(Optional)</em></div>
+        <div class="card-blurb">Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard. <strong>This rewrites the actual audio file.</strong></div>
+      </div>
+      <span class="risk-badge danger">Rewrites Audio</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>What exactly happens to my files?</summary>
+        <div class="explain-body">
+          <p>Each file is analyzed for integrated loudness (EBU R128 standard). If it's outside −8.0 LUFS ± 0.5 LUFS, the file is re-encoded:</p>
+          <ul>
+            <li><strong>MP3</strong> → re-encoded at 320 kbps CBR</li>
+            <li><strong>AIFF/WAV</strong> → re-encoded losslessly at the same bit depth as the original</li>
+          </ul>
+          <p>Files already within the tolerance window are <strong>left untouched</strong>.</p>
+          <p>The process: original is renamed to <code>.bak</code>, new file is written, <code>soundfile</code> validates the new file is readable, then — and only then — the <code>.bak</code> is deleted. If validation fails, the <code>.bak</code> is kept and you still have your original.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Should I normalize my files?</summary>
+        <div class="explain-body">
+          <p><strong>Only if inconsistent levels are a real problem for you.</strong> −8.0 LUFS is the correct target for DJ use — it leaves headroom for the mixer and matches what most commercial releases already land at.</p>
+          <p>Things to know before you run this:</p>
+          <ul>
+            <li>This is the highest-risk operation in the toolkit. Back up your drive first.</li>
+            <li>MP3 re-encoding is a lossy process — even at 320 kbps, you're going through an encode cycle. For AIFF/WAV files, re-encoding is lossless.</li>
+            <li>Tracks that are already at the right level are skipped entirely — this will not process your whole library unnecessarily.</li>
+            <li>Do not run this while the drive is in use by RekordBox or during a gig.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder Path</label>
+        <input type="text" id="normalize-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+      </div>
+      <div class="field">
+        <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
+        <select id="normalize-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+          <option value="1">1 — sequential (safe, slowest)</option>
+          <option value="2">2 workers</option>
+          <option value="4" selected>4 workers (recommended)</option>
+          <option value="6">6 workers (fast)</option>
+          <option value="8">8 workers (max — all cores)</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-neon" onclick="runNormalize()">Normalize Loudness</button>
+      </div>
+    </div>
+  </div>
+
 
   <div class="card" id="step-convert">
     <div class="card-head">
@@ -720,7 +737,8 @@
   </div>
 
 
-  <!-- ── Organize Library ──────────────────────────────────────────────── -->
+
+    <!-- ── Organize Library ──────────────────────────────────────────────── -->
   <div class="card" id="step-organize">
     <div class="card-head">
       <div class="card-icon"><img src="/static/icon-organizer.png" alt="Organize"></div>
@@ -826,7 +844,11 @@
     </div>
   </div>
 
-  <!-- ── Novelty Scanner ───────────────────────────────────────────────── -->
+
+
+  <p class="section-title" style="margin-top:48px">Cross-Library Rescue — find unique tracks on other drives</p>
+
+    <!-- ── Novelty Scanner ───────────────────────────────────────────────── -->
   <div class="card" id="step-novelty">
     <div class="card-head">
       <div class="card-icon"><img src="/static/icon-novelty.png" alt="Novelty Scanner"></div>
@@ -882,7 +904,11 @@
     </div>
   </div>
 
-  <!-- ── Pipeline Builder ──────────────────────────────────────────────── -->
+
+
+  <p class="section-title" style="margin-top:48px">Pipeline Builder — chain any combination of steps</p>
+
+    <!-- ── Pipeline Builder ──────────────────────────────────────────────── -->
   <div class="card" id="step-pipeline" style="max-width:100%">
     <div class="card-head">
       <div class="card-icon" style="background:var(--accent-dim)"><span style="font-size:1.3rem">▶</span></div>
@@ -994,10 +1020,11 @@
     <!-- Recommended order explanation (shown after loading preset) -->
     <div id="pipe-recommended-note" class="hidden" style="margin-top:16px;padding:12px 16px;background:var(--surface-hi);border:1px solid var(--border);border-radius:var(--radius);font-size:.82rem;line-height:1.6;color:var(--text-dim)">
       <strong style="color:var(--text)">Why this order?</strong><br>
-      Sort first so files are in the right place before tagging. Tag before finding duplicates so you can review copies by name. Find duplicates before converting — no point converting a file you're about to delete. Convert last (before updating RekordBox) so you're only working with files you're keeping.
+      Tag first so BPM and key are available for the duplicate pre-filter — this makes duplicate detection significantly faster. Find duplicates before deleting anything. Prune after you've reviewed the report. Relocate next so RekordBox paths are correct before you move files. Convert only what you're keeping. Organize the library structure once it's clean. Normalize loudness last — no point re-encoding a file you might later delete or re-convert.
     </div>
 
   </div>
+
 
 </main>
 
@@ -1890,6 +1917,12 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
         capturedReportPath = line.slice(22).trim();
         return;
       }
+      // Physical scan JSON path — show subtle note in log
+      if (line.startsWith('SUPERBOX_PHYSICAL_SCAN: ')) {
+        const physPath = line.slice(24).trim();
+        appendLog(`  📁 Physical scan saved → ${physPath}`);
+        return;
+      }
       // Structured progress — update scan bar, don't echo to log
       if (line.startsWith('SUPERBOX_PROGRESS: ')) {
         if (useBar) {
@@ -1981,9 +2014,13 @@ function setAllButtons(disabled) {
 
 /* ── Individual command runners ────────────────────────────────────────────── */
 function runAudit() {
-  const root = document.getElementById('audit-root').value.trim();
-  const params = root ? `?root=${encodeURIComponent(root)}` : '';
-  runCommand(`/api/run/audit${params}`, 'Audit — Library Health Check', null, true);
+  const root       = document.getElementById('audit-root').value.trim();
+  const savePhys   = document.getElementById('audit-save-physical') &&
+                     document.getElementById('audit-save-physical').checked ? '1' : '0';
+  const p = new URLSearchParams();
+  if (root) p.set('root', root);
+  p.set('save_physical', savePhys);
+  runCommand(`/api/run/audit?${p.toString()}`, 'Audit — Database + Physical Scan', null, true);
 }
 
 
@@ -2086,7 +2123,7 @@ const PIPE_STEPS = {
   relocate:   { name: 'Update RekordBox',    icon: '📍',  desc: 'Sync RekordBox after files have moved' },
 };
 
-const RECOMMENDED = ['organize','process','normalize','duplicates','prune','convert','relocate'];
+const RECOMMENDED = ['process','duplicates','prune','relocate','convert','organize','normalize'];
 
 let pipelineSteps = [];   // [{id, type}]
 let pipeUid = 0;
@@ -2311,6 +2348,8 @@ async function runPipeline() {
             else if (line.startsWith('SUPERBOX_PROGRESS: ')) {
               try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
             } else if (line.startsWith('SUPERBOX_REPORT_PATH: ')) {
+              /* silently capture */
+            } else if (line.startsWith('SUPERBOX_PHYSICAL_SCAN: ')) {
               /* silently capture */
             } else {
               if (inReport) reportBuffer.push(line);
