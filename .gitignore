@@ -1,31 +1,80 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.egg-info/
-dist/
-build/
-.eggs/
+.vercel
+.env*.local
 
-# Virtual environment
-venv/
-.venv/
-env/
+# ── Home directory protection ──────────────────────────────────────────────
+# The SuperBox git repo is rooted at ~/ so git sees the entire home directory.
+# Everything below is ignored — only FabledHarbinger/ (the actual project) is tracked.
 
-# macOS
+# macOS system folders
+.Trash
+Library
+Applications
+
+# Standard home folders
+Desktop
+Downloads
+Documents
+Movies
+Music
+Pictures
+Public
+
+# Dev tools and shell state
+.nvm
+.npm
+.volta
+.local
+.config
+.cache
+.vscode
+.cursor
+.ssh
+.zsh_history
+.zsh_sessions
+.bash_history
+.bash_sessions
 .DS_Store
-.AppleDouble
-.LSOverride
+.gitconfig
 
-# Claude Code
-.claude/
+# Other projects that are not SuperBox
+holographic-mind
+Budget
+AIFF MOD.app
+Dropbox-Cameronkthedj
+Dropbox-ProfessionalDJteam
+com.visualstudio.code.tunnel.plist
+super_Logo.png
 
-# Secrets / config
-*.env
-.env
-settings.json
+# SuperBox runtime data (generated — not source code)
+rekordbox-toolkit
 
-# Test artifacts
-*.bak
-*.tmp
+# Dotfile tools and app data
+.agents
+.aitk
+.azure
+.brew_upgrade.log
+.brew_upgrade_last
+.cagent
+.claude-server-commander
+.claude.json
+.claude.json.backup
+.claude
+.copilot
+.cups
+.degit
+.docker
+.dropbox
+.lesshst
+.minikube
+.mongodb
+.net
+.npmrc
+.ollama
+.profile
+.railway
+.redhat
+.rekordbox-toolkit
+.vs-kubernetes
+.zcompdump
+.zprofile
+.zshrc
