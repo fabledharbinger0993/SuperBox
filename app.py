@@ -329,13 +329,16 @@ def api_pipeline():
     Body: {"dry_run": bool, "steps": [{"type": str, "config": {...}}, ...]}
 
     Supported step types and their config keys:
-      organize   — source, target, mix_threshold, workers
+      audit      — root (optional)
       process    — path, workers, no_bpm, no_key, force
-      normalize  — path, workers
       duplicates — path, workers, output
-      prune      — (csv injected automatically from previous duplicates step)
-      convert    — path, format, workers
+      prune      — csv (optional; auto-injected from previous duplicates step if omitted)
       relocate   — old_root, new_root
+      import     — path
+      link       — path
+      normalize  — path, workers
+      convert    — path, format, workers
+      organize   — source, target, mix_threshold, workers
     """
     body     = request.get_json(force=True, silent=True) or {}
     dry_run  = bool(body.get("dry_run", True))
@@ -351,7 +354,24 @@ def api_pipeline():
         cfg    = s.get("config", {})
         name   = s.get("name", stype)
 
-        if stype == "organize":
+        if stype == "audit":
+            cmd = [sys.executable, str(CLI_PATH), "audit"]
+            if cfg.get("root"):
+                cmd += ["--root", cfg["root"]]
+            if not cfg.get("save_physical", True):
+                cmd.append("--no-save-physical")
+
+        elif stype == "import":
+            path = cfg.get("path", "")
+            cmd = [sys.executable, str(CLI_PATH), "import", path]
+            if dry_run:
+                cmd.append("--dry-run")
+
+        elif stype == "link":
+            path = cfg.get("path", "")
+            cmd = [sys.executable, str(CLI_PATH), "link", path]
+
+        elif stype == "organize":
             src_list = cfg.get("sources") or [cfg.get("source", "")]
             if isinstance(src_list, str):
                 src_list = [src_list]
@@ -395,10 +415,16 @@ def api_pipeline():
                 cmd += ["--output", cfg["output"]]
 
         elif stype == "prune":
-            # CSV path injected at runtime from previous duplicates step output
             cmd = [sys.executable, str(CLI_PATH), "prune"]
             if dry_run: cmd.append("--dry-run")
-            built.append({"name": name, "cmd": cmd, "needs_csv": True})
+            explicit_csv = cfg.get("csv", "").strip()
+            if explicit_csv:
+                # CSV path provided explicitly (confirm-mode single-step calls)
+                cmd.append(explicit_csv)
+                built.append({"name": name, "cmd": cmd})
+            else:
+                # Auto-inject CSV from previous duplicates step at runtime
+                built.append({"name": name, "cmd": cmd, "needs_csv": True})
             continue
 
         elif stype == "convert":

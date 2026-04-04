@@ -925,11 +925,11 @@
       <div class="pipeline-actions">
         <div class="pipe-col-label">Available steps — click to add</div>
 
-        <button class="pipe-action-btn" onclick="pipelineAddStep('organize')" title="Move files into Artist / Album / Track folders">
-          <span class="pipe-action-icon">🗂</span>
+        <button class="pipe-action-btn" onclick="pipelineAddStep('audit')" title="DB snapshot + full physical filesystem scan">
+          <span class="pipe-action-icon">▣</span>
           <span class="pipe-action-text">
-            <strong>Sort into Folders</strong>
-            <span>Moves files into Artist / Album / Track order</span>
+            <strong>Library Audit</strong>
+            <span>DB snapshot + physical filesystem inventory</span>
           </span>
         </button>
 
@@ -938,14 +938,6 @@
           <span class="pipe-action-text">
             <strong>Tag Tracks</strong>
             <span>Writes BPM and musical key into each file</span>
-          </span>
-        </button>
-
-        <button class="pipe-action-btn" onclick="pipelineAddStep('normalize')" title="Re-encode tracks that are too loud or too quiet">
-          <span class="pipe-action-icon">📢</span>
-          <span class="pipe-action-text">
-            <strong>Balance Loudness</strong>
-            <span>Brings every track to the same volume level</span>
           </span>
         </button>
 
@@ -960,8 +952,40 @@
         <button class="pipe-action-btn" onclick="pipelineAddStep('prune')" title="Remove the copies confirmed in Find Duplicates">
           <span class="pipe-action-icon">✂️</span>
           <span class="pipe-action-text">
-            <strong>Remove Duplicates</strong>
-            <span>Deletes copies found by Find Duplicates</span>
+            <strong>Prune Duplicates</strong>
+            <span>Remove copies found by Find Duplicates</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('relocate')" title="Update RekordBox after files have moved">
+          <span class="pipe-action-icon">📍</span>
+          <span class="pipe-action-text">
+            <strong>Fix Broken Paths</strong>
+            <span>Update RekordBox after files have moved</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('import')" title="Add new audio files into the RekordBox database">
+          <span class="pipe-action-icon">＋</span>
+          <span class="pipe-action-text">
+            <strong>Import Tracks</strong>
+            <span>Add new audio files to RekordBox database</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('link')" title="Link imported tracks to playlists by folder name">
+          <span class="pipe-action-icon">🔗</span>
+          <span class="pipe-action-text">
+            <strong>Link Playlists</strong>
+            <span>Connect tracks to playlists by folder name</span>
+          </span>
+        </button>
+
+        <button class="pipe-action-btn" onclick="pipelineAddStep('normalize')" title="Re-encode tracks that are too loud or too quiet">
+          <span class="pipe-action-icon">📢</span>
+          <span class="pipe-action-text">
+            <strong>Balance Loudness</strong>
+            <span>Brings every track to the same volume level</span>
           </span>
         </button>
 
@@ -973,11 +997,11 @@
           </span>
         </button>
 
-        <button class="pipe-action-btn" onclick="pipelineAddStep('relocate')" title="Tell RekordBox where everything moved to">
-          <span class="pipe-action-icon">📍</span>
+        <button class="pipe-action-btn" onclick="pipelineAddStep('organize')" title="Move files into Artist / Album / Track folders">
+          <span class="pipe-action-icon">🗂</span>
           <span class="pipe-action-text">
-            <strong>Update RekordBox</strong>
-            <span>Syncs RekordBox after files have been moved</span>
+            <strong>Organize Library</strong>
+            <span>Moves files into Artist / Album / Track order</span>
           </span>
         </button>
 
@@ -1005,12 +1029,37 @@
         </div>
 
         <div style="margin-top:12px">
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;font-size:.9rem;margin-bottom:12px">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;font-size:.9rem;margin-bottom:10px">
             <input type="checkbox" id="pipeline-dry-run" checked style="width:16px;height:16px;accent-color:var(--accent)">
             Dry Run — show what would happen without changing anything
           </label>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:.85rem;margin-bottom:14px;color:var(--text-muted)">
+            <input type="checkbox" id="pipeline-confirm-steps" style="width:15px;height:15px;accent-color:var(--caution)">
+            Confirm between steps — pause after each step completes and require approval before continuing
+          </label>
           <div class="btn-row">
             <button class="btn btn-neon" id="btn-pipeline" onclick="runPipeline()" style="flex:1;justify-content:center">▶ Run Pipeline</button>
+          </div>
+        </div>
+
+        <!-- ── Step confirmation gate (shown between pipeline steps) ───────── -->
+        <div id="pipe-confirm-gate" style="display:none;margin-top:16px;padding:14px 16px;
+             background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.35);
+             border-radius:8px;font-size:.86rem;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <span style="font-size:1.3rem;line-height:1">⏸</span>
+            <div style="flex:1">
+              <div id="pipe-gate-title" style="font-weight:600;color:var(--text);margin-bottom:4px">Step complete</div>
+              <div id="pipe-gate-body" style="color:var(--text-muted);line-height:1.5;font-size:.82rem;margin-bottom:12px"></div>
+              <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button class="btn btn-neon" id="pipe-gate-continue" onclick="pipeConfirmContinue()" style="padding:7px 20px">
+                  Continue → <span id="pipe-gate-next-name"></span>
+                </button>
+                <button class="btn" onclick="pipeConfirmStop()" style="color:var(--danger);border-color:var(--danger);padding:7px 16px">
+                  Stop here
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -2113,17 +2162,20 @@ function runConvert() {
 /* ── Pipeline Builder ──────────────────────────────────────────────────────── */
 
 const PIPE_STEPS = {
-  organize:   { name: 'Sort into Folders',  icon: '🗂',  desc: 'Move files into Artist / Album / Track' },
+  audit:      { name: 'Library Audit',      icon: '▣',   desc: 'DB snapshot + physical filesystem inventory' },
+  process:    { name: 'Tag Tracks',         icon: '🏷',  desc: 'Write BPM and Key into each file' },
+  duplicates: { name: 'Find Duplicates',    icon: '🔎',  desc: 'Scan for files that are the same recording' },
+  prune:      { name: 'Prune Duplicates',   icon: '✂️', desc: 'Remove copies found by Find Duplicates' },
+  relocate:   { name: 'Fix Broken Paths',   icon: '📍',  desc: 'Update RekordBox after files have moved' },
+  import:     { name: 'Import Tracks',      icon: '＋',  desc: 'Add new audio files to RekordBox database' },
+  link:       { name: 'Link Playlists',     icon: '🔗',  desc: 'Connect tracks to playlists by folder name' },
+  normalize:  { name: 'Balance Loudness',   icon: '📢',  desc: 'Bring every track to the same volume' },
+  convert:    { name: 'Convert Format',     icon: '🔄',  desc: 'Change files to AIFF, MP3, WAV, or FLAC' },
+  organize:   { name: 'Organize Library',   icon: '🗂',  desc: 'Move files into Artist / Album / Track' },
   novelty:    { name: 'Novelty Scan',       icon: '★',   desc: 'Copy unique tracks from source to home library' },
-  process:    { name: 'Tag Tracks',          icon: '🏷',  desc: 'Write BPM and Key into each file' },
-  normalize:  { name: 'Balance Loudness',    icon: '📢',  desc: 'Bring every track to the same volume' },
-  duplicates: { name: 'Find Duplicates',     icon: '🔎',  desc: 'Scan for files that are the same recording' },
-  prune:      { name: 'Remove Duplicates',   icon: '✂️', desc: 'Delete copies found in previous step' },
-  convert:    { name: 'Convert Format',      icon: '🔄',  desc: 'Change files to AIFF, MP3, WAV, or FLAC' },
-  relocate:   { name: 'Update RekordBox',    icon: '📍',  desc: 'Sync RekordBox after files have moved' },
 };
 
-const RECOMMENDED = ['process','duplicates','prune','relocate','convert','organize','normalize'];
+const RECOMMENDED = ['process','duplicates','prune','relocate','import','link','organize'];
 
 let pipelineSteps = [];   // [{id, type}]
 let pipeUid = 0;
@@ -2196,10 +2248,17 @@ function pipelineRender() {
   });
 }
 
-function _pipelineReadConfig(type) {
-  /* Read current values from the existing step card inputs */
+function _pipelineReadConfig(type, extraCsv) {
+  /* Read current values from the existing step card inputs.
+     extraCsv: optional CSV path from a previous duplicates step (confirm mode). */
   const musicRoot = document.getElementById('process-path')?.value.trim() || '';
   switch (type) {
+    case 'audit':
+      return { root: document.getElementById('audit-root')?.value.trim() || '' };
+    case 'import':
+      return { path: document.getElementById('import-path')?.value.trim() || musicRoot };
+    case 'link':
+      return { path: document.getElementById('link-path')?.value.trim() || musicRoot };
     case 'organize':
       return {
         sources:       Array.from(document.querySelectorAll('.org-source-input'))
@@ -2211,8 +2270,8 @@ function _pipelineReadConfig(type) {
       };
     case 'process':
       return {
-        path:    musicRoot,
-        workers: parseInt(document.getElementById('normalize-workers')?.value || '1'),
+        path:         musicRoot,
+        workers:      parseInt(document.getElementById('normalize-workers')?.value || '1'),
         no_normalize: true,
       };
     case 'normalize':
@@ -2223,10 +2282,10 @@ function _pipelineReadConfig(type) {
     case 'duplicates':
       return {
         path:    document.getElementById('dupes-path')?.value.trim() || musicRoot,
-        workers: 1,
+        workers: parseInt(document.getElementById('dupes-workers')?.value || '1'),
       };
     case 'prune':
-      return {};
+      return extraCsv ? { csv: extraCsv } : {};
     case 'convert':
       return {
         path:    document.getElementById('convert-path')?.value.trim() || musicRoot,
@@ -2243,6 +2302,97 @@ function _pipelineReadConfig(type) {
   }
 }
 
+/* ── Pipeline confirm-gate state ──────────────────────────────────────────── */
+let _pipeConfirmResolve = null;   // set when gate is open; call(true) = continue, (false) = stop
+
+function pipeConfirmContinue() {
+  document.getElementById('pipe-confirm-gate').style.display = 'none';
+  if (_pipeConfirmResolve) { _pipeConfirmResolve(true); _pipeConfirmResolve = null; }
+}
+function pipeConfirmStop() {
+  document.getElementById('pipe-confirm-gate').style.display = 'none';
+  if (_pipeConfirmResolve) { _pipeConfirmResolve(false); _pipeConfirmResolve = null; }
+}
+
+function _showPipeConfirmGate(completedName, nextName, summaryLines) {
+  /* Returns a Promise that resolves true (continue) or false (stop). */
+  const gate = document.getElementById('pipe-confirm-gate');
+  document.getElementById('pipe-gate-title').textContent =
+    `✓ "${completedName}" complete${nextName ? ' — ready for next step' : ' — pipeline done'}`;
+  document.getElementById('pipe-gate-body').textContent =
+    summaryLines.length ? summaryLines.slice(-6).join('  ·  ') : 'Step finished with no output.';
+  document.getElementById('pipe-gate-next-name').textContent = nextName || '';
+  const cont = document.getElementById('pipe-gate-continue');
+  if (nextName) {
+    cont.style.display = '';
+    cont.textContent = `Continue → ${nextName}`;
+  } else {
+    cont.style.display = 'none';
+  }
+  gate.style.display = '';
+  return new Promise(resolve => { _pipeConfirmResolve = resolve; });
+}
+
+/* ── Run a single pipeline step via /api/run/pipeline ──────────────────────── */
+async function _runOnePipelineStep(step, dryRun, capturedCsv) {
+  /* Returns {exitCode, reportPath, outputLines} */
+  const stepWithCsv = {
+    ...step,
+    config: _pipelineReadConfig(step.type, step.type === 'prune' ? capturedCsv : null),
+  };
+  const resp = await fetch('/api/run/pipeline', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ dry_run: dryRun, steps: [stepWithCsv] }),
+  });
+  if (!resp.ok) throw new Error(await resp.text());
+
+  const reader   = resp.body.getReader();
+  const decoder  = new TextDecoder();
+  let   buf      = '';
+  let   reportPath = null;
+  let   outputLines = [];
+  let   exitCode = 0;
+  let   inReport = false;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const parts = buf.split('\n\n');
+    buf = parts.pop();
+    for (const part of parts) {
+      const dataLine = part.split('\n').find(l => l.startsWith('data: '));
+      if (!dataLine) continue;
+      try {
+        const ev = JSON.parse(dataLine.slice(6));
+        if (ev.step_start !== undefined) {
+          /* already logged by caller */
+        } else if (ev.step_end !== undefined) {
+          exitCode = ev.exit_code;
+        } else if (ev.line !== undefined) {
+          const line = ev.line;
+          if (line === 'SUPERBOX_REPORT_BEGIN')       { inReport = true; }
+          else if (line === 'SUPERBOX_REPORT_END')    { inReport = false; }
+          else if (line.startsWith('SUPERBOX_PROGRESS: ')) {
+            try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
+          } else if (line.startsWith('SUPERBOX_REPORT_PATH: ')) {
+            reportPath = line.slice(22).trim();
+          } else if (line.startsWith('SUPERBOX_PHYSICAL_SCAN: ')) {
+            appendLog(`  📁 Physical scan → ${line.slice(24).trim()}`, 'dim');
+          } else {
+            outputLines.push(line);
+            appendLog(line, classifyLine(line));
+          }
+        } else if (ev.done) {
+          exitCode = ev.exit_code || 0;
+        }
+      } catch (_) {}
+    }
+  }
+  return { exitCode, reportPath, outputLines };
+}
+
 async function runPipeline() {
   if (pipelineSteps.length === 0) {
     alert('Add at least one step to the pipeline first.');
@@ -2250,42 +2400,39 @@ async function runPipeline() {
   }
   if (isRunning) return;
 
-  const dryRun = document.getElementById('pipeline-dry-run').checked;
-  const steps  = pipelineSteps.map(s => ({
-    type:   s.type,
-    name:   (PIPE_STEPS[s.type] || {}).name || s.type,
-    config: _pipelineReadConfig(s.type),
-  }));
-
-  const label = dryRun ? 'Pipeline — Dry Run (preview only)' : 'Running Pipeline';
+  const dryRun       = document.getElementById('pipeline-dry-run').checked;
+  const confirmMode  = document.getElementById('pipeline-confirm-steps')?.checked ?? false;
+  const label        = dryRun ? 'Pipeline — Dry Run (preview only)' : 'Running Pipeline';
+  const total        = pipelineSteps.length;
 
   /* Reset step visual state */
   pipelineSteps.forEach(s => {
     const el = document.getElementById(`pipe-step-${s.id}`);
     if (el) el.className = 'pipe-step';
   });
+  document.getElementById('pipe-confirm-gate').style.display = 'none';
 
-  /* Set up the shared log/bar/spinner using existing helpers */
   initLog(label);
   showScanBar(label);
   isRunning = true;
   setSpinner(true);
   setAllButtons(true);
-  appendLog(`▸ ${label}`, 'dim');
+  appendLog(`▸ ${label}${confirmMode ? '  (confirm between steps)' : ''}`, 'dim');
   appendLog('', 'dim');
 
-  let reportBuffer    = [];
-  let inReport        = false;
-  let stepIdMap       = {};
-  pipelineSteps.forEach((s, i) => { stepIdMap[i + 1] = `pipe-step-${s.id}`; });
+  let reportBuffer = [];
+  let capturedCsv  = null;   // last SUPERBOX_REPORT_PATH from a duplicates step
 
-  const finish = (exitCode, failedStep) => {
+  const finish = (exitCode, failedStep, stopped) => {
     isRunning = false;
     setSpinner(false);
     setAllButtons(false);
     finishScanBar();
+    document.getElementById('pipe-confirm-gate').style.display = 'none';
     appendLog('', '');
-    if (failedStep) {
+    if (stopped) {
+      appendLog('⏹ Pipeline stopped by user.', 'log-exit-fail');
+    } else if (failedStep) {
       appendLog(`✗ Pipeline stopped — "${failedStep}" had an error.`, 'log-exit-fail');
     } else if (exitCode === 0) {
       appendLog(dryRun
@@ -2300,17 +2447,70 @@ async function runPipeline() {
     }
   };
 
+  /* ── CONFIRM MODE: run one step at a time ───────────────────────────────── */
+  if (confirmMode) {
+    for (let i = 0; i < pipelineSteps.length; i++) {
+      const s    = pipelineSteps[i];
+      const def  = PIPE_STEPS[s.type] || { name: s.type, icon: '⚙', desc: '' };
+      const step = { type: s.type, name: def.name, config: {} };
+      const el   = document.getElementById(`pipe-step-${s.id}`);
+
+      if (el) el.className = 'pipe-step running';
+      appendLog('', '');
+      appendLog(`── Step ${i + 1} / ${total}: ${def.name} ──`, 'dim');
+
+      let result;
+      try {
+        result = await _runOnePipelineStep(step, dryRun, capturedCsv);
+      } catch (err) {
+        if (el) el.className = 'pipe-step failed';
+        appendLog('[Connection error] ' + err.message, 'error');
+        finish(1, def.name, false);
+        return;
+      }
+
+      if (el) el.className = result.exitCode === 0 ? 'pipe-step done' : 'pipe-step failed';
+      if (result.reportPath) capturedCsv = result.reportPath;
+
+      if (result.exitCode !== 0) {
+        finish(result.exitCode, def.name, false);
+        return;
+      }
+
+      /* Pause for confirmation unless this is the last step */
+      const nextStep = pipelineSteps[i + 1];
+      const nextName = nextStep ? (PIPE_STEPS[nextStep.type] || { name: nextStep.type }).name : null;
+      const summaryLines = result.outputLines.filter(l => l.trim() && !l.startsWith(' '));
+      const shouldContinue = await _showPipeConfirmGate(def.name, nextName, summaryLines);
+      if (!shouldContinue) {
+        finish(0, null, true);
+        return;
+      }
+    }
+    finish(0, null, false);
+    return;
+  }
+
+  /* ── AUTO MODE: send all steps at once (original behaviour) ─────────────── */
+  const steps = pipelineSteps.map(s => ({
+    type:   s.type,
+    name:   (PIPE_STEPS[s.type] || {}).name || s.type,
+    config: _pipelineReadConfig(s.type),
+  }));
+  let stepIdMap = {};
+  pipelineSteps.forEach((s, i) => { stepIdMap[i + 1] = `pipe-step-${s.id}`; });
+  let inReport = false;
+
   try {
     const resp = await fetch('/api/run/pipeline', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ dry_run: dryRun, steps }),
     });
-
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ error: resp.statusText }));
       appendLog('Pipeline error: ' + (err.error || resp.statusText), 'error');
-      finish(1, null);
+      finish(1, null, false);
       return;
     }
 
@@ -2330,21 +2530,18 @@ async function runPipeline() {
         if (!dataLine) continue;
         try {
           const ev = JSON.parse(dataLine.slice(6));
-
           if (ev.step_start !== undefined) {
             const el = document.getElementById(stepIdMap[ev.step_start]);
             if (el) el.className = 'pipe-step running';
             appendLog('', '');
             appendLog(`── Step ${ev.step_start} / ${ev.total_steps}: ${ev.step_name} ──`, 'dim');
-
           } else if (ev.step_end !== undefined) {
             const el = document.getElementById(stepIdMap[ev.step_end]);
             if (el) el.className = ev.exit_code === 0 ? 'pipe-step done' : 'pipe-step failed';
-
           } else if (ev.line !== undefined) {
             const line = ev.line;
-            if (line === 'SUPERBOX_REPORT_BEGIN') { inReport = true; reportBuffer = []; }
-            else if (line === 'SUPERBOX_REPORT_END') { inReport = false; }
+            if (line === 'SUPERBOX_REPORT_BEGIN')       { inReport = true; reportBuffer = []; }
+            else if (line === 'SUPERBOX_REPORT_END')    { inReport = false; }
             else if (line.startsWith('SUPERBOX_PROGRESS: ')) {
               try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
             } else if (line.startsWith('SUPERBOX_REPORT_PATH: ')) {
@@ -2355,16 +2552,15 @@ async function runPipeline() {
               if (inReport) reportBuffer.push(line);
               appendLog(line, classifyLine(line));
             }
-
           } else if (ev.done) {
-            finish(ev.exit_code || 0, ev.failed_step || null);
+            finish(ev.exit_code || 0, ev.failed_step || null, false);
           }
         } catch (_) {}
       }
     }
   } catch (err) {
     appendLog('[Connection error] ' + err.message, 'error');
-    finish(1, null);
+    finish(1, null, false);
   }
 }
 
