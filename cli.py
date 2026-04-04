@@ -240,7 +240,7 @@ def cmd_relocate(args: argparse.Namespace) -> None:
 
 def cmd_duplicates(args: argparse.Namespace) -> None:
     """Scan PATH for acoustically identical files and write a CSV report."""
-    from duplicate_detector import scan_duplicates, write_csv_report
+    from duplicate_detector import scan_duplicates, write_csv_report, write_trash_rescue_report
 
     root = Path(args.path)
     if not root.is_dir():
@@ -264,19 +264,45 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         except Exception:
             output = Path.home() / "rekordbox-toolkit" / "duplicate_report.csv"
 
+    rescue_output = output.with_name(
+        output.stem.replace("duplicate_report", "trash_rescue_report")
+        if "duplicate_report" in output.stem
+        else f"trash_rescue_{output.stem}"
+    ).with_suffix(".txt")
+
     workers = max(1, args.workers)
     log.info("Scanning for duplicates under: %s (workers=%d)", root, workers)
     log.info("This may take a while for large libraries — progress logged every %d files", 100)
 
     try:
-        groups = scan_duplicates(root, max_workers=workers)
+        result = scan_duplicates(root, max_workers=workers)
     except Exception:
         log.exception("Duplicate scan failed")
         sys.exit(1)
 
+    groups   = result.groups
     removable = sum(len(g.recommended_remove) for g in groups)
+    trapped_keeps = sum(1 for g in groups if g.keep_in_trash)
 
-    if not groups:
+    # ── Trash rescue warning ──────────────────────────────────────────────────
+    if result.unique_in_trash or trapped_keeps:
+        print()
+        print("  ╔══════════════════════════════════════════════════════════════╗")
+        print("  ║  !!! RESCUE REQUIRED — DO NOT CLEAR TRASH YET !!!           ║")
+        print("  ╠══════════════════════════════════════════════════════════════╣")
+        if result.unique_in_trash:
+            print(f"  ║  {len(result.unique_in_trash):>5} tracks exist ONLY in a trash folder            ║")
+            print(f"  ║        → NOT included in the pruning CSV                    ║")
+            print(f"  ║        → SuperBox does not offer an automated rescue step   ║")
+            print(f"  ║        → move these files manually before clearing trash    ║")
+        if trapped_keeps:
+            print(f"  ║  {trapped_keeps:>5} duplicate groups have their best copy in trash   ║")
+            print(f"  ║        → marked keep_in_trash=YES in the CSV                ║")
+            print(f"  ║        → pruner will NOT delete them, but manual trash      ║")
+            print(f"  ║          cleanup would — move them first                    ║")
+        print("  ╚══════════════════════════════════════════════════════════════╝")
+
+    if not groups and not result.unique_in_trash:
         _emit_report(
             "No duplicates found. Every file in this folder appears to be unique.",
             "Duplicates", f"duplicates_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
@@ -288,14 +314,18 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
             "A report has been saved so you can review each group before deleting anything.",
         ]
         try:
-            write_csv_report(groups, output)
-            lines.append(f"\nReport saved to: {output}")
+            if groups:
+                write_csv_report(result, output)
+                lines.append(f"\nReport saved to: {output}")
+            write_trash_rescue_report(result, rescue_output)
+            lines.append(f"Rescue report:   {rescue_output}")
         except Exception:
             log.exception("Failed to write CSV report")
             sys.exit(1)
         _emit_report("\n".join(lines), "Duplicates",
                      f"duplicates_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
-        print(f"SUPERBOX_REPORT_PATH: {output}", flush=True)
+        if groups:
+            print(f"SUPERBOX_REPORT_PATH: {output}", flush=True)
 
 
 def cmd_process(args: argparse.Namespace) -> None:

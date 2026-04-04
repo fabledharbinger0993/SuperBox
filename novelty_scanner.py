@@ -173,11 +173,19 @@ def _dest_candidates(
             if abs(track_dur - dest_dur) > _DURATION_TOLERANCE_SEC:
                 continue
 
-        # BPM check
+        # BPM check — coerce to float; scan_index may store BPM as a string
         dest_bpm = meta.get("bpm")
-        if track_bpm and dest_bpm:
-            tolerance = track_bpm * _BPM_TOLERANCE_PCT
-            if abs(track_bpm - dest_bpm) > tolerance:
+        try:
+            dest_bpm = float(dest_bpm) if dest_bpm is not None else None
+        except (ValueError, TypeError):
+            dest_bpm = None
+        try:
+            track_bpm_f = float(track_bpm) if track_bpm is not None else None
+        except (ValueError, TypeError):
+            track_bpm_f = None
+        if track_bpm_f and dest_bpm:
+            tolerance = track_bpm_f * _BPM_TOLERANCE_PCT
+            if abs(track_bpm_f - dest_bpm) > tolerance:
                 continue
 
         # Key check (skip if either side missing)
@@ -372,9 +380,15 @@ def scan_novel(
         nonlocal fingerprinted
 
         src_meta   = scan_index.get(str(src), {})
-        src_bpm    = src_meta.get("bpm")
+        try:
+            src_bpm = float(src_meta["bpm"]) if src_meta.get("bpm") is not None else None
+        except (ValueError, TypeError):
+            src_bpm = None
         src_key    = src_meta.get("key")
-        src_dur    = src_meta.get("duration_sec")
+        try:
+            src_dur = float(src_meta["duration_sec"]) if src_meta.get("duration_sec") is not None else None
+        except (ValueError, TypeError):
+            src_dur = None
 
         # Phase 1: pre-filter — find destination candidates
         candidates = _dest_candidates(src_bpm, src_key, src_dur, dest_index)
