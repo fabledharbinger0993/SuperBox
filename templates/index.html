@@ -1280,18 +1280,85 @@
 
       <div class="welcome-section">
         <h3>Why this exists</h3>
-        <p>Rekordbox is an excellent performance tool. As a library manager, it has real limits. It doesn't write analysis results to your actual audio files — only its own database. That means BPM and key data disappears if you ever rebuild your library, migrate to another platform, or Rekordbox loses its mind. And it does, sometimes.</p>
-        <p>Path breakage is the other one. Move a folder, rename a drive, plug into a different USB port on a different computer — Rekordbox loses every file it can't find and gives you no tools to fix it in bulk. SuperBox was built to solve exactly these problems, and to give DJs with large, mature libraries a safety net that Rekordbox doesn't provide.</p>
+        <p>Rekordbox is an excellent performance tool. As a library manager, it has real limits. It doesn't write analysis results to your actual audio files — only its own database. BPM, key, and path data all live inside Rekordbox's private database, which means a library rebuild, a drive rename, or a corrupt database wipes all of it with no recovery path.</p>
+        <p>Path breakage is the other one. Move a folder, rename a drive, plug into a different USB port — Rekordbox loses every file it can't find and gives you no tools to fix it in bulk. SuperBox was built to solve exactly these problems: to give DJs with large, mature libraries a safety net that Rekordbox doesn't provide, and to ensure your library data outlives any single piece of software.</p>
       </div>
 
       <div class="welcome-section">
-        <h3>What it does</h3>
-        <p><strong>Audit</strong> — reads your database and music folder and cross-checks them. Orphaned files, missing tracks, broken paths, untagged tracks. Gives you the full picture before you touch anything.</p>
-        <p><strong>Tag Tracks</strong> — analyzes each audio file's actual waveform and writes BPM and musical key directly into the file tags (ID3 for MP3/AIFF, Vorbis for FLAC). These tags travel with the file forever, independent of any database.</p>
-        <p><strong>Import</strong> — adds new tracks to Rekordbox's database with a full backup created before any write. Preview mode shows you exactly what would change before committing.</p>
-        <p><strong>Normalize</strong> — measures integrated loudness per track (EBU R128 standard) and re-encodes files that fall outside the target. Every original is preserved as a .bak until the new file is verified readable.</p>
-        <p><strong>Duplicates</strong> — acoustic fingerprinting across your whole library. Finds files that are the same recording regardless of filename, bitrate, or format. Not filename matching — actual audio content comparison.</p>
-        <p><strong>Relocate</strong> — when a drive mounts under a new name or files move to a new folder, this updates every affected path in the database in one operation. Three match strategies: exact, hash-based, and fuzzy.</p>
+        <h3>Core pipeline — each tool feeds the next</h3>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:12px;">Run these in order on a fresh library. Each step's output is used as input by the steps that follow it.</p>
+
+        <p><strong>▣ Library Audit</strong> — two passes in one run. The <em>database pass</em> reads your Rekordbox database and flags orphaned entries, broken file paths, untagged tracks, and duplicates the DB already knows about. The <em>physical scan pass</em> walks your entire music drive and maps every audio file on disk — extension breakdown, total size, trash-adjacent files, and a complete file inventory. The combined report is written to JSON and feeds the Relocate, Import, and Prune tools downstream. Run this first, every time.</p>
+
+        <p><strong>🏷 Tag Tracks</strong> — analyzes each audio file's actual waveform using librosa and writes BPM and musical key directly into the file's tags (ID3 for MP3/AIFF, Vorbis comments for FLAC/OGG). Tags travel with the file permanently, independent of any database or software. Run this before finding duplicates so the pre-filter can use accurate BPM and key values.</p>
+
+        <p><strong>🔎 Find Duplicates</strong> — acoustic fingerprinting across your whole library via Chromaprint. Finds files that are the same recording regardless of filename, bitrate, format, or trim length. Pre-filters by BPM, key, and duration before fingerprinting to keep things fast on large libraries. Produces a CSV report that the Prune tool reads directly.</p>
+
+        <p><strong>✂ Prune Duplicates</strong> — loads the duplicate report and lets you select which files to remove from each group. Confirmation is deliberately multi-step, with each confirm button placed at a different screen corner to prevent muscle-memory clicking through a destructive action. Files go to Trash by default; permanent deletion is a separate explicit choice. Reads the CSV from Find Duplicates automatically if available.</p>
+
+        <p><strong>📍 Fix Broken Paths</strong> — when a drive mounts under a new name, or files move to a new folder, every path stored in Rekordbox's database breaks silently. This tool takes an old path prefix and a new path prefix, then updates every matching entry in the database in one operation. Always creates a timestamped database backup before writing.</p>
+
+        <p><strong>＋ Import</strong> — scans a folder and adds new audio files to Rekordbox's database. Skips files already present. Dry-run mode shows exactly what would be added before committing. A full database backup is created before any write.</p>
+
+        <p><strong>🔗 Link Playlists</strong> — associates imported tracks to Rekordbox playlists based on the folder structure they live in. If your files are organized into named subfolders, this maps those folder names to playlist names automatically. Run after Import.</p>
+      </div>
+
+      <div class="welcome-section">
+        <h3>Optional &amp; transformative</h3>
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:12px;">Run after the core pipeline is clean. These tools modify audio files directly.</p>
+
+        <p><strong>📢 Normalize</strong> — measures the integrated loudness of each track using the EBU R128 standard (the same standard used in broadcast and streaming), and re-encodes any file that falls outside your target range. Every original is preserved as a <code>.bak</code> file until the new version is verified readable. Keeps energy consistent across your sets without touching gain in Rekordbox.</p>
+
+        <p><strong>🔄 Convert Format</strong> — re-encodes audio files in a folder to a target format. Useful for converting a batch of downloads to your preferred format before importing. Originals are preserved.</p>
+
+        <p><strong>🗂 Organize (De-fragment Library)</strong> — moves files into a consistent <code>Artist / Album / Track</code> folder hierarchy based on their embedded tags. Uses the Album Artist tag (TPE2) rather than the Track Artist tag (TPE1) to avoid an explosion of per-feature-artist folders. Camelot key prefixes in artist names are stripped before folder creation. Dry-run mode available. In assimilate mode, tracks from multiple source drives are consolidated into one target library root.</p>
+      </div>
+
+      <div class="welcome-section">
+        <h3>Cross-library rescue</h3>
+        <p><strong>★ Novelty Scanner</strong> — scans a source drive or folder (a backup drive, a USB stick, an old hard disk) and identifies audio files that are not acoustically present in your main library. These are genuinely new-to-you tracks, not duplicates under different names. Found tracks can be copied or moved to your primary library for import. Useful for recovering tracks from old drives you thought you'd lost.</p>
+      </div>
+
+      <div class="welcome-section">
+        <h3>▶ Pipeline Builder</h3>
+        <p>Chain any combination of tools into a single automated run. Add steps from the left panel, reorder them, and hit Run Pipeline. Two modes:</p>
+        <div class="welcome-tool-row">
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">Auto mode</div>
+            <div class="welcome-tool-desc">Steps run back-to-back without stopping. Output from each step is passed to the next automatically — the duplicates CSV found by Find Duplicates is fed directly into Prune without you having to copy a path. The full combined output streams to the log panel in real time.</div>
+          </div>
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">Confirm between steps</div>
+            <div class="welcome-tool-desc">Pauses after each step completes and shows a gate panel before the next step begins. The gate is color-coded: green tint on success, red tint on failure. Four actions are available depending on outcome:</div>
+          </div>
+        </div>
+        <div class="welcome-compare-row" style="margin-top:10px;">
+          <div class="welcome-compare">
+            <div class="welcome-compare-name">↻ Re-do</div>
+            <div class="welcome-compare-desc">Runs the same step again from scratch. Useful if a step failed because Rekordbox was still open, or if you want to tweak a setting and retry before moving on.</div>
+          </div>
+          <div class="welcome-compare">
+            <div class="welcome-compare-name">✓ Finish</div>
+            <div class="welcome-compare-desc">Stops the pipeline here and marks it complete. Use this when a step succeeded and you don't need the remaining steps this session.</div>
+          </div>
+          <div class="welcome-compare">
+            <div class="welcome-compare-name">⏭ Skip</div>
+            <div class="welcome-compare-desc">Skips the current step's result and advances to the next one. Available when a step fails and you want to continue the pipeline anyway — for example, skipping a failed Normalize to still run Organize after it.</div>
+          </div>
+          <div class="welcome-compare">
+            <div class="welcome-compare-name">⏹ Stop</div>
+            <div class="welcome-compare-desc">Aborts the pipeline immediately. Always visible in the gate regardless of step outcome. Any steps that already completed are not reversed.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="welcome-section">
+        <h3>Quality of life</h3>
+        <p><strong>Drag and drop</strong> — every path input on every card and in the Pipeline Builder accepts a file or folder dragged directly from Finder. Drop anything onto the field. A faint purple dashed ring marks each drop target; it glows neon on hover. The full path populates instantly and the field flashes green to confirm.</p>
+        <p><strong>Session pills</strong> — completed operations are tracked as pills in the bottom-right corner for the duration of your session. Click any pill to re-open that step's full output log.</p>
+        <p><strong>Report viewer</strong> — after any tool run, a report card appears inside the card showing a summary of what happened. Click <em>View Full Report</em> to open the complete output in a scrollable modal.</p>
+        <p><strong>Owl / Glossary</strong> — the owl icon (bottom right) opens a floating glossary of every technical term used in SuperBox. Click any term in the glossary for a full explanation card. Useful if you're not sure what a Camelot key, an orphaned entry, or EBU R128 means.</p>
+        <p><strong>Settings</strong> — the ⚙ gear icon (top right) controls archive mode (which drive SuperBox writes backups to), log retention, and scan exclusions. Changes take effect immediately.</p>
       </div>
 
       <div class="welcome-section">
@@ -1299,23 +1366,27 @@
         <div class="welcome-tool-row">
           <div class="welcome-tool">
             <div class="welcome-tool-name">librosa</div>
-            <div class="welcome-tool-desc">Open-source audio analysis library from the music information retrieval research community. Used for BPM detection (beat tracking on the actual waveform) and key detection (Krumhansl-Schmuckler algorithm on chroma features). Free, runs entirely on your machine.</div>
-          </div>
-          <div class="welcome-tool">
-            <div class="welcome-tool-name">mutagen</div>
-            <div class="welcome-tool-desc">Industry-standard Python library for reading and writing audio file tags. Handles ID3 (MP3/AIFF), Vorbis comments (FLAC), and more. Used by Beets, MusicBrainz Picard, and many other tools in the music metadata world.</div>
-          </div>
-          <div class="welcome-tool">
-            <div class="welcome-tool-name">pyrekordbox</div>
-            <div class="welcome-tool-desc">Reads and writes Rekordbox's SQLite database directly, using the same file Rekordbox uses. This is what lets SuperBox import tracks, update paths, and link playlists without Rekordbox needing to be open.</div>
-          </div>
-          <div class="welcome-tool">
-            <div class="welcome-tool-name">pyloudnorm + soundfile</div>
-            <div class="welcome-tool-desc">EBU R128 loudness measurement and audio I/O. The same loudness standard used in broadcast and streaming. Ensures every track in your set hits the same integrated loudness target — consistent energy without riding the gain knob.</div>
+            <div class="welcome-tool-desc">Open-source audio analysis from the music information retrieval research community. Beat tracking on the actual waveform for BPM; Krumhansl-Schmuckler algorithm on chroma features for key detection. Runs entirely on your machine, no internet required.</div>
           </div>
           <div class="welcome-tool">
             <div class="welcome-tool-name">chromaprint + pyacoustid</div>
-            <div class="welcome-tool-desc">Acoustic fingerprinting — the same underlying technology used by AcoustID and MusicBrainz. Generates a compact signature from the audio content itself. Two files with different names, different bitrates, different lengths — if they're the same recording, this finds them.</div>
+            <div class="welcome-tool-desc">Acoustic fingerprinting — the same technology behind AcoustID and MusicBrainz. Generates a compact signature from audio content. Two files with different names, bitrates, and lengths — if they're the same recording, this finds them.</div>
+          </div>
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">pyrekordbox</div>
+            <div class="welcome-tool-desc">Reads and writes Rekordbox's SQLite database directly. This is what lets SuperBox import tracks, fix paths, and link playlists without Rekordbox needing to be open. Rekordbox must be closed before any write operation.</div>
+          </div>
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">mutagen</div>
+            <div class="welcome-tool-desc">Industry-standard Python library for reading and writing audio file tags. Handles ID3 (MP3/AIFF), Vorbis comments (FLAC), and more. Used by Beets, MusicBrainz Picard, and most serious music metadata tools.</div>
+          </div>
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">pyloudnorm + soundfile</div>
+            <div class="welcome-tool-desc">EBU R128 loudness measurement and audio I/O. The broadcast and streaming standard. Measures integrated loudness across the whole track — not peak, not RMS — and re-encodes only what falls outside your target range.</div>
+          </div>
+          <div class="welcome-tool">
+            <div class="welcome-tool-name">Flask + Waitress</div>
+            <div class="welcome-tool-desc">Local web server — no cloud, no CDN, no external network calls. Everything runs on localhost:5001. The browser is just a UI skin over Python processes running on your own machine. Shut the server down with the ⏻ Quit button.</div>
           </div>
         </div>
       </div>
@@ -1325,29 +1396,30 @@
         <div class="welcome-compare-row">
           <div class="welcome-compare">
             <div class="welcome-compare-name">vs Mixed In Key</div>
-            <div class="welcome-compare-desc">Mixed In Key is excellent and arguably still the most accurate BPM/key tool built specifically for DJs. It's $58 one-time, polished, and has years of refinement behind it. SuperBox uses librosa, which is solid and research-grade, but MIK has the edge on accuracy for complex or atonal tracks. If you use MIK, SuperBox respects that — it won't overwrite existing tags unless you explicitly ask it to.</div>
+            <div class="welcome-compare-desc">MIK is excellent and arguably the most accurate BPM/key tool built specifically for DJs. $58 one-time, polished, years of refinement. SuperBox uses librosa — solid and research-grade — but MIK has the edge on complex or atonal tracks. If you use MIK, SuperBox respects it: it won't overwrite existing tags unless you explicitly ask.</div>
           </div>
           <div class="welcome-compare">
             <div class="welcome-compare-name">vs Lexicon</div>
-            <div class="welcome-compare-desc">Lexicon is the best cross-platform DJ library manager available right now, around $10/month. If you work across Serato, Traktor, and Rekordbox, Lexicon is probably the right tool. SuperBox is Rekordbox-specific, free, and focused on the safety and recovery problems Lexicon doesn't prioritize. They're not direct competitors — they solve different problems.</div>
+            <div class="welcome-compare-desc">Lexicon is the best cross-platform DJ library manager right now, ~$10/month. If you work across Serato, Traktor, and Rekordbox, Lexicon is probably the right tool. SuperBox is Rekordbox-specific, free, and focused on the safety and recovery problems Lexicon doesn't prioritize. They solve different problems.</div>
           </div>
           <div class="welcome-compare">
             <div class="welcome-compare-name">vs Rekordbox's own analysis</div>
-            <div class="welcome-compare-desc">Rekordbox's BPM analysis is fine. The fundamental difference is where results are stored. Rekordbox writes to its database only — results don't survive a library rebuild and don't work in other software. SuperBox writes to the file tags themselves. Those tags travel with the audio file permanently, across any software and any database.</div>
+            <div class="welcome-compare-desc">Rekordbox's BPM analysis is fine. The difference is where the results live. Rekordbox writes to its database only — results don't survive a rebuild and don't work elsewhere. SuperBox writes to the file tags. Those tags live in the audio file forever, across any software and any database rebuild.</div>
           </div>
           <div class="welcome-compare">
             <div class="welcome-compare-name">vs MusicBrainz Picard</div>
-            <div class="welcome-compare-desc">Picard is a full metadata editor — it identifies recordings, corrects track info, standardizes tags. SuperBox doesn't do that. It doesn't touch song titles, artists, or album data. The scope is deliberately narrow: BPM, key, loudness, path integrity, and library safety. Different tool, different job.</div>
+            <div class="welcome-compare-desc">Picard identifies recordings and corrects metadata — titles, artists, albums. SuperBox deliberately doesn't touch any of that. The scope is narrow by design: BPM, key, loudness, path integrity, and library safety. Different tool, different job.</div>
           </div>
         </div>
       </div>
 
       <div class="welcome-section">
         <h3>The philosophy</h3>
-        <p>Every write operation in SuperBox creates a timestamped backup before it touches anything. DB changes, audio rewrites, path updates — all of it is logged and reversible. Files go to Trash, not permanent deletion. The goal is that you should be able to undo anything SuperBox has ever done to your library.</p>
-        <p>No cloud. No accounts. No subscription. Your library data stays on your machine.</p>
+        <p>Every write operation in SuperBox creates a timestamped backup before touching anything. Database changes, audio rewrites, path updates — all logged and reversible. Files are moved to Trash rather than permanently deleted unless you explicitly choose otherwise. The goal is that nothing SuperBox has ever done to your library should be unrecoverable.</p>
+        <p>Rekordbox must be closed before any write operation. SuperBox will warn you if it detects Rekordbox is running.</p>
+        <p>No cloud. No accounts. No subscription. No internet dependency at runtime. Your library data stays on your machine.</p>
         <p style="margin-top:10px; padding:10px 14px; background:var(--surface-hi); border:1px solid var(--border); border-radius:7px; font-size:.81rem; color:var(--text-muted);">
-          💡 You can revisit this window anytime — including the archive folder setup — by clicking the <strong style="color:var(--text)">lightbulb icon</strong> in the bottom-right corner of the screen.
+          💡 You can revisit this window anytime — including the archive folder setup below — by clicking the <strong style="color:var(--text)">lightbulb icon</strong> in the bottom-right corner of the screen.
         </p>
       </div>
 
