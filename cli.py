@@ -275,6 +275,7 @@ def cmd_process(args: argparse.Namespace) -> None:
       BPM and key detection still run and tag values are still written.
       To skip tag writes as well, combine: --no-bpm --no-key --no-normalize.
     """
+    import json as _json
     from audio_processor import process_directory
 
     root = Path(args.path)
@@ -287,9 +288,10 @@ def cmd_process(args: argparse.Namespace) -> None:
     normalise = not args.no_normalize and not args.dry_run
 
     log.info(
-        "Processing %s — BPM:%s KEY:%s NORMALIZE:%s FORCE:%s DRY_RUN:%s",
+        "Processing %s — BPM:%s KEY:%s NORMALIZE:%s FORCE:%s DRY_RUN:%s RESUME:%s",
         root,
         detect_bpm, detect_key, normalise, args.force, args.dry_run,
+        getattr(args, "resume", False),
     )
 
     if args.dry_run:
@@ -305,6 +307,27 @@ def cmd_process(args: argparse.Namespace) -> None:
             "Ensure your files are backed up independently before proceeding."
         )
 
+    # ── Resume: load scan_index to skip already-processed files ──────────────
+    skip_paths: set[str] | None = None
+    if getattr(args, "resume", False):
+        index_path = Path.home() / "rekordbox-toolkit" / "scan_index.json"
+        if index_path.exists():
+            try:
+                with open(index_path, encoding="utf-8") as f:
+                    entries = _json.load(f)
+                skip_paths = {e["path"] for e in entries if isinstance(e, dict) and "path" in e}
+                log.info(
+                    "Resume mode: %d paths in scan_index will be skipped",
+                    len(skip_paths),
+                )
+            except Exception as exc:
+                log.warning("Could not load scan_index for resume: %s — starting fresh", exc)
+        else:
+            log.warning(
+                "--resume: no scan_index found at %s — starting a fresh scan",
+                index_path,
+            )
+
     try:
         results = process_directory(
             root,
@@ -312,6 +335,7 @@ def cmd_process(args: argparse.Namespace) -> None:
             detect_key=detect_key,
             normalise=normalise,
             force=args.force,
+            skip_paths=skip_paths,
         )
     except Exception:
         log.exception("Processing failed")
@@ -518,6 +542,15 @@ Examples:
         help=(
             "Suppress loudness normalisation. "
             "BPM/key tag writes still occur unless --no-bpm/--no-key are also set."
+        ),
+    )
+    p_process.add_argument(
+        "--resume",
+        action="store_true",
+        help=(
+            "Skip files already recorded in scan_index.json. "
+            "Use this to continue an interrupted scan without re-processing "
+            "files that were already completed."
         ),
     )
     p_process.set_defaults(func=cmd_process)

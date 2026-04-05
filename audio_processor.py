@@ -6,7 +6,7 @@ Analyses and normalises audio files in-place. No database interaction.
 Operations per file (each independently skippable):
 1. BPM detection via librosa beat tracking, written to TBPM tag
 2. Key detection via librosa chroma + Krumhansl-Schmuckler, written to TKEY (Camelot)
-3. Loudness check via pyloudnorm (EBU R128 measurement)
+3. Loudness check via ffmpeg ebur128 filter (EBU R128 measurement)
 4. Normalisation via ffmpeg volume filter if outside tolerance, in-place replacement
 
 Design rules:
@@ -25,7 +25,9 @@ import json
 import logging
 import os
 import shutil
+import signal
 import subprocess
+import sys
 import tempfile
 import time
 from dataclasses import dataclass, field
@@ -129,15 +131,32 @@ def _detect_key(path: Path) -> str | None:
 # ─── Loudness measurement ─────────────────────────────────────────────────────
 
 def _measure_lufs(path: Path) -> float | None:
+    """Measure integrated loudness (LUFS) via ffmpeg's ebur128 filter.
+
+    Streams the file — no audio data is loaded into RAM, and no
+    scipy/pyloudnorm dependency is required.
+    """
     try:
-        import pyloudnorm as pyln  # lazy — avoids scipy circular import at module load  # noqa: PLC0415
-        data, rate = sf.read(str(path))
-        meter = pyln.Meter(rate)
-        lufs = meter.integrated_loudness(data)
-        if not np.isfinite(lufs):
-            log.warning("Non-finite LUFS for %s (silent file?)", path.name)
-            return None
-        return round(float(lufs), 2)
+        cmd = [
+            "ffmpeg", "-nostdin", "-i", str(path),
+            "-af", "ebur128=framelog=quiet",
+            "-f", "null", "-",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        # ebur128 summary appears in stderr; scan from the end for the I: line.
+        for line in reversed(result.stderr.splitlines()):
+            stripped = line.strip()
+            if stripped.startswith("I:") and "LUFS" in stripped:
+                # format: "    I:     -14.3 LUFS"
+                parts = stripped.split()
+                # parts[0] == "I:", parts[1] == "-14.3", parts[2] == "LUFS"
+                if len(parts) >= 2:
+                    try:
+                        return round(float(parts[1]), 2)
+                    except ValueError:
+                        pass
+        log.warning("ebur128: no LUFS summary found in ffmpeg output for %s", path.name)
+        return None
     except Exception as e:
         log.error("Loudness measurement failed for %s: %s", path.name, e)
         return None
@@ -194,11 +213,14 @@ def _normalise_file(path: Path, gain_db: float) -> bool:
             log.error("ffmpeg failed for %s:\n%s", path.name, result.stderr[-500:])
             return False
 
-        # sf.read raises SoundFileError on failure — it never returns None.
-        # Check for an empty or implausibly short result instead.
-        verify_data, verify_rate = sf.read(str(tmp_path))
-        if len(verify_data) == 0:
-            log.error("ffmpeg output is empty (zero samples) for %s", path.name)
+        # Verify the output has non-zero frames using the header only (no RAM load).
+        try:
+            verify_info = sf.info(str(tmp_path))
+            if verify_info.frames == 0:
+                log.error("ffmpeg output is empty (zero samples) for %s", path.name)
+                return False
+        except Exception as verify_err:
+            log.error("Could not verify ffmpeg output for %s: %s", path.name, verify_err)
             return False
 
         shutil.move(str(path), str(bak))
@@ -287,10 +309,13 @@ def _convert_file(path: Path, target_format: str) -> tuple[bool, str]:
         if result.returncode != 0:
             return False, f"ffmpeg failed: {result.stderr[-200:]}"
 
-        # Verify output
-        verify_data, _ = sf.read(str(tmp_path))
-        if len(verify_data) == 0:
-            return False, "ffmpeg output is empty (zero samples)"
+        # Verify output has non-zero frames using the header only (no RAM load).
+        try:
+            verify_info = sf.info(str(tmp_path))
+            if verify_info.frames == 0:
+                return False, "ffmpeg output is empty (zero samples)"
+        except Exception as verify_err:
+            return False, f"Could not verify ffmpeg output: {verify_err}"
 
         # Move original to .bak, new to path
         shutil.move(str(path), str(bak))
@@ -442,6 +467,7 @@ def process_directory(
     force: bool = False,
     max_workers: int = 1,
     pause_seconds: float = 0.0,
+    skip_paths: set[str] | None = None,
 ) -> list[ProcessResult]:
     """
     Process all audio files under root. Returns all ProcessResults.
@@ -467,11 +493,26 @@ def process_directory(
     from scanner import scan_directory
 
     tracks = list(scan_directory(root))
+
+    # ── Resume: skip files already recorded in scan_index ────────────────────
+    if skip_paths:
+        before = len(tracks)
+        tracks = [t for t in tracks if str(t.path) not in skip_paths]
+        skipped_count = before - len(tracks)
+        if skipped_count:
+            print(
+                f"SUPERBOX_RESUME: Skipping {skipped_count} already-processed "
+                f"files — {len(tracks)} remaining",
+                flush=True,
+            )
+            log.info("Resume: skipping %d already-processed files, %d remain",
+                     skipped_count, len(tracks))
+
     total = len(tracks)
     results: list[ProcessResult] = []
 
     if total == 0:
-        log.info("No audio files found under %s", root)
+        log.info("No audio files found under %s (or all already processed)", root)
         return results
 
     log.info(
@@ -516,15 +557,11 @@ def process_directory(
                 tags_written += 1
         elif r.ok:
             clean += 1
-        # Build scan index entry — duration via librosa if BPM was detected
+        # Build scan index entry — duration via sf.info (header only, no RAM load).
         try:
-            duration_sec = None
-            if r.bpm_detected is not None or r.skipped_bpm:
-                y, sr = librosa.load(str(r.path), duration=30.0, mono=True)
-                # librosa.get_duration is fast since audio is already loaded
-                duration_sec = round(librosa.get_duration(y=y, sr=sr), 1)
+            duration_sec = round(sf.info(str(r.path)).duration, 1)
         except Exception:
-            pass
+            duration_sec = None
         try:
             file_size = r.path.stat().st_size
         except OSError:
@@ -550,6 +587,9 @@ def process_directory(
             "duration_sec": duration_sec,
             "file_size":    file_size,
         })
+        # Flush to disk every 100 files so a kill preserves recent progress.
+        if done % 100 == 0:
+            _write_scan_index_partial()
 
     def _process_one(track, index: int) -> ProcessResult:
         r = process_file(
@@ -565,6 +605,41 @@ def process_directory(
         return r
 
     scan_index: list[dict] = []   # accumulates entries for scan_index.json
+    index_path = Path.home() / "rekordbox-toolkit" / "scan_index.json"
+
+    def _write_scan_index_partial(final: bool = False) -> None:
+        """Merge scan_index entries into the on-disk JSON and flush."""
+        if not scan_index:
+            return
+        try:
+            index_path.parent.mkdir(parents=True, exist_ok=True)
+            existing: dict[str, dict] = {}
+            if index_path.exists():
+                try:
+                    with open(index_path, encoding="utf-8") as f:
+                        for entry in json.load(f):
+                            existing[entry["path"]] = entry
+                except Exception:
+                    pass  # corrupt / empty — start fresh
+            for entry in scan_index:
+                existing[entry["path"]] = entry
+            with open(index_path, "w", encoding="utf-8") as f:
+                json.dump(list(existing.values()), f, indent=2)
+            if final:
+                log.info("Scan index written: %s (%d entries)", index_path, len(existing))
+        except Exception as exc:
+            log.warning("Could not write scan index: %s", exc)
+
+    # ── SIGTERM handler: write partial index and exit with code 130 ──────────
+    _prev_sigterm = signal.getsignal(signal.SIGTERM)
+
+    def _on_sigterm(signum, frame) -> None:
+        log.info("SIGTERM received — writing partial scan index and stopping.")
+        _write_scan_index_partial(final=False)
+        signal.signal(signal.SIGTERM, _prev_sigterm)  # restore default
+        sys.exit(130)  # conventional "interrupted" exit code
+
+    signal.signal(signal.SIGTERM, _on_sigterm)
 
     if max_workers > 1:
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
@@ -593,23 +668,9 @@ def process_directory(
             if pause_seconds > 0 and i < total - 1:
                 time.sleep(pause_seconds)
 
-    # Write scan index for duplicate pre-filter
-    if scan_index:
-        index_path = Path.home() / "rekordbox-toolkit" / "scan_index.json"
-        index_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            existing: dict[str, dict] = {}
-            if index_path.exists():
-                with open(index_path, encoding="utf-8") as f:
-                    for entry in json.load(f):
-                        existing[entry["path"]] = entry
-            for entry in scan_index:
-                existing[entry["path"]] = entry
-            with open(index_path, "w", encoding="utf-8") as f:
-                json.dump(list(existing.values()), f, indent=2)
-            log.info("Scan index written: %s (%d entries)", index_path, len(existing))
-        except Exception as exc:
-            log.warning("Could not write scan index: %s", exc)
+    # ── Final scan_index write ────────────────────────────────────────────────
+    signal.signal(signal.SIGTERM, _prev_sigterm)  # restore before final write
+    _write_scan_index_partial(final=True)
 
     return results
 

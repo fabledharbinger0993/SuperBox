@@ -326,6 +326,70 @@ details[open] > summary { color: var(--text); }
   color: var(--danger);
 }
 
+/* ── Scan interrupt controls ─────────────────────────────────────────────── */
+/* Inline with each step's activate button; shown only while that step runs. */
+.scan-controls {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+.scan-controls.visible { display: inline-flex; }
+
+/* Checkpoint button — safe steps (accent/blue) */
+.btn-scan-cp {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 6px 12px;
+  font-size: .78rem; font-weight: 600;
+  white-space: nowrap;
+}
+.btn-scan-cp:hover:not(:disabled) {
+  background: var(--accent-dim);
+}
+/* Checkpoint — risky steps (amber/caution) */
+.btn-scan-cp.risky {
+  border-color: var(--caution);
+  color: var(--caution);
+}
+.btn-scan-cp.risky:hover:not(:disabled) {
+  background: rgba(245,158,11,.12);
+}
+
+/* Force-stop button */
+.btn-scan-kill {
+  background: var(--danger-dim);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+  padding: 6px 12px;
+  font-size: .78rem; font-weight: 600;
+  white-space: nowrap;
+}
+.btn-scan-kill:hover:not(:disabled) {
+  background: rgba(239,68,68,.25);
+}
+
+/* Resume button — shown after a checkpoint/interrupt */
+.btn-resume {
+  background: transparent;
+  border: 1px solid var(--safe-border);
+  color: var(--safe);
+  padding: 6px 12px;
+  font-size: .78rem; font-weight: 600;
+  white-space: nowrap;
+  display: none;
+}
+.btn-resume.visible { display: inline-flex; align-items: center; gap: 5px; }
+.btn-resume:hover:not(:disabled) { background: var(--safe-dim); }
+
+/* Small risk hint next to controls */
+.scan-ctrl-hint {
+  font-size: .72rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* rb-blocked message */
 .rb-block-msg {
   display: none;
@@ -1426,6 +1490,10 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
       </div>
       <div class="btn-row">
         <button class="btn btn-neon" onclick="runAudit()">Execute Audit</button>
+        <div class="scan-controls" id="ctrl-audit">
+          <button class="btn btn-scan-cp" data-scan-ctrl onclick="checkpointScan()">⏸ Checkpoint</button>
+          <button class="btn btn-scan-kill" data-scan-ctrl onclick="forceStopScan()">⊗ Force Stop</button>
+        </div>
       </div>
     </div>
     <div id="audit-result" class="report-card hidden">
@@ -1493,6 +1561,11 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
       </div>
       <div class="btn-row">
         <button class="btn btn-neon" onclick="runProcess()">Detect BPM &amp; Key</button>
+        <div class="scan-controls" id="ctrl-process">
+          <button class="btn btn-scan-cp" data-scan-ctrl onclick="checkpointScan()" title="Stops after the current file — progress saved to scan_index">⏸ Checkpoint</button>
+          <button class="btn btn-scan-kill" data-scan-ctrl onclick="forceStopScan()">⊗ Force Stop</button>
+        </div>
+        <button class="btn btn-resume" id="resume-process" onclick="resumeProcess()" title="Continue from where the last scan left off">↺ Resume Last Scan</button>
       </div>
     </div>
     <div id="process-result" class="report-card hidden">
@@ -1557,6 +1630,11 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + 44px + 
       <div class="btn-row">
         <button class="btn btn-ghost" onclick="runImportDry()">Preview Import</button>
         <button class="btn btn-neon" id="btn-import" onclick="runImport()">Import Tracks</button>
+        <div class="scan-controls" id="ctrl-import">
+          <button class="btn btn-scan-cp" data-scan-ctrl onclick="checkpointScan()" title="Open transactions will roll back — DB integrity is preserved">⏸ Checkpoint</button>
+          <button class="btn btn-scan-kill" data-scan-ctrl onclick="forceStopScan()" title="Immediate kill — last uncommitted batch will roll back">⊗ Force Stop</button>
+          <span class="scan-ctrl-hint">⚠ DB write in progress</span>
+        </div>
       </div>
       <div class="rb-block-msg" id="import-rb-block">
         <span>⚠</span> RekordBox is open. Close it before importing.
@@ -2624,13 +2702,29 @@ function reopenLog() {
 function setSpinner(on) {
   document.getElementById('log-spinner').classList.toggle('active', on);
 }
+const _MAX_LOG_LINES = 600;
+let   _logScrollPending = false;
+
 function appendLog(text, cls = '') {
   const out  = document.getElementById('log-output');
   const line = document.createElement('div');
   line.className = 'log-line ' + cls;
   line.textContent = text;
   out.appendChild(line);
+
+  // Trim oldest lines to keep the DOM lean for large libraries
+  while (out.children.length > _MAX_LOG_LINES) {
+    out.removeChild(out.firstChild);
+  }
+
+  // Batch auto-scroll via rAF — avoids forced reflow on every line
+  if (!_logScrollPending) {
+    _logScrollPending = true;
+    requestAnimationFrame(() => {
   out.scrollTop = out.scrollHeight;
+      _logScrollPending = false;
+    });
+  }
 }
 function classifyLine(text) {
   const t = text.toLowerCase();
@@ -2754,16 +2848,6 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false,
         appendLog('✓ Finished successfully', 'log-exit-ok');
       } else {
         appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
-      }
-      // Render captured report block into the step's inline report card
-      if (reportTarget && reportBuffer.length > 0) {
-        const card = document.getElementById(reportTarget);
-        const pre  = document.getElementById(reportTarget + '-pre');
-        if (card && pre) {
-          pre.textContent = reportBuffer.join('\n');
-          card.classList.remove('hidden');
-          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
       }
       // On success, store the report and add a pill — don't auto-open the modal.
       // The user can click the pill to open it, or it stays in the step card body.

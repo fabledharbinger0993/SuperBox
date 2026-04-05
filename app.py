@@ -84,13 +84,25 @@ def _subprocess_env() -> dict:
     return os.environ.copy()
 
 
+# ── Active scan subprocess tracking ──────────────────────────────────────────
+# Only one scan can run at a time (enforced by isRunning on the frontend).
+# The lock guards read/write of _scan_process from concurrent request threads.
+
+_scan_lock    = threading.Lock()
+_scan_process: subprocess.Popen | None = None
+
+
 def _stream(cmd: list[str]):
     """
     Generator that yields SSE-formatted lines from a subprocess.
     Each event is a JSON object:
-      {"line": "..."}          — a line of output
-      {"done": true, "exit_code": N}  — command finished
+      {"line": "..."}               — a line of output
+      {"done": true, "exit_code": N} — command finished
+
+    Also registers the Popen object in _scan_process so that the
+    /api/scan/interrupt and /api/scan/force-quit endpoints can signal it.
     """
+    global _scan_process
     try:
         process = subprocess.Popen(
             cmd,
@@ -101,11 +113,17 @@ def _stream(cmd: list[str]):
             cwd=str(REPO_ROOT),
             env=_subprocess_env(),
         )
+        with _scan_lock:
+            _scan_process = process
         for line in iter(process.stdout.readline, ""):
             yield f"data: {json.dumps({'line': line.rstrip()})}\n\n"
         process.wait()
+        with _scan_lock:
+            _scan_process = None
         yield f"data: {json.dumps({'done': True, 'exit_code': process.returncode})}\n\n"
     except Exception as exc:
+        with _scan_lock:
+            _scan_process = None
         yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}', 'done': True, 'exit_code': 1})}\n\n"
 
 
@@ -213,6 +231,8 @@ def api_process():
         cmd.append("--force")
     if request.args.get("dry_run") == "1":
         cmd.append("--dry-run")
+    if request.args.get("resume") == "1":
+        cmd.append("--resume")
     workers = request.args.get("workers", "").strip()
     if workers and workers.isdigit() and int(workers) > 1:
         cmd += ["--workers", workers]
@@ -449,6 +469,47 @@ def api_run_prune():
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Scan interrupt / force-quit ───────────────────────────────────────────────
+
+@app.route("/api/scan/interrupt", methods=["POST"])
+def api_scan_interrupt():
+    """
+    Send SIGTERM to the active scan subprocess.
+
+    The subprocess installs a SIGTERM handler that writes a partial scan_index
+    checkpoint and exits with code 130. Safe for all scan types — the current
+    file being processed will finish before the process stops.
+    """
+    with _scan_lock:
+        proc = _scan_process
+    if proc is None or proc.poll() is not None:
+        return jsonify({"ok": False, "error": "No active scan to interrupt"}), 400
+    try:
+        proc.send_signal(signal.SIGTERM)
+        return jsonify({"ok": True, "action": "sigterm",
+                        "note": "Scan will stop after the current file finishes."})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/scan/force-quit", methods=["POST"])
+def api_scan_force_quit():
+    """
+    Send SIGKILL to the active scan subprocess — immediate termination,
+    no cleanup. Any file currently being written may be left incomplete
+    (the .bak safety net still applies for normalisation).
+    """
+    with _scan_lock:
+        proc = _scan_process
+    if proc is None or proc.poll() is not None:
+        return jsonify({"ok": False, "error": "No active scan to kill"}), 400
+    try:
+        proc.kill()
+        return jsonify({"ok": True, "action": "sigkill"})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 # ── Archive setup ─────────────────────────────────────────────────────────────
