@@ -922,10 +922,10 @@
         <div id="pipe-gate-title" style="font-weight:600;color:var(--text);margin-bottom:4px">Step complete</div>
         <div id="pipe-gate-body" style="color:var(--text-muted);line-height:1.5;font-size:.82rem;margin-bottom:12px"></div>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-neon" id="pipe-btn-finish" onclick="pipeGateAction('finish')" style="padding:7px 22px;display:none">Finish</button>
-          <button class="btn btn-neon" id="pipe-btn-redo" onclick="pipeGateAction('redo')" style="padding:7px 18px;display:none">Re-do</button>
-          <button class="btn" id="pipe-btn-skip" onclick="pipeGateAction('skip')" style="padding:7px 18px;display:none;border-color:var(--caution);color:var(--caution)">Skip</button>
-          <button class="btn" onclick="pipeGateAction('stop')" style="color:var(--danger);border-color:var(--danger);padding:7px 16px">Stop</button>
+          <button class="btn btn-neon" id="pipe-btn-finish" onclick="pipeGateAction('finish')" style="padding:6px 18px;display:none;gap:7px"><img src="/static/icon-restart-from-interrupt.png" style="width:18px;height:18px;object-fit:contain"> Finish</button>
+          <button class="btn btn-neon" id="pipe-btn-redo" onclick="pipeGateAction('redo')" style="padding:6px 14px;display:none;gap:7px"><img src="/static/icon-restart-step.png" style="width:18px;height:18px;object-fit:contain"> Re-do</button>
+          <button class="btn" id="pipe-btn-skip" onclick="pipeGateAction('skip')" style="padding:6px 14px;display:none;border-color:var(--caution);color:var(--caution);gap:7px"><img src="/static/icon-skip-to-next-step.png" style="width:18px;height:18px;object-fit:contain"> Skip</button>
+          <button class="btn" onclick="pipeGateAction('stop')" style="color:var(--danger);border-color:var(--danger);padding:6px 14px;gap:7px"><img src="/static/icon-interrupt-plus-stop-wizard.png" style="width:18px;height:18px;object-fit:contain"> Stop</button>
           <span id="pipe-gate-next-label" style="font-size:.78rem;color:var(--text-dim);margin-left:4px"></span>
         </div>
       </div>
@@ -1067,7 +1067,7 @@
           <input type="checkbox" id="wiz-confirm-steps-2" style="width:14px;height:14px;accent-color:var(--caution)">
           Confirm between steps
         </label>
-        <button class="btn btn-neon" id="wiz-run-btn" onclick="pipeWizRun()" style="margin-left:auto">▶ Run Pipeline</button>
+        <button class="btn btn-neon" id="wiz-run-btn" onclick="pipeWizRun()" style="margin-left:auto;gap:8px"><img src="/static/icon-start-wizard.png" style="width:18px;height:18px;object-fit:contain"> Run Pipeline</button>
       </div>
     </div>
 
@@ -1111,12 +1111,12 @@
 <!-- ══ Floating action buttons ══════════════════════════════════════════════ -->
 <!-- ── Pipeline Wizard button ─────────────────────────────────────────────── -->
 <div id="pipeline-btn" onclick="openPipelineWizard()" title="Pipeline Wizard">
-  <span style="font-size:1.1rem;line-height:1">▶</span>
+  <img src="/static/icon-start-wizard.png" style="width:22px;height:22px;object-fit:contain">
   <span>Pipeline</span>
 </div>
 
 <div id="lightbulb-btn" onclick="openWelcome()" title="About SuperBox">
-  <span style="font-size:1.1rem;line-height:1">💡</span>
+  <img src="/static/icon-welcome-info.png" style="width:22px;height:22px;object-fit:contain">
   <span>About</span>
 </div>
 
@@ -1124,7 +1124,7 @@
 <div id="owl-btn"
      onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()"
      onclick="owlClick()">
-  <span class="owl-icon">🦉</span>
+  <img src="/static/icon-site-key.png" style="width:22px;height:22px;object-fit:contain" class="owl-icon">
   <span>KEY</span>
 </div>
 
