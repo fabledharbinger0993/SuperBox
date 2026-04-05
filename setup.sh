@@ -111,6 +111,28 @@ pip install -r "$SCRIPT_DIR/requirements.txt" --quiet
 
 ok "All Python packages installed"
 
+# ── Create launcher .app ─────────────────────────────────────────────────
+step "Creating SuperBox.app launcher"
+
+APP_DEST="$HOME/Applications/SuperBox.app"
+LAUNCH_PATH="$SCRIPT_DIR/launch.sh"
+
+mkdir -p "$HOME/Applications"
+
+# Build a minimal AppleScript .app that calls launch.sh with the correct
+# local path. osacompile is included with macOS — no extra installs needed.
+osacompile -o "$APP_DEST" - 2>/dev/null <<APPLESCRIPT
+do shell script "bash '$LAUNCH_PATH'"
+APPLESCRIPT
+
+if [ -d "$APP_DEST" ]; then
+  ok "SuperBox.app created at ~/Applications/SuperBox.app"
+  info "Drag it to your Dock for one-click access."
+  info "Or double-click it from ~/Applications."
+else
+  info "Could not create SuperBox.app — run launch.sh directly from Terminal."
+fi
+
 # ── Done ──────────────────────────────────────────────────────────────────
 touch "$SENTINEL"
 
