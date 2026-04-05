@@ -45,6 +45,14 @@
   </div>
 </header>
 
+<!-- ══ SuperBox update banner ═══════════════════════════════════════════════ -->
+<div id="superbox-update-banner">
+  <span class="brew-icon">⬆</span>
+  <span class="brew-msg" id="superbox-update-msg">A new version of SuperBox is available.</span>
+  <a id="superbox-update-link" href="#" target="_blank" rel="noopener" class="brew-btn" style="text-decoration:none">Download</a>
+  <button class="brew-dismiss" onclick="superboxUpdateDismiss()" title="Dismiss">✕</button>
+</div>
+
 <!-- ══ Brew update banner ═══════════════════════════════════════════════════ -->
 <div id="brew-banner">
   <span class="brew-icon">🍺</span>
@@ -1548,6 +1556,17 @@ function _addOrUpdateSummaryPill(title) {
   container.appendChild(pill);
 }
 
+/* ── Modal open pulse ──────────────────────────────────────────────────────
+   Call pulseModal(innerBoxEl) immediately after making any backdrop visible.
+   Removes the class on animationend so re-opening replays the animation.   */
+function pulseModal(el) {
+  if (!el) return;
+  el.classList.remove('modal-pulse-once');
+  void el.offsetWidth; // force reflow so animation restarts on re-open
+  el.classList.add('modal-pulse-once');
+  el.addEventListener('animationend', () => el.classList.remove('modal-pulse-once'), { once: true });
+}
+
 function openReportModal(title, text, reportPath) {
   document.getElementById('rmod-title').textContent = title + ' — Complete';
   const pathEl = document.getElementById('rmod-save-path');
@@ -1561,6 +1580,7 @@ function openReportModal(title, text, reportPath) {
   }
   document.getElementById('rmod-pre').textContent = text;
   document.getElementById('report-modal-backdrop').classList.remove('hidden');
+  pulseModal(document.getElementById('report-modal'));
   // Keep in session memory and surface as a persistent pill button
   sessionReports[title] = { text, reportPath, ts: Date.now() };
   _addOrUpdateSummaryPill(title);
@@ -1588,6 +1608,7 @@ function openSettings() {
     _settingsUpdateUI('auto');
   });
   document.getElementById('settings-backdrop').classList.remove('hidden');
+  pulseModal(document.getElementById('settings-modal'));
 }
 function closeSettings() {
   document.getElementById('settings-backdrop').classList.add('hidden');
@@ -1637,6 +1658,7 @@ async function saveSettings() {
 /* ── Welcome modal ─────────────────────────────────────────────────────────── */
 function openWelcome() {
   document.getElementById('welcome-backdrop').classList.remove('hidden');
+  pulseModal(document.getElementById('welcome-modal'));
   // Populate the archive tree with the real drive path if config is loaded
   fetch('/api/config').then(r => r.json()).then(cfg => {
     if (cfg.archive_root) {
@@ -1747,13 +1769,62 @@ function brewDismiss() {
   document.getElementById('brew-banner').style.display = 'none';
 }
 
+/* ── SuperBox update checker ───────────────────────────────────────────────── */
+let _superboxUpdateDismissed = false;
+
+async function superboxUpdateCheck() {
+  try {
+    const res = await fetch('/api/update/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    _superboxUpdateRender(data);
+  } catch (_) {}
+}
+
+function _superboxUpdateRender(data) {
+  if (_superboxUpdateDismissed) return;
+  if (!data.update_available) return;
+
+  const banner  = document.getElementById('superbox-update-banner');
+  const msgEl   = document.getElementById('superbox-update-msg');
+  const linkEl  = document.getElementById('superbox-update-link');
+  const latest  = data.latest_version || 'a newer version';
+  const current = data.current_version;
+
+  if (data.is_git_install) {
+    msgEl.textContent = current
+      ? `SuperBox ${latest} is available (you have ${current}) — restart to update.`
+      : `SuperBox ${latest} is available — restart to update.`;
+    linkEl.style.display = 'none';
+  } else {
+    msgEl.textContent = current
+      ? `SuperBox ${latest} is available (you have an older version).`
+      : `A new version of SuperBox (${latest}) is available.`;
+    if (data.release_url) {
+      linkEl.href = data.release_url;
+      linkEl.style.display = '';
+    } else {
+      linkEl.style.display = 'none';
+    }
+  }
+
+  banner.style.display = 'flex';
+}
+
+function superboxUpdateDismiss() {
+  _superboxUpdateDismissed = true;
+  document.getElementById('superbox-update-banner').style.display = 'none';
+}
+
 function runBrewUpgrade() {
   brewDismiss();
   runCommand('/api/run/brew-upgrade', 'Homebrew — Upgrade SuperBox Packages');
 }
 
-// Check on page load (non-blocking — banner appears only if updates found)
+// Check on page load (non-blocking — banners appear only if updates found)
 brewCheckStatus();
+// Delay the update check slightly so the brew check fires first
+setTimeout(superboxUpdateCheck, 1000);
 
 async function quitSuperBox() {
   const msg = isRunning
@@ -1808,6 +1879,7 @@ if (!localStorage.getItem('superbox-welcome-seen')) {
     fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
   }
   document.getElementById('path-backdrop').classList.remove('hidden');
+  pulseModal(document.getElementById('path-modal-box'));
 }
 
 function choosePath(mode) {

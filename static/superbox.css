@@ -132,6 +132,17 @@ header {
 }
 
 /* ── Brew update banner ────────────────────────────────────────────────── */
+#superbox-update-banner {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 24px;
+  background: color-mix(in srgb, var(--safe) 10%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--safe) 30%, transparent);
+  font-size: .82rem;
+  color: var(--text);
+}
+
 #brew-banner {
   display: none;
   align-items: center;
@@ -893,6 +904,20 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   color: var(--accent);
 }
 .owl-icon { font-size: 1.1rem; line-height: 1; }
+
+/* ── Modal open pulse ───────────────────────────────────────────────────── */
+/* Single accent glow bloom that plays once whenever any modal opens.
+   --accent is #818cf8 → rgb(129,140,248).
+   Applied via JS: pulseModal(el) adds .modal-pulse-once, which auto-removes
+   on animationend so the animation can fire again on a subsequent open.     */
+@keyframes modal-open-pulse {
+  0%   { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(129,140,248,.5); }
+  45%  { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0 36px 10px rgba(129,140,248,.18); }
+  100% { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(129,140,248,.0); }
+}
+.modal-pulse-once {
+  animation: modal-open-pulse 650ms cubic-bezier(.22,1,.36,1) forwards;
+}
 
 /* ── Modal background watermark ─────────────────────────────────────────── */
 /* Shared ::before rule drops the SRB cube at 4% opacity, bottom-right corner,

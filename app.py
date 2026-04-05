@@ -41,6 +41,10 @@ from brew_updater import start_background_checker as _start_brew_checker, \
                          BREW_DEPS as _BREW_DEPS
 _start_brew_checker()
 
+from update_checker import start_background_checker as _start_update_checker, \
+                           get_status as _update_get_status
+_start_update_checker()
+
 # ── Active-process tracker (interrupt / emergency-stop) ───────────────────────
 _proc_lock: threading.Lock = threading.Lock()
 _active_proc: "subprocess.Popen | None" = None
@@ -875,6 +879,14 @@ def api_cancel_force():
         return jsonify({"ok": False, "error": "No active scan"}), 404
     proc.kill()
     return jsonify({"ok": True})
+
+
+# ── SuperBox update route ─────────────────────────────────────────────────────
+
+@app.route("/api/update/status")
+def api_update_status():
+    """Return the cached GitHub release check result (never blocks)."""
+    return jsonify(_update_get_status())
 
 
 # ── Homebrew update routes ────────────────────────────────────────────────────
