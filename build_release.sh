@@ -67,7 +67,7 @@ echo "  ✓ Compiled $APP_NAME"
 # ── Copy SuperBox icon onto the .app ─────────────────────────────────────────
 ICON_SRC="$(dirname "$0")/static/SRB_LOGO.png"
 if [[ -f "$ICON_SRC" ]]; then
-  ICON_DEST="$APP_PATH/Contents/Resources/droplet.icns"
+  ICON_DEST="$APP_PATH/Contents/Resources/applet.icns"
   # Convert PNG → ICNS using sips + iconutil
   ICONSET_DIR="$BUILD_DIR/superbox.iconset"
   mkdir -p "$ICONSET_DIR"
@@ -78,6 +78,14 @@ if [[ -f "$ICON_SRC" ]]; then
   done
   iconutil -c icns "$ICONSET_DIR" -o "$ICON_DEST" 2>/dev/null && echo "  ✓ Icon applied" || echo "  ⚠ Icon conversion failed — app will use default icon"
 fi
+
+# ── Strip ad-hoc code signature ───────────────────────────────────────────────
+# osacompile signs the app with an ad-hoc signature. On macOS Sequoia+,
+# ad-hoc signed apps downloaded from the internet show "damaged and can't be
+# opened" with no recourse. Stripping the signature downgrades this to
+# "unidentified developer", which shows the Open Anyway button in
+# System Settings → Privacy & Security.
+codesign --remove-signature "$APP_PATH" 2>/dev/null && echo "  ✓ Ad-hoc signature stripped" || echo "  ⚠ Could not strip signature"
 
 # ── Package into SuperBox.zip ─────────────────────────────────────────────────
 ZIP_PATH="$(pwd)/$ZIP_NAME"
