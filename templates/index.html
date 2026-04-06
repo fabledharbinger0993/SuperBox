@@ -1502,9 +1502,9 @@ let rbRunning    = false;
 // Session-only storage — cleared when the page reloads / server stops.
 const sessionReports = {};
 
-// Map SSE log titles → human-readable pill labels
 const STEP_PILL_LABELS = {
   'Audit — Library Health Check':                 'Step 1 Summary',
+  'Audit — Database + Physical Scan':             'Step 1 Summary',
   'Tag Tracks — BPM & Key Detection':             'Step 2 Summary',
   'Preview Import — Dry Run':                     'Step 3 Preview',
   'Import — Writing Tracks to Database':          'Step 3 Summary',
@@ -1514,8 +1514,21 @@ const STEP_PILL_LABELS = {
   'Relocate — Updating File Paths in Database':   'Relocate Summary',
 };
 
+function _pillLabel(title) {
+  if (STEP_PILL_LABELS[title]) return STEP_PILL_LABELS[title];
+  // Dynamic labels: Organize, Convert, Novelty, Pipeline
+  if (title.startsWith('Organize —'))      return 'Organize Summary';
+  if (title.startsWith('Converting '))     return 'Convert Summary';
+  if (title.startsWith('Novelty Scan —'))  return 'Novelty Summary';
+  if (title.startsWith('Prune —'))         return 'Prune Summary';
+  if (title.startsWith('Running Pipeline') || title.startsWith('Pipeline —')) return 'Pipeline Summary';
+  if (title.startsWith('Homebrew —'))      return 'Brew Update';
+  // Generic fallback
+  return title.split(' — ')[0] + ' Summary';
+}
+
 function _addOrUpdateSummaryPill(title) {
-  const label     = STEP_PILL_LABELS[title] || (title.split(' — ')[0] + ' Summary');
+  const label     = _pillLabel(title);
   const container = document.getElementById('session-pills-container');
   if (!container) return;
   // If a pill for this title already exists, its click handler already reads
@@ -2334,6 +2347,8 @@ function openPipelineWizard() {
 
 function closePipelineWizard() {
   document.getElementById('pipeline-wizard-backdrop').classList.add('hidden');
+  // Resolve any pending gate promise so it doesn't leak across sessions
+  if (_pipeGateResolve) { _pipeGateResolve('stop'); _pipeGateResolve = null; }
 }
 
 function pipeWizNext() {
@@ -2837,6 +2852,8 @@ async function runPipeline(dryRun = true, confirmMode = false) {
     setAllButtons(false);
     finishScanBar();
     document.getElementById('pipe-confirm-gate').style.display = 'none';
+    // Clean up any dangling gate promise
+    if (_pipeGateResolve) { _pipeGateResolve('stop'); _pipeGateResolve = null; }
     appendLog('', '');
     if (stopped) {
       appendLog('⏹ Pipeline stopped by user.', 'log-exit-fail');
@@ -2861,7 +2878,7 @@ async function runPipeline(dryRun = true, confirmMode = false) {
     while (i < pipelineSteps.length) {
       const s    = pipelineSteps[i];
       const def  = PIPE_STEPS[s.type] || { name: s.type, icon: '⚙', desc: '' };
-      const step = { type: s.type, name: def.name, config: {} };
+      const step = { type: s.type, name: def.name, config: s._config || _loadPipeCfg(s.type) || {} };
       const el   = document.getElementById(`pipe-step-${s.id}`);
 
       if (el) el.className = 'pipe-step running';
@@ -3127,6 +3144,8 @@ function _renderPruneGroups() {
 function _makeRow(entry, isLower) {
   const row   = document.createElement('div');
   row.className = isLower ? 'prune-row-lower' : 'prune-row-keep';
+  // Store path safely as a data attribute — avoids inline onclick string injection
+  row.dataset.filePath = entry.file_path;
 
   const ext   = (entry.format_ext || '').replace('.','').toUpperCase();
   const lossless = ['AIFF','AIF','WAV','FLAC'].includes(ext);
@@ -3135,11 +3154,9 @@ function _makeRow(entry, isLower) {
   const rankCls = { PN:'rank-pn', MIK:'rank-mik', RAW:'rank-raw' }[entry.rank] || 'rank-raw';
   const checked = pruneSelected.has(entry.file_path);
   const cbCls   = isLower ? 'prune-cb' : 'prune-cb keep-cb';
-  const safePath = entry.file_path.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
   row.innerHTML = `
-    <input type="checkbox" class="${cbCls}" ${checked ? 'checked' : ''}
-           onchange="togglePruneFile('${safePath}', this.checked)">
+    <input type="checkbox" class="${cbCls}" ${checked ? 'checked' : ''}>
     <span class="prune-star">${isLower ? '' : '★'}</span>
     <span class="prune-fname" title="${_esc(entry.file_path)}">${_esc(entry.filename)}</span>
     <span class="fmt-badge ${fmtCls}">${ext || '?'}</span>
@@ -3149,8 +3166,16 @@ function _makeRow(entry, isLower) {
     <span class="rank-badge ${rankCls}">${entry.rank}</span>
     ${entry.in_db         ? '<span class="prune-indb">in DB</span>'    : ''}
     ${!entry.exists_on_disk ? '<span class="prune-missing">missing</span>' : ''}
-    <button class="prune-preview-btn"
-            onclick="previewFile('${safePath}')">▶</button>`;
+    <button class="prune-preview-btn">▶</button>`;
+
+  // Attach event listeners using the data attribute — safe against any path content
+  row.querySelector('input[type=checkbox]').addEventListener('change', function() {
+    togglePruneFile(entry.file_path, this.checked);
+  });
+  row.querySelector('.prune-preview-btn').addEventListener('click', function() {
+    previewFile(entry.file_path);
+  });
+
   return row;
 }
 
