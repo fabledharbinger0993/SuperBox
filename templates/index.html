@@ -2763,7 +2763,7 @@ function _pipeWizReadDraft(step) {
   step._config      = draft;  // keep _config in sync for the runner
 }
 
-
+function _savePipeCfg(type, cfg) {
   try { localStorage.setItem(`sb_pipe_cfg_${type}`, JSON.stringify(cfg)); } catch(_) {}
 }
 
