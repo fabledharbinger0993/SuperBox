@@ -45,6 +45,15 @@ from update_checker import start_background_checker as _start_update_checker, \
                            get_status as _update_get_status
 _start_update_checker()
 
+# ── Step state tracker ───────────────────────────────────────────────────────
+try:
+    from state_tracker import mark_step_complete, get_step_status  # noqa: PLC0415
+    _STATE_TRACKER_AVAILABLE = True
+except ImportError:
+    _STATE_TRACKER_AVAILABLE = False
+    def mark_step_complete(*a, **kw): pass   # no-op fallback
+    def get_step_status(*a, **kw): return {}  # no-op fallback
+
 # ── Active-process tracker (interrupt / emergency-stop) ───────────────────────
 _proc_lock: threading.Lock = threading.Lock()
 _active_proc: "subprocess.Popen | None" = None
@@ -100,7 +109,7 @@ def _subprocess_env() -> dict:
     return os.environ.copy()
 
 
-def _stream(cmd: list[str]):
+def _stream(cmd: list[str], library_root: str = "", step_name: str = ""):
     """
     Generator that yields SSE-formatted lines from a subprocess.
     Each event is a JSON object:
@@ -111,6 +120,8 @@ def _stream(cmd: list[str]):
     send signals to it mid-run.
     """
     global _active_proc
+    _library_root = library_root
+    _step_name    = step_name
     try:
         process = subprocess.Popen(
             cmd,
@@ -127,6 +138,8 @@ def _stream(cmd: list[str]):
             for line in iter(process.stdout.readline, ""):
                 yield f"data: {json.dumps({'line': line.rstrip()})}\n\n"
             process.wait()
+            if _step_name and _library_root:
+                mark_step_complete(_library_root, _step_name, process.returncode)
             yield f"data: {json.dumps({'done': True, 'exit_code': process.returncode})}\n\n"
         finally:
             with _proc_lock:
@@ -137,9 +150,9 @@ def _stream(cmd: list[str]):
         yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}', 'done': True, 'exit_code': 1})}\n\n"
 
 
-def _sse_response(cmd: list[str]) -> Response:
+def _sse_response(cmd: list[str], library_root: str = "", step_name: str = "") -> Response:
     return Response(
-        _stream(cmd),
+        _stream(cmd, library_root=library_root, step_name=step_name),
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -203,6 +216,17 @@ def _stream_pipeline(steps: list[dict]):
             yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}'})}\n\n"
             exit_code = 1
 
+        # Journal step completion — derive library root from config for pipeline runs
+        try:
+            _pipe_root = step.get("library_root", "")
+            if not _pipe_root:
+                from config import MUSIC_ROOT as _MR  # noqa: PLC0415
+                _pipe_root = str(_MR)
+        except Exception:
+            _pipe_root = ""
+        if _pipe_root:
+            mark_step_complete(_pipe_root, step.get("type", name), exit_code)
+
         yield f"data: {json.dumps({'step_end': idx, 'step_name': name, 'exit_code': exit_code})}\n\n"
 
         if exit_code != 0:
@@ -219,6 +243,26 @@ def _require_rb_closed():
             "error": "Rekordbox is running. Close it before running write operations."
         }), 409
     return None
+
+
+def _get_library_root(req, primary_field: str) -> str:
+    """
+    Best-effort extraction of the library root from the current request.
+    Checks ?library_root= first, then falls back to the primary path param,
+    then to config.MUSIC_ROOT. Returns empty string if nothing is available.
+    """
+    root = req.args.get("library_root", "").strip()
+    if root:
+        return root
+    path = req.args.get(primary_field, "").strip()
+    if path:
+        from pathlib import Path as _Path
+        return str(_Path(path))
+    try:
+        from config import MUSIC_ROOT  # noqa: PLC0415
+        return str(MUSIC_ROOT)
+    except Exception:
+        return ""
 
 
 # ── Startup ───────────────────────────────────────────────────────────────────
@@ -291,7 +335,7 @@ def api_audit():
     root = request.args.get("root", "").strip()
     if root:
         cmd += ["--root", root]
-    return _sse_response(cmd)
+    return _sse_response(cmd, library_root=_get_library_root(request, "root"), step_name="audit")
 
 
 @app.route("/api/run/process")
@@ -321,7 +365,8 @@ def api_process():
                 cmd += ["--pause", pause]
         except ValueError:
             pass
-    return _sse_response(cmd)
+    library_root = _get_library_root(request, "path")
+    return _sse_response(cmd, library_root=library_root, step_name="process")
 
 
 @app.route("/api/run/pipeline", methods=["POST"])
@@ -476,7 +521,8 @@ def api_organize():
         except ValueError:
             pass
 
-    return _sse_response(cmd)
+    library_root = _get_library_root(request, "target")
+    return _sse_response(cmd, library_root=library_root, step_name="organize")
 
 
 @app.route("/api/run/convert")
@@ -490,7 +536,8 @@ def api_convert():
     workers = request.args.get("workers", "1").strip()
     if workers.isdigit() and int(workers) > 1:
         cmd += ["--workers", workers]
-    return _sse_response(cmd)
+    library_root = _get_library_root(request, "path")
+    return _sse_response(cmd, library_root=library_root, step_name="convert")
 
 
 @app.route("/api/run/import")
@@ -510,7 +557,8 @@ def api_import():
         cmd.append("--dry-run")
     if request.args.get("resume") == "1" and not dry_run:
         cmd.append("--resume")
-    return _sse_response(cmd)
+    library_root = _get_library_root(request, "path")
+    return _sse_response(cmd, library_root=library_root, step_name="import")
 
 
 @app.route("/api/run/link")
@@ -527,7 +575,8 @@ def api_link():
     cmd = [sys.executable, str(CLI_PATH), "link", path]
     if dry_run_link:
         cmd.append("--dry-run")
-    return _sse_response(cmd)
+    library_root = _get_library_root(request, "path")
+    return _sse_response(cmd, library_root=library_root, step_name="link")
 
 
 @app.route("/api/run/relocate")
@@ -542,7 +591,8 @@ def api_relocate():
         return jsonify({"error": "old_root and new_root are required"}), 400
 
     cmd = [sys.executable, str(CLI_PATH), "relocate", old, new]
-    return _sse_response(cmd)
+    library_root = _get_library_root(request, "new_root")
+    return _sse_response(cmd, library_root=library_root, step_name="relocate")
 
 
 @app.route("/api/run/novelty")
@@ -563,7 +613,8 @@ def api_novelty():
     if workers.isdigit() and int(workers) > 1:
         cmd += ["--workers", workers]
 
-    return _sse_response(cmd)
+    library_root = _get_library_root(request, "dest")
+    return _sse_response(cmd, library_root=library_root, step_name="novelty")
 
 
 @app.route("/api/run/duplicates")
@@ -586,7 +637,8 @@ def api_duplicates():
                 cmd += ["--pause", pause]
         except ValueError:
             pass
-    return _sse_response(cmd)
+    library_root = _get_library_root(request, "path")
+    return _sse_response(cmd, library_root=library_root, step_name="duplicates")
 
 
 # ── Duplicate prune routes ────────────────────────────────────────────────────
@@ -799,6 +851,16 @@ def api_run_prune():
                 prune_files(paths, db, log=lambda m: log_q.put(("line", m)),
                             permanent=permanent)
 
+            _prune_root = staged.get("library_root", "")
+            if not _prune_root:
+                try:
+                    from config import MUSIC_ROOT as _MR  # noqa: PLC0415
+                    _prune_root = str(_MR)
+                except Exception:
+                    pass
+            if _prune_root:
+                mark_step_complete(_prune_root, "prune", 0)
+
             log_q.put(("done", 0))
         except Exception as exc:
             log_q.put(("line", f"[ERROR] {exc}"))
@@ -820,6 +882,18 @@ def api_run_prune():
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Step state endpoint ──────────────────────────────────────────────────────
+
+@app.route("/api/state", methods=["POST"])
+def api_state():
+    """Return the steps_completed dict for a given library root."""
+    data = request.get_json(force=True, silent=True) or {}
+    library_root = data.get("library_root", "").strip()
+    if not library_root:
+        return jsonify({}), 200
+    return jsonify(get_step_status(library_root))
 
 
 # ── Archive setup ─────────────────────────────────────────────────────────────
