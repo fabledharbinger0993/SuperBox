@@ -3902,7 +3902,74 @@ function setupAllDropZones() {
   ].forEach(id => { const el = document.getElementById(id); if (el) setupDropZone(el); });
   document.querySelectorAll('.org-source-input').forEach(setupDropZone);
 }
+/* ── State tracking ───────────────────────────────────────────────────── */
+let currentLibraryRoot = '';
 
+async function loadState(libraryRoot) {
+  if (!libraryRoot?.trim()) return;
+  currentLibraryRoot = libraryRoot.trim();
+
+  try {
+    const res = await fetch('/api/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ library_root: currentLibraryRoot })
+    });
+    if (!res.ok) return;
+    const state = await res.json();
+    applyStateToUI(state);
+  } catch (e) {
+    console.warn('[State] load failed', e);
+  }
+}
+
+function applyStateToUI(state) {
+  const map = {
+    audit: 'step-audit',
+    process: 'step-process',
+    duplicates: 'step-duplicates',
+    prune: 'step-prune',
+    relocate: 'step-relocate',
+    import: 'step-import',
+    link: 'step-link',
+    normalize: 'step-normalize',
+    convert: 'step-convert',
+    organize: 'step-organize',
+    novelty: 'step-novelty'
+  };
+
+  Object.entries(map).forEach(([key, id]) => {
+    const card = document.getElementById(id);
+    if (!card) return;
+    card.classList.remove('step-complete', 'step-error');
+    const info = state[key];
+    if (info) {
+      if (info.exit_code === 0) card.classList.add('step-complete');
+      else card.classList.add('step-error');
+    }
+  });
+}
+
+// Auto load state when page loads or paths change
+window.addEventListener('load', async () => {
+  try {
+    const cfgRes = await fetch('/api/config');
+    const cfg = await cfgRes.json();
+    if (cfg.music_root) await loadState(cfg.music_root);
+  } catch (e) {}
+
+  const pathFields = ['audit-root','process-path','dupes-path','prune-csv-path',
+                      'relocate-old','relocate-new','import-path','link-path',
+                      'normalize-path','convert-path','organize-target',
+                      'novelty-source','novelty-dest'];
+  pathFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => {
+      const val = el.value.trim();
+      if (val) loadState(val);
+    });
+  });
+});
 setupAllDropZones();
 </script>
 </body>
