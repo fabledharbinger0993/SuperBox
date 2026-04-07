@@ -2356,7 +2356,7 @@ function runProcess() {
   if (document.getElementById('process-no-bpm').checked)  p.set('no_bpm', '1');
   if (document.getElementById('process-no-key').checked)  p.set('no_key', '1');
   if (document.getElementById('process-force').checked)   p.set('force',  '1');
-  p.set('no_normalize', '1');  // Step 2 is tags-only; normalize is Step 5
+  p.set('no_normalize', '1');  
   const el = document.getElementById('process-result');
   if (el) el.classList.add('hidden');
   runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection', null, true, false);
@@ -3939,7 +3939,70 @@ function _extractDropPath(e) {
   if (plain && plain.trim().startsWith('/')) return plain.trim();
   return null;
 }
+function auditRowHtml(value = '') {
+  const safeValue = String(value || '').replace(/"/g, '&quot;');
+  return `
+    <div class="audit-path-row">
+      <button type="button" class="audit-dot-btn" onclick="toggleAuditRow(this)" title="Expand/collapse"></button>
+      <input type="text" class="audit-path-input" value="${safeValue}" placeholder="/Volumes/DRIVE/Music">
+      <button type="button" class="audit-dot-btn" onclick="removeAuditRow(this)" title="Remove row"></button>
+    </div>
+  `;
+}
 
+function addAuditPathRow(value = '') {
+  const stack = document.getElementById('audit-path-stack');
+  if (!stack) return;
+  stack.insertAdjacentHTML('beforeend', auditRowHtml(value));
+  const row = stack.lastElementChild;
+  const input = row.querySelector('.audit-path-input');
+  if (input) input.focus();
+}
+
+function toggleAuditRow(btn) {
+  const row = btn.closest('.audit-path-row');
+  if (!row) return;
+  const input = row.querySelector('.audit-path-input');
+  const collapsed = row.classList.toggle('collapsed');
+  btn.classList.toggle('collapsed', collapsed);
+  if (!collapsed && input) input.focus();
+}
+
+function removeAuditRow(btn) {
+  const row = btn.closest('.audit-path-row');
+  const stack = document.getElementById('audit-path-stack');
+  if (!row || !stack) return;
+
+  if (stack.children.length > 1) {
+    row.remove();
+  } else {
+    const input = row.querySelector('.audit-path-input');
+    if (input) input.value = '';
+  }
+}
+
+function getAuditPaths() {
+  return Array.from(document.querySelectorAll('.audit-path-input'))
+    .map(el => el.value.trim())
+    .filter(Boolean);
+}
+
+function runAudit() {
+  const paths = getAuditPaths();
+  const savePhys = document.getElementById('audit-save-physical')?.checked ? '1' : '0';
+
+  const p = new URLSearchParams();
+  p.set('save_physical', savePhys);
+  paths.forEach(path => p.append('paths', path));
+
+  runCommand(`/api/run/audit?${p.toString()}`, 'Audit — Database + Physical Scan', null, true);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const stack = document.getElementById('audit-path-stack');
+  if (stack && !stack.children.length) addAuditPathRow();
+});
+  
 function setupDropZone(input) {
   if (!input || input.dataset.dropReady) return;
   input.dataset.dropReady = '1';
