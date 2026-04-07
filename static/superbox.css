@@ -977,6 +977,23 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   color: var(--accent); 
 }
 
+#quit-btn {
+  background: none;
+  border: 1px solid var(--border-hi);
+  color: var(--text-muted);
+  border-radius: 5px;
+  padding: 4px 12px;
+  font-size: .78rem;
+  cursor: pointer;
+  letter-spacing: .04em;
+  transition: border-color .15s, color .15s;
+}
+
+#quit-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* Header */
 .settings-header {
   padding: 22px 28px 18px;
