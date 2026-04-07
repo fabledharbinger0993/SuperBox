@@ -121,75 +121,71 @@
     <div class="card-icon safe"><img src="/static/icon-audit.png" alt="Audit"></div>
     <div class="card-meta">
       <div class="card-title">Library Audit — Database &amp; Physical Scan</div>
-      <div class="card-blurb">
-        Two coordinated passes: a <strong>Rekordbox library scan</strong> that documents tracks, playlists, and file paths,
-        and a <strong>physical library scan</strong> that walks the folders you enter below in order.
-      </div>
+      <div class="card-blurb">Read-only. No changes to files or database.</div>
     </div>
     <span class="risk-badge safe">Read-Only</span>
   </div>
 
-  <div class="explainers">
-    <details>
-      <summary>What does Audit actually check?</summary>
-      <div class="explain-body">
-        <p>It opens the database in <strong>read-only mode</strong> and documents library structure without modifying anything.</p>
-        <p>The left side captures Rekordbox-internal data. The right side scans the actual folders you specify on disk.</p>
-      </div>
-    </details>
-    <details>
-      <summary>Can anything go wrong?</summary>
-      <div class="explain-body">
-        <p><strong>No.</strong> Audit only reads. If the database path is wrong, it fails before touching anything.</p>
-      </div>
-    </details>
-  </div>
-
-  <div id="dead-roots-banner" style="display:none; margin: 12px 0; padding: 12px 16px;
-       background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3);
-       border-radius: 8px; font-size: .84rem; color: var(--text);">
-    <strong style="color:var(--danger);">⚠ Disconnected drive detected</strong>
-    <div id="dead-roots-detail" style="margin-top:6px; color:var(--text-muted); line-height:1.6;"></div>
-    <div style="margin-top:8px; font-size:.78rem; color:var(--text-dim);">
-      These dead roots have been pre-filled in <strong>Relocate — Fix Broken Paths</strong> below. Run that step next.
-    </div>
-  </div>
-
   <div class="audit-grid">
-    <div class="audit-card audit-card-left">
-      <div class="card-head">
-        <div class="card-icon safe"><img src="/static/icon-audit.png" alt="Rekordbox Audit"></div>
-        <div class="card-meta">
-          <div class="card-title">Rekordbox Library Scan</div>
-          <div class="card-blurb">
-            Reads the Rekordbox database and documents tracks, playlists, and stored file paths.
-          </div>
-        </div>
-        <span class="risk-badge safe">Read-Only</span>
-      </div>
 
-      <div class="explainers">
+    <!-- Left: RekordBox DB scan — info + explainers -->
+    <div class="audit-card audit-card-left">
+      <div class="audit-panel-title">
+        <img src="/static/icon-audit.png" alt="" class="audit-panel-icon">
+        Rekordbox Library Scan
+      </div>
+      <p class="audit-panel-blurb">
+        Opens the database in <strong>read-only mode</strong> and inventories tracks,
+        playlists, and the file path stored for every track.
+      </p>
+
+      <div class="explainers" style="margin-top:12px;">
         <details>
-          <summary>What this scan does</summary>
+          <summary>What does this scan capture?</summary>
           <div class="explain-body">
-            <p>This pass inventories the Rekordbox library database, including playlist structure and track file paths.</p>
-            <p>It does not modify files or write back to Rekordbox.</p>
+            <p>Track count, playlist tree, and every file path Rekordbox has on record.
+            Results are written to a timestamped report so you can diff library states over time.</p>
+          </div>
+        </details>
+        <details>
+          <summary>Can anything go wrong?</summary>
+          <div class="explain-body">
+            <p><strong>No.</strong> Audit only reads. If the database path is wrong it
+            fails before touching anything. Nothing is modified.</p>
+          </div>
+        </details>
+        <details>
+          <summary>What about disconnected drives?</summary>
+          <div class="explain-body">
+            <p>If a drive root referenced in Rekordbox is not mounted, it will appear in
+            the <strong>⚠ Disconnected drive</strong> banner and its paths are
+            pre-filled in the Relocate step below.</p>
           </div>
         </details>
       </div>
+
+      <div id="dead-roots-banner" style="display:none; margin-top:14px; padding: 10px 14px;
+           background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.3);
+           border-radius: 8px; font-size: .82rem; color: var(--text);">
+        <strong style="color:var(--danger);">⚠ Disconnected drive detected</strong>
+        <div id="dead-roots-detail" style="margin-top:5px; color:var(--text-muted); line-height:1.6;"></div>
+        <div style="margin-top:7px; font-size:.76rem; color:var(--text-dim);">
+          Pre-filled in <strong>Relocate — Fix Broken Paths</strong> below.
+        </div>
+      </div>
     </div>
 
+    <!-- Right: Physical library scan — drop zone + pills + run -->
     <div class="audit-card audit-card-right">
-      <div class="card-head">
-        <div class="card-icon safe"><img src="/static/icon-audit.png" alt="Physical Audit"></div>
-        <div class="card-meta">
-          <div class="card-title">Physical Library Scan</div>
-          <div class="card-blurb">
-            Scans every folder path you enter below, in order, and builds a physical inventory of those folders.
-          </div>
-        </div>
-        <span class="risk-badge safe">Read-Only</span>
+      <div class="audit-panel-title">
+        <img src="/static/icon-audit.png" alt="" class="audit-panel-icon">
+        Physical Library Scan
+        <span class="risk-badge safe" style="margin-left:auto;">Read-Only</span>
       </div>
+      <p class="audit-panel-blurb">
+        Drop the folders you want scanned. Each path is walked in full — only what
+        you add here is scanned, never an auto-detected root.
+      </p>
 
       <div class="folder-zone" id="audit-zone">
         <div class="folder-zone-hint">
@@ -203,7 +199,7 @@
       </div>
       <div class="folder-pills" id="audit-pills"></div>
 
-      <div class="field">
+      <div class="field" style="margin-top:10px;">
         <div class="checkbox-row">
           <label class="checkbox-label">
             <input type="checkbox" id="audit-save-physical" checked>
@@ -216,6 +212,7 @@
         <button class="btn btn-neon" type="button" onclick="runAudit()">Run Library Audit</button>
       </div>
     </div>
+
   </div>
 </div>
 

@@ -1885,6 +1885,32 @@ body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28
 .audit-card .card-head { padding: 0; margin-bottom: 10px; }
 .audit-card .card-blurb { font-size: .8rem; }
 
+/* Panel-level title row inside each audit sub-card */
+.audit-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .94rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: .01em;
+  margin-bottom: 8px;
+}
+.audit-panel-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  opacity: .80;
+  filter: drop-shadow(0 0 4px rgba(120,50,230,.45));
+  flex-shrink: 0;
+}
+.audit-panel-blurb {
+  font-size: .80rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0 0 4px;
+}
+
 /* ══ Folder drop zone (pill stacker) ════════════════════════════════════════ */
 .folder-zone {
   position: relative;
@@ -1892,41 +1918,52 @@ body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 76px;
-  border: 2px dashed rgba(110, 40, 215, 0.38);
+  min-height: 130px;
+  border: 2px solid rgba(120, 50, 230, 0.52);
   border-radius: 10px;
-  padding: 12px 14px;
-  background: rgba(100, 40, 200, .03);
-  transition: border-color .18s, background .18s, box-shadow .18s;
+  padding: 16px 14px 14px;
+  /* Dot-grid background — replicates the neon pegboard aesthetic */
+  background-color: rgba(70, 15, 150, 0.06);
+  background-image: radial-gradient(circle, rgba(140, 60, 255, 0.28) 1px, transparent 1px);
+  background-size: 20px 20px;
+  box-shadow:
+    0 0 10px 2px rgba(120, 50, 230, 0.22),
+    0 0 24px 5px rgba(120, 50, 230, 0.08),
+    inset 0 0 10px  rgba(120, 50, 230, 0.04);
+  transition: border-color .18s, box-shadow .18s, background-color .18s;
   cursor: default;
 }
 .folder-zone:hover {
-  border-color: rgba(110, 40, 215, 0.62);
-  background: rgba(100, 40, 200, .055);
+  border-color: rgba(130, 60, 240, 0.80);
+  box-shadow:
+    0 0 14px 4px rgba(120, 50, 230, 0.35),
+    0 0 32px 8px rgba(120, 50, 230, 0.12),
+    inset 0 0 12px  rgba(120, 50, 230, 0.06);
 }
 .folder-zone.drag-over {
-  border-color: rgba(105, 35, 210, 0.95);
-  background: rgba(100, 40, 200, .09);
+  border-color: rgba(150, 70, 255, 1);
+  background-color: rgba(90, 25, 180, 0.12);
   box-shadow:
-    0 0  8px  3px rgba(120, 50, 230, 0.45),
-    0 0 22px  7px rgba(120, 50, 230, 0.20),
-    inset 0 0 14px  rgba(120, 50, 230, 0.06);
+    0 0 16px 6px rgba(150, 70, 255, 0.55),
+    0 0 40px 12px rgba(120, 50, 230, 0.25),
+    inset 0 0 20px  rgba(130, 60, 240, 0.09);
 }
 .folder-zone-hint {
   font-size: .76rem;
-  color: rgba(150, 90, 255, 0.70);
+  color: rgba(170, 110, 255, 0.75);
   letter-spacing: .04em;
   pointer-events: none;
   user-select: none;
   text-align: center;
   line-height: 1.55;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .folder-zone-hint strong {
   display: block;
-  font-size: .86rem;
-  color: rgba(160, 100, 255, 0.90);
-  margin-bottom: 1px;
+  font-size: .9rem;
+  color: rgba(190, 130, 255, 0.95);
+  margin-bottom: 2px;
+  letter-spacing: .02em;
 }
 .folder-zone-input-row {
   display: flex;
@@ -2000,8 +2037,8 @@ body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28
   height: 15px;
   border-radius: 50%;
   border: none;
-  background: rgba(120, 50, 230, 0.18);
-  color: rgba(185, 140, 255, 0.80);
+  background: rgba(220, 100, 30, 0.22);
+  color: rgba(255, 160, 60, 0.90);
   font-size: .60rem;
   line-height: 1;
   cursor: pointer;
@@ -2011,4 +2048,4 @@ body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28
   transition: background .12s, color .12s;
   padding: 0;
 }
-.folder-pill-x:hover { background: rgba(239,68,68,.28); color: var(--danger); }
+.folder-pill-x:hover { background: rgba(239,68,68,.40); color: #ff6b6b; }
