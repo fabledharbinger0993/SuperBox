@@ -6,10 +6,13 @@ Created lazily on first use.
 """
 
 import json
+import logging
+import os
 from pathlib import Path
 from datetime import datetime, timezone
 
 STATE_FILENAME = ".superbox_state.json"
+log = logging.getLogger(__name__)
 
 def _state_path(library_root: str) -> Path:
     """Return the state file path inside the library root."""
@@ -38,6 +41,10 @@ def load_state(library_root: str) -> dict:
 def save_state(library_root: str, state: dict):
     """Save with timestamp and ensure parent dir exists."""
     path = _state_path(library_root)
+    # Guard: never write to filesystem roots or non-writable system dirs
+    if not os.access(path.parent, os.W_OK):
+        log.warning("state_tracker: %s is not writable — skipping state save", path.parent)
+        return
     state["last_updated"] = datetime.now(timezone.utc).isoformat()
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:

@@ -411,10 +411,8 @@ def process_file(
                 audio.add_tags()
                 log.info("Created new tag block for tagless file: %s", path.name)
             except Exception as e:
-                result.errors.append(
-                    f"file has no tags and cannot have tags added ({type(e).__name__}: {e}) — skipping"
-                )
-                return result
+                # Some formats (e.g. WAV) may need special handling — log and continue
+                log.warning("Could not add tags to %s (%s: %s) — will attempt write anyway", path.name, type(e).__name__, e)
         tags = audio.tags
     except Exception as e:
         result.errors.append(f"could not read tags: {e}")
