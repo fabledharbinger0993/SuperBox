@@ -25,7 +25,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, jsonify
 
 # Ensure the toolkit modules are importable when app.py is run directly
 _REPO_ROOT = Path(__file__).parent.resolve()
