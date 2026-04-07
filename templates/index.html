@@ -6,6 +6,15 @@
 <title>SuperBox — rekordbox-toolkit</title>
 <link rel="stylesheet" href="/static/superbox.css">
 <link rel="icon" type="image/png" href="/static/SRB_LOGO.png">
+<style>
+/* SuperBox modal animation system */
+@keyframes sb-modal-in    {from{opacity:0;transform:scale(.92) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes sb-modal-out   {from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(.95) translateY(6px)}}
+@keyframes sb-modal-shrink{0%{opacity:1;transform:scale(1) translate(0,0)} 100%{opacity:0;transform:scale(.06) translate(52vw,46vh)}}
+@keyframes sb-pill-appear {from{opacity:0;transform:scale(.55) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes sb-backdrop-in {from{opacity:0} to{opacity:1}}
+@keyframes sb-backdrop-out{from{opacity:1} to{opacity:0}}
+</style>
 </head>
 <body>
 
@@ -1132,7 +1141,7 @@
       <pre id="rmod-pre"></pre>
     </div>
     <div class="rmod-footer">
-      <button class="welcome-got-it" onclick="closeReportModal()">✓ Got it</button>
+      <button class="welcome-got-it" onclick="closeReportModal(true)">✓ Got it</button>
     </div>
   </div>
 </div>
@@ -1566,15 +1575,13 @@ function _pillLabel(title) {
   return title.split(' — ')[0] + ' Summary';
 }
 
-function _addOrUpdateSummaryPill(title) {
+function _addOrUpdateSummaryPill(title, animate) {
   const label     = _pillLabel(title);
   const container = document.getElementById('session-pills-container');
   if (!container) return;
-  // If a pill for this title already exists, its click handler already reads
-  // from sessionReports[title] which was just updated — nothing else to do.
-  if (container.querySelector(`[data-pill-title]`) &&
-      [...container.querySelectorAll('[data-pill-title]')]
-        .some(el => el.dataset.pillTitle === title)) return;
+  const existing = [...container.querySelectorAll('[data-pill-title]')]
+    .find(el => el.dataset.pillTitle === title);
+  if (existing) return;
   const pill = document.createElement('button');
   pill.className        = 'summary-pill';
   pill.dataset.pillTitle = title;
@@ -1587,16 +1594,23 @@ function _addOrUpdateSummaryPill(title) {
   container.appendChild(pill);
 }
 
-/* ── Modal open pulse ──────────────────────────────────────────────────────
-   Call pulseModal(innerBoxEl) immediately after making any backdrop visible.
-   Removes the class on animationend so re-opening replays the animation.   */
-function pulseModal(el) {
-  if (!el) return;
-  el.classList.remove('modal-pulse-once');
-  void el.offsetWidth; // force reflow so animation restarts on re-open
-  el.classList.add('modal-pulse-once');
-  el.addEventListener('animationend', () => el.classList.remove('modal-pulse-once'), { once: true });
+/* ── Modal animation helpers ───────────────────────────────────────────────
+   _sbAnim(el, keyframe, dur, cb) — runs keyframe then fires cb.
+   _sbFadeBd(id, show, cb) — fades backdrop in/out.
+   pulseModal kept as no-op so existing call-sites don't break.            */
+function _sbAnim(el, kf, dur, cb) {
+  if (!el) { if (cb) cb(); return; }
+  el.style.animation = kf + ' ' + dur + ' cubic-bezier(.16,1,.3,1) forwards';
+  el.addEventListener('animationend', () => { el.style.animation=''; if (cb) cb(); }, {once:true});
 }
+function _sbFadeBd(id, show, cb) {
+  const bd = document.getElementById(id);
+  if (!bd) { if (cb) cb(); return; }
+  if (show) { bd.classList.remove('hidden'); _sbAnim(bd, 'sb-backdrop-in', '.2s', cb); }
+  else      { _sbAnim(bd, 'sb-backdrop-out', '.18s', () => { bd.classList.add('hidden'); if (cb) cb(); }); }
+}
+function pulseModal(el) { /* no-op — animations now use _sbAnim */ }
+
 
 function openReportModal(title, text, reportPath) {
   document.getElementById('rmod-title').textContent = title + ' — Complete';
@@ -1605,20 +1619,31 @@ function openReportModal(title, text, reportPath) {
     pathEl.textContent = '▸ Report saved to:  ' + reportPath;
     pathEl.style.display = '';
   } else {
-    // No saved file — just note it's session-only
     pathEl.textContent = '▸ Session summary only — no file saved for this step.';
     pathEl.style.display = '';
   }
   document.getElementById('rmod-pre').textContent = text;
-  document.getElementById('report-modal-backdrop').classList.remove('hidden');
-  pulseModal(document.getElementById('report-modal'));
-  // Keep in session memory and surface as a persistent pill button
   sessionReports[title] = { text, reportPath, ts: Date.now() };
-  _addOrUpdateSummaryPill(title);
+  _sbFadeBd('report-modal-backdrop', true);
+  const box = document.getElementById('report-modal');
+  void box.offsetWidth;
+  _sbAnim(box, 'sb-modal-in', '.28s');
 }
 
-function closeReportModal() {
-  document.getElementById('report-modal-backdrop').classList.add('hidden');
+function closeReportModal(shrinkToPill) {
+  const box   = document.getElementById('report-modal');
+  const title = (document.getElementById('rmod-title')?.textContent||'').replace(' — Complete','');
+  if (shrinkToPill) {
+    _sbAnim(box, 'sb-modal-shrink', '.32s', () => {
+      _sbFadeBd('report-modal-backdrop', false);
+      _addOrUpdateSummaryPill(title, true);
+    });
+  } else {
+    _sbAnim(box, 'sb-modal-out', '.18s', () => {
+      _sbFadeBd('report-modal-backdrop', false);
+      _addOrUpdateSummaryPill(title);
+    });
+  }
 }
 
 // Escape key handled in the global keydown listener below
@@ -1638,11 +1663,14 @@ function openSettings() {
     document.querySelector('input[name="archive-mode"][value="auto"]').checked = true;
     _settingsUpdateUI('auto');
   });
-  document.getElementById('settings-backdrop').classList.remove('hidden');
-  pulseModal(document.getElementById('settings-modal'));
+  _sbFadeBd('settings-backdrop', true);
+  const _smb = document.getElementById('settings-modal');
+  void _smb.offsetWidth; _sbAnim(_smb, 'sb-modal-in', '.28s');
 }
 function closeSettings() {
-  document.getElementById('settings-backdrop').classList.add('hidden');
+  _sbAnim(document.getElementById('settings-modal'), 'sb-modal-out', '.18s', () => {
+    _sbFadeBd('settings-backdrop', false);
+  });
 }
 function _settingsUpdateUI(mode) {
   document.getElementById('settings-custom-path').style.display  = mode === 'custom' ? 'block' : 'none';
@@ -1688,8 +1716,9 @@ async function saveSettings() {
 
 /* ── Welcome modal ─────────────────────────────────────────────────────────── */
 function openWelcome() {
-  document.getElementById('welcome-backdrop').classList.remove('hidden');
-  pulseModal(document.getElementById('welcome-modal'));
+  _sbFadeBd('welcome-backdrop', true);
+  const _wmb = document.getElementById('welcome-modal');
+  void _wmb.offsetWidth; _sbAnim(_wmb, 'sb-modal-in', '.28s');
   // Populate the archive tree with the real drive path if config is loaded
   fetch('/api/config').then(r => r.json()).then(cfg => {
     if (cfg.archive_root) {
@@ -1709,8 +1738,10 @@ function openWelcome() {
   }).catch(() => {});
 }
 function closeWelcome() {
-  document.getElementById('welcome-backdrop').classList.add('hidden');
-  localStorage.setItem('superbox-welcome-seen', '1');
+  _sbAnim(document.getElementById('welcome-modal'), 'sb-modal-out', '.18s', () => {
+    _sbFadeBd('welcome-backdrop', false);
+    localStorage.setItem('superbox-welcome-seen', '1');
+  });
 }
 function welcomeGrantPermission() {
   localStorage.setItem('superbox-archive-permission', 'granted');
@@ -1868,8 +1899,21 @@ async function quitSuperBox() {
   try {
     await fetch('/api/quit', { method: 'POST' });
   } catch(_) {}
-  // Server is gone — close the tab
-  setTimeout(() => window.close(), 500);
+  // window.close() only works on script-opened tabs — replace the page instead
+  setTimeout(() => {
+    document.open();
+    document.write(
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SuperBox — Stopped</title>'
+      + '<style>body{background:#0a0a0a;color:#555;font-family:ui-monospace,monospace;'
+      + 'display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'
+      + 'flex-direction:column;gap:16px;}p{margin:0;font-size:.9rem;letter-spacing:.04em;}'
+      + 'strong{color:#888;}</style></head><body>'
+      + '<p><strong>SuperBox has shut down.</strong></p>'
+      + '<p>Close this tab or restart the server to continue.</p>'
+      + '</body></html>'
+    );
+    document.close();
+  }, 500);
 }
 
 async function refreshStatus() {
@@ -1909,12 +1953,15 @@ if (!localStorage.getItem('superbox-welcome-seen')) {
   if (localStorage.getItem('superbox-archive-permission') === 'granted') {
     fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
   }
-  document.getElementById('path-backdrop').classList.remove('hidden');
-  pulseModal(document.getElementById('path-modal-box'));
+  _sbFadeBd('path-backdrop', true);
+  const _pmb = document.getElementById('path-modal-box');
+  void _pmb.offsetWidth; _sbAnim(_pmb, 'sb-modal-in', '.28s');
 }
 
 function choosePath(mode) {
-  document.getElementById('path-backdrop').classList.add('hidden');
+  _sbAnim(document.getElementById('path-modal-box'), 'sb-modal-out', '.18s', () => {
+    _sbFadeBd('path-backdrop', false);
+  });
   if (mode === 'pipeline') {
     openPipelineWizard();
   }
@@ -2214,11 +2261,16 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
       } else {
         appendLog(`✗ Exited with code ${data.exit_code}`, 'log-exit-fail');
       }
-      // Store the report as a bottom-right pill — click to open as popup.
+      // On success: auto-open report modal (user dismisses to pill).
+      // On failure: store silently as pill.
       if (reportBuffer.length > 0) {
         const reportText = reportBuffer.join('\n');
-        sessionReports[logTitle] = { text: reportText, reportPath: capturedReportPath };
-        _addOrUpdateSummaryPill(logTitle);
+        if (data.exit_code === 0) {
+          openReportModal(logTitle, reportText, capturedReportPath);
+        } else {
+          sessionReports[logTitle] = { text: reportText, reportPath: capturedReportPath };
+          _addOrUpdateSummaryPill(logTitle);
+        }
       }
       if (onDone) onDone(data.exit_code);
     }
@@ -2381,7 +2433,8 @@ function openPipelineWizard() {
   document.getElementById('pipe-wiz-p1').classList.remove('hidden');
   document.getElementById('pipe-wiz-p2').classList.add('hidden');
   document.getElementById('pipeline-wizard').classList.remove('wizard-wide');
-  pulseModal(document.getElementById('pipeline-wizard'));
+  const _pwb = document.getElementById('pipeline-wizard');
+  void _pwb.offsetWidth; _sbAnim(_pwb, 'sb-modal-in', '.28s');
 }
 
 function closePipelineWizard() {
@@ -2763,9 +2816,14 @@ function _pipeWizReadDraft(step) {
   step._config      = draft;  // keep _config in sync for the runner
 }
 
-  function _loadPipeCfg(type) {
-    try { return JSON.parse(localStorage.getItem(`sb_pipe_cfg_${type}`)) || {}; } catch (_) { return {}; }
-  }
+
+function _savePipeCfg(type, cfg) {
+  try { localStorage.setItem(`sb_pipe_cfg_${type}`, JSON.stringify(cfg)); } catch(_) {}
+}
+
+function _loadPipeCfg(type) {
+  try { return JSON.parse(localStorage.getItem(`sb_pipe_cfg_${type}`)) || {}; } catch(_) { return {}; }
+}
 
 function pipelineAddStep(type) {
   pipelineSteps.push({ id: ++pipeUid, type });
@@ -3900,6 +3958,48 @@ function setupAllDropZones() {
 }
 
 setupAllDropZones();
+
+/* ── State tracker — per-library step completion ─────────────────────────
+   Calls /api/state on load and after every successful command.
+   Cards get .step-complete or .step-error CSS classes.              */
+const STATE_STEP_MAP = {
+  audit:'step-audit', process:'step-process', duplicates:'step-duplicates',
+  prune:'step-prune', relocate:'step-relocate', import:'step-import',
+  link:'step-link', normalize:'step-normalize', convert:'step-convert',
+  organize:'step-organize', novelty:'step-novelty',
+};
+async function loadState(libraryRoot) {
+  if (!libraryRoot) return;
+  try {
+    const res = await fetch('/api/state', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ library_root: libraryRoot }),
+    });
+    if (res.ok) applyStateToUI(await res.json());
+  } catch (_) {}
+}
+function applyStateToUI(state) {
+  Object.entries(STATE_STEP_MAP).forEach(([step, cardId]) => {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+    card.classList.remove('step-complete', 'step-error');
+    const info = state[step];
+    if (!info) return;
+    card.classList.add(info.exit_code === 0 ? 'step-complete' : 'step-error');
+  });
+}
+async function _initStateOverlay() {
+  try {
+    const cfg = await fetch('/api/config').then(r => r.json());
+    if (cfg.music_root) loadState(cfg.music_root);
+  } catch (_) {}
+}
+_initStateOverlay();
+['process-path','import-path','link-path','audit-root','normalize-path',
+ 'organize-target','novelty-dest'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', () => { if (el.value.trim()) loadState(el.value.trim()); });
+});
 </script>
 </body>
 </html>
