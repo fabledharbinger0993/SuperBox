@@ -33,10 +33,7 @@
              letter-spacing:.04em; cursor:pointer;">
       ▸ View Output
     </button>
-    <button id="settings-btn" onclick="openSettings()" title="Archive &amp; Log Settings"
-      style="display:none; background:var(--accent-dim); border:1px solid var(--accent);
-             color:var(--accent); border-radius:5px; padding:4px 12px; font-size:.78rem;
-             letter-spacing:.04em; cursor:pointer;">
+    <button id="settings-btn" onclick="openSettings()" title="Archive &amp; Log Settings">
       ⚙ Settings
     </button>
     <button id="quit-btn" onclick="quitSuperBox()"
@@ -1573,10 +1570,11 @@ function _addOrUpdateSummaryPill(title) {
   const label     = _pillLabel(title);
   const container = document.getElementById('session-pills-container');
   if (!container) return;
-  // Check for an existing pill with this exact title and bail if found
-  const existing = [...container.querySelectorAll('[data-pill-title]')]
-    .find(el => el.dataset.pillTitle === title);
-  if (existing) return;
+  // If a pill for this title already exists, its click handler already reads
+  // from sessionReports[title] which was just updated — nothing else to do.
+  if (container.querySelector(`[data-pill-title]`) &&
+      [...container.querySelectorAll('[data-pill-title]')]
+        .some(el => el.dataset.pillTitle === title)) return;
   const pill = document.createElement('button');
   pill.className        = 'summary-pill';
   pill.dataset.pillTitle = title;
@@ -1862,7 +1860,7 @@ setTimeout(superboxUpdateCheck, 1000);
 async function quitSuperBox() {
   const msg = isRunning
     ? '⚠️ A scan is still running.\n\nShutting down now will cancel it mid-process. Are you sure?'
-    : 'Shut down SuperBox?\n\nThe server will stop and this tab will show a shutdown message.';
+    : 'Shut down SuperBox?\n\nThe server will stop and this window will close.';
   if (!confirm(msg)) return;
   const btn = document.getElementById('quit-btn');
   btn.textContent = 'Shutting down…';
@@ -1870,21 +1868,8 @@ async function quitSuperBox() {
   try {
     await fetch('/api/quit', { method: 'POST' });
   } catch(_) {}
-  // window.close() only works on script-opened tabs — replace the page instead.
-  setTimeout(() => {
-    document.open();
-    document.write(
-      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SuperBox — Stopped</title>' +
-      '<style>body{background:#0a0a0a;color:#555;font-family:ui-monospace,monospace;' +
-      'display:flex;align-items:center;justify-content:center;height:100vh;margin:0;' +
-      'flex-direction:column;gap:16px;}p{margin:0;font-size:.9rem;letter-spacing:.04em;}' +
-      'strong{color:#888;}</style></head><body>' +
-      '<p><strong>SuperBox has shut down.</strong></p>' +
-      '<p>Close this tab or restart the server to continue.</p>' +
-      '</body></html>'
-    );
-    document.close();
-  }, 500);
+  // Server is gone — close the tab
+  setTimeout(() => window.close(), 500);
 }
 
 async function refreshStatus() {
@@ -2234,13 +2219,6 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
         const reportText = reportBuffer.join('\n');
         sessionReports[logTitle] = { text: reportText, reportPath: capturedReportPath };
         _addOrUpdateSummaryPill(logTitle);
-      }
-      // Refresh state overlay after any successful command
-      if (data.exit_code === 0) {
-        const _stateRoot = document.getElementById('process-path')?.value ||
-                           document.getElementById('import-path')?.value ||
-                           document.getElementById('audit-root')?.value || '';
-        if (_stateRoot.trim()) loadState(_stateRoot.trim());
       }
       if (onDone) onDone(data.exit_code);
     }
@@ -2785,13 +2763,9 @@ function _pipeWizReadDraft(step) {
   step._config      = draft;  // keep _config in sync for the runner
 }
 
-function _savePipeCfg(type, cfg) {
-  try { localStorage.setItem(`sb_pipe_cfg_${type}`, JSON.stringify(cfg)); } catch(_) {}
-}
-
-function _loadPipeCfg(type) {
-  try { return JSON.parse(localStorage.getItem(`sb_pipe_cfg_${type}`)) || {}; } catch(_) { return {}; }
-}
+  function _loadPipeCfg(type) {
+    try { return JSON.parse(localStorage.getItem(`sb_pipe_cfg_${type}`)) || {}; } catch (_) { return {}; }
+  }
 
 function pipelineAddStep(type) {
   pipelineSteps.push({ id: ++pipeUid, type });
@@ -3926,75 +3900,6 @@ function setupAllDropZones() {
 }
 
 setupAllDropZones();
-
-/* ── State tracker — per-library step completion ───────────────────────────
-   Reads from /api/state (backed by state_tracker.py on the server).
-   Called on page load (once config is ready) and after every successful
-   command completion so cards light up as steps finish.
-   ─────────────────────────────────────────────────────────────────────── */
-
-const STATE_STEP_MAP = {
-  audit:      'step-audit',
-  process:    'step-process',
-  duplicates: 'step-duplicates',
-  prune:      'step-prune',
-  relocate:   'step-relocate',
-  import:     'step-import',
-  link:       'step-link',
-  normalize:  'step-normalize',
-  convert:    'step-convert',
-  organize:   'step-organize',
-  novelty:    'step-novelty',
-};
-
-async function loadState(libraryRoot) {
-  if (!libraryRoot) return;
-  try {
-    const res = await fetch('/api/state', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ library_root: libraryRoot }),
-    });
-    if (!res.ok) return;
-    const state = await res.json();
-    applyStateToUI(state);
-  } catch (_) { /* non-fatal — state overlay is decorative */ }
-}
-
-function applyStateToUI(state) {
-  Object.entries(STATE_STEP_MAP).forEach(([step, cardId]) => {
-    const card = document.getElementById(cardId);
-    if (!card) return;
-    const info = state[step];
-    card.classList.remove('step-complete', 'step-error');
-    if (!info) return;
-    if (info.exit_code === 0) {
-      card.classList.add('step-complete');
-    } else {
-      card.classList.add('step-error');
-    }
-  });
-}
-
-// Load state once config is available on page load
-async function _initStateOverlay() {
-  try {
-    const res = await fetch('/api/config');
-    const cfg = await res.json();
-    if (cfg.music_root) loadState(cfg.music_root);
-  } catch (_) {}
-}
-_initStateOverlay();
-
-// Re-load when user changes a path field (may be switching libraries)
-['process-path','import-path','link-path','audit-root',
- 'normalize-path','organize-target','novelty-dest'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('change', () => {
-    const root = el.value.trim();
-    if (root) loadState(root);
-  });
-});
 </script>
 </body>
 </html>
