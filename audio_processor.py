@@ -402,7 +402,20 @@ def process_file(
 
     try:
         audio = MutagenFile(str(path), easy=False)
-        tags = audio.tags if audio else None
+        if audio is None:
+            result.errors.append("mutagen could not open file (unsupported format)")
+            return result
+        # If the file has no tag block yet, create one now so we can write to it.
+        if audio.tags is None:
+            try:
+                audio.add_tags()
+                log.info("Created new tag block for tagless file: %s", path.name)
+            except Exception as e:
+                result.errors.append(
+                    f"file has no tags and cannot have tags added ({type(e).__name__}: {e}) — skipping"
+                )
+                return result
+        tags = audio.tags
     except Exception as e:
         result.errors.append(f"could not read tags: {e}")
         tags = None
@@ -414,7 +427,9 @@ def process_file(
         if tags is None:
             return False
         if is_vorbis:
-            return bool(tags.get(vorbis_key.lower()))
+            val = tags.get(vorbis_key.lower())
+            # Treat empty string or "0" as absent so force=False still writes
+            return bool(val) and str(val[0] if isinstance(val, list) else val).strip() not in ("", "0")
         frame = tags.get(id3_key)
         return frame is not None and str(frame).strip() not in ("", "0")
 
