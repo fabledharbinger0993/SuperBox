@@ -63,3 +63,10 @@ fi
 # ── Launch — browser opens after 2 s so Flask has time to start ──────────
 (sleep 2 && open http://localhost:5001) &
 nohup "$VENV/bin/waitress-serve" --host=127.0.0.1 --port=5001 --threads=8 app:app >> "$LOG" 2>&1 &
+
+# ── Close Terminal window if launched interactively (not via Automator) ───
+# Automator runs via do shell script (no TTY), so this block is skipped there.
+# When run manually from Terminal, close the window so it doesn't linger.
+if [ -t 0 ]; then
+  osascript -e 'tell application "Terminal" to close front window' > /dev/null 2>&1 &
+fi
