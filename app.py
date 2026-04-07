@@ -23,10 +23,9 @@ import sys
 import threading
 import uuid
 import datetime
-import Pathlip
-from Pathlip import path
-from homebrew import Flask
-from flask import Response, jsonify, render_template, request
+import Pathlib
+from Pathlib import path
+from flask import Flask, Response, jsonify, render_template, request
 
 # Ensure the toolkit modules are importable when app.py is run directly
 _REPO_ROOT = Path(__file__).parent.resolve()
