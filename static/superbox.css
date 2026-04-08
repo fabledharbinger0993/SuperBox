@@ -1318,6 +1318,42 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
 .summary-pill-icon { font-size: .9rem; line-height: 1; }
 
 /* ── Welcome modal ───────────────────────────────────────────────────────── */
+
+/* Step wizard */
+.welcome-step            { display: none; flex-direction: column; }
+.welcome-step.active     { display: flex; }
+.welcome-step-body       { padding: 28px 32px 24px; display: flex; flex-direction: column; gap: 18px; }
+.welcome-step-title      { font-size: 1.08rem; font-weight: 700; color: var(--text); margin: 0; }
+.welcome-step-sub        { font-size: .84rem; color: var(--text-muted); line-height: 1.7; margin: 0; }
+.welcome-perm-badge      { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; border-radius: 20px; font-size: .73rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.welcome-perm-badge.read { background: rgba(30,180,100,.12); color: #3ecf8e; border: 1px solid rgba(30,180,100,.28); }
+.welcome-perm-badge.write{ background: rgba(230,140,40,.12); color: #e69c2a; border: 1px solid rgba(230,140,40,.28); }
+.welcome-tool-list       { background: var(--surface-hi); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 9px; }
+.welcome-tool-item       { display: flex; align-items: baseline; gap: 10px; font-size: .82rem; color: var(--text-muted); line-height: 1.45; }
+.welcome-tool-item strong{ color: var(--text); font-weight: 600; flex-shrink: 0; min-width: 130px; }
+.welcome-btn-row         { display: flex; gap: 10px; align-items: center; padding-bottom: 4px; }
+.wbtn-accept { background: var(--accent); border: none; color: #fff; border-radius: 7px; padding: 10px 24px; font-size: .85rem; font-weight: 600; cursor: pointer; transition: opacity .14s; }
+.wbtn-accept:hover { opacity: .88; }
+.wbtn-deny   { background: none; border: 1px solid var(--border-hi); color: var(--text-muted); border-radius: 7px; padding: 9px 20px; font-size: .83rem; cursor: pointer; transition: background .14s, color .14s; }
+.wbtn-deny:hover { background: rgba(255,255,255,.05); color: var(--text); }
+
+/* Permission-locked cards */
+.permission-locked { opacity: .35; cursor: pointer; }
+.permission-locked > * { pointer-events: none; }
+
+/* Toast */
+.sb-toast {
+  position: fixed; bottom: calc(var(--scan-bar-h) + 20px); left: 50%; transform: translateX(-50%);
+  background: var(--surface-hi); border: 1px solid var(--border-hi);
+  border-radius: 8px; padding: 10px 22px; font-size: .84rem; color: var(--text);
+  font-weight: 500; box-shadow: 0 8px 32px rgba(0,0,0,.6); z-index: 20000; white-space: nowrap;
+  animation: sb-toast-in .22s ease, sb-toast-out .3s ease 2.8s forwards;
+}
+.sb-toast.toast-success { border-color: var(--safe); color: var(--safe); }
+.sb-toast.toast-error   { border-color: var(--danger); color: var(--danger); }
+@keyframes sb-toast-in  { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+@keyframes sb-toast-out { from { opacity:1; } to { opacity:0; transform:translateX(-50%) translateY(6px); } }
+
 #welcome-backdrop {
   position: fixed; inset: 0; z-index: 10000;
   background: rgba(0,0,0,.72);
@@ -2012,6 +2048,23 @@ body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28
   background: rgba(120, 50, 230, 0.18);
   border-color: var(--accent);
 }
+.folder-zone-browse {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: .82rem;
+  cursor: pointer;
+  transition: background .14s, border-color .14s, color .14s;
+  white-space: nowrap;
+}
+.folder-zone-browse:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.3);
+  color: var(--text);
+}
 
 /* Pills container and individual pills */
 .folder-pills {
@@ -2090,5 +2143,12 @@ body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28
 }
 body.has-drag .folder-zone:not(.drag-over) {
   border-color: rgba(130, 60, 240, 0.82);
+  animation: zone-idle-pulse 1.1s ease-in-out infinite;
+}
+body.has-drag .drop-wrap:not(.drop-active)::after {
+  border-color: rgba(130, 60, 240, 0.82);
+  box-shadow:
+    0 0  8px  3px rgba(120, 50, 230, 0.45),
+    0 0 20px  6px rgba(120, 50, 230, 0.18);
   animation: zone-idle-pulse 1.1s ease-in-out infinite;
 }

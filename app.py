@@ -27,12 +27,22 @@ from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request
 
-# Ensure the toolkit modules are importable when app.py is run directly
-_REPO_ROOT = Path(__file__).parent.resolve()
+# ── Resource root — handles both dev and PyInstaller bundle ──────────────────
+# When PyInstaller runs, sys._MEIPASS is the temp dir where everything lives.
+# SUPERBOX_ROOT can also be set by main.py before importing this module.
+_REPO_ROOT = Path(
+    os.environ.get('SUPERBOX_ROOT')
+    or getattr(sys, '_MEIPASS', None)
+    or Path(__file__).parent.resolve()
+)
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-app = Flask(__name__)
+app = Flask(
+    __name__,
+    template_folder=str(_REPO_ROOT / 'templates'),
+    static_folder=str(_REPO_ROOT / 'static'),
+)
 
 # ── Homebrew update checker (background, weekly) ──────────────────────────────
 from brew_updater import start_background_checker as _start_brew_checker, \
@@ -1037,6 +1047,81 @@ def api_brew_upgrade():
 
     cmd = ["brew", "upgrade"] + names
     return _sse_response(cmd)
+
+
+# ── Folder path resolution ────────────────────────────────────────────────────
+
+@app.route("/api/finder-selection")
+def api_finder_selection():
+    """Return the path of the currently selected item in Finder.
+
+    When a user drags a folder from Finder and drops it in SuperBox, Finder
+    keeps the dragged item selected after the drop.  Querying that selection
+    immediately gives us the exact path the WebView security model withholds —
+    no dialog, no double navigation.
+
+    Falls back to the native folder picker if Finder has nothing selected
+    (e.g. the drag came from a non-Finder source).
+    Returns {"path": null} if the picker is cancelled.
+    """
+    from flask import request as _req
+    source = _req.args.get("source", "")  # "drop" → skip picker fallback
+
+    _finder_script = """\
+tell application "Finder"
+    set sel to selection
+    if (count of sel) > 0 then
+        return POSIX path of (item 1 of sel as alias)
+    end if
+end tell"""
+    try:
+        r = subprocess.run(
+            ["osascript", "-e", _finder_script],
+            capture_output=True, text=True, timeout=5,
+        )
+        if r.returncode == 0 and r.stdout.strip():
+            return jsonify({"path": r.stdout.strip().rstrip("/")})
+    except Exception:
+        pass
+
+    # When called from a drag-drop event, pywebview may focus before osascript
+    # runs and Finder clears its selection — return null silently rather than
+    # opening a picker dialog the user didn't ask for.
+    if source == "drop":
+        return jsonify({"path": None})
+
+    # Nothing selected in Finder — open the native picker as fallback
+    try:
+        r = subprocess.run(
+            ["osascript", "-e", "POSIX path of (choose folder)"],
+            capture_output=True, text=True, timeout=120,
+        )
+        if r.returncode == 0:
+            return jsonify({"path": r.stdout.strip().rstrip("/")})
+    except Exception:
+        pass
+
+    return jsonify({"path": None})
+
+
+@app.route("/api/pick-folder")
+def api_pick_folder():
+    """Open the native macOS folder-chooser dialog (Browse button).
+
+    Used by the Browse buttons in each folder zone.  Always shows the dialog —
+    does not attempt to read Finder's selection.
+    Returns {"path": null} if cancelled.
+    """
+    try:
+        result = subprocess.run(
+            ["osascript", "-e", "POSIX path of (choose folder)"],
+            capture_output=True, text=True, timeout=120,
+        )
+        if result.returncode == 0:
+            return jsonify({"path": result.stdout.strip().rstrip("/")})
+    except Exception:
+        pass
+    return jsonify({"path": None})
 
 
 # ── Quit ──────────────────────────────────────────────────────────────────────

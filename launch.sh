@@ -54,15 +54,10 @@ source "$VENV/bin/activate"
 cd "$SCRIPT_DIR"
 git pull origin main --ff-only >> "$LOG" 2>&1
 
-# ── If server is already running, just open the browser and exit ──────────
-if curl -s --max-time 1 http://localhost:5001 > /dev/null 2>&1; then
-  open http://localhost:5001
-  exit 0
-fi
-
-# ── Launch — browser opens after 2 s so Flask has time to start ──────────
-(sleep 2 && open http://localhost:5001) &
-nohup "$VENV/bin/waitress-serve" --host=127.0.0.1 --port=5001 --threads=8 app:app >> "$LOG" 2>&1 &
+# ── Launch native window (main.py handles "already running" gracefully) ──────
+# main.py detects whether port 5001 is occupied and reuses the existing server
+# rather than starting a second one — safe to call even if already open.
+nohup "$VENV/bin/python" "$SCRIPT_DIR/main.py" >> "$LOG" 2>&1 &
 
 # ── Close Terminal window if launched interactively (not via Automator) ───
 # Automator runs via do shell script (no TTY), so this block is skipped there.

@@ -75,10 +75,10 @@
 
 <!-- ══ Workflow rail ════════════════════════════════════════════════════════ -->
 <nav class="workflow-rail" id="workflow-rail">
-  <button class="step-tab active" data-target="step-audit">
+  <button class="step-tab" data-target="step-audit" style="display:none">
     <span class="step-num">▣</span> Library Audit
   </button>
-  <button class="step-tab" data-target="step-process">
+  <button class="step-tab active" data-target="step-process">
     <span class="step-num">🏷</span> Tag Tracks
   </button>
   <button class="step-tab" data-target="step-duplicates">
@@ -116,7 +116,7 @@
   <p class="section-title">Core Pipeline — each tool feeds the next</p>
 
    <!-- ── Step 1: Audit ──────────────────────────────────────────────────── -->
-<div class="card" id="step-audit" style="--card-watermark:url('/static/icon-audit.png')">
+<div class="card" id="step-audit" style="--card-watermark:url('/static/icon-audit.png');display:none">
   <div class="card-head">
     <div class="card-icon safe"><img src="/static/icon-audit.png" alt="Audit"></div>
     <div class="card-meta">
@@ -194,6 +194,7 @@
         </div>
         <div class="folder-zone-input-row">
           <input type="text" class="folder-zone-text" id="audit-zone-text" placeholder="/Volumes/DRIVE/Music">
+          <button class="folder-zone-browse" type="button" onclick="pickFolderFor('audit-pills')">Browse…</button>
           <button class="folder-zone-add" type="button" onclick="auditZoneAdd()">+ Add</button>
         </div>
       </div>
@@ -264,6 +265,7 @@
           </div>
           <div class="folder-zone-input-row">
             <input type="text" class="folder-zone-text" id="process-zone-text" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('process-pills')">Browse…</button>
             <button class="folder-zone-add" type="button" onclick="processZoneAdd()">+ Add</button>
           </div>
         </div>
@@ -335,6 +337,7 @@
           </div>
           <div class="folder-zone-input-row">
             <input type="text" class="folder-zone-text" id="dupes-zone-text" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('dupes-pills')">Browse…</button>
             <button class="folder-zone-add" type="button" onclick="dupesZoneAdd()">+ Add</button>
           </div>
         </div>
@@ -412,8 +415,12 @@
       <div class="prune-toolbar">
         <div class="field" style="flex:1;margin-bottom:0">
           <label>Duplicate Report CSV</label>
-          <input type="text" id="prune-csv-path"
-                 placeholder="Leave blank for default: ~/rekordbox-toolkit/duplicate_report.csv">
+          <div class="drop-wrap">
+            <input type="text" id="prune-csv-path" style="flex:1"
+                   placeholder="Leave blank for default: ~/rekordbox-toolkit/duplicate_report.csv">
+            <span class="drop-badge">⤵ drop</span>
+          </div>
+          <button class="folder-zone-browse" type="button" style="margin-top:5px;width:100%" onclick="pickPathFor('prune-csv-path')">Browse…</button>
         </div>
         <button class="btn btn-ghost" style="margin-top:19px;flex-shrink:0"
                 onclick="loadPruneReport()">Load Report</button>
@@ -552,11 +559,19 @@
       <div class="field-row">
         <div class="field">
           <label>Old Path Prefix (where files used to be)</label>
-          <input type="text" id="relocate-old" placeholder="/Volumes/OLD_DRIVE/Music">
+          <div class="drop-wrap">
+            <input type="text" id="relocate-old" placeholder="/Volumes/OLD_DRIVE/Music" style="flex:1">
+            <span class="drop-badge">⤵ drop</span>
+          </div>
+          <button class="folder-zone-browse" type="button" style="margin-top:5px;width:100%" onclick="pickPathFor('relocate-old')">Browse…</button>
         </div>
         <div class="field">
           <label>New Path (where files are now)</label>
-          <input type="text" id="relocate-new" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+          <div class="drop-wrap">
+            <input type="text" id="relocate-new" placeholder="/Volumes/DJMT/DJMT PRIMARY" style="flex:1">
+            <span class="drop-badge">⤵ drop</span>
+          </div>
+          <button class="folder-zone-browse" type="button" style="margin-top:5px;width:100%" onclick="pickPathFor('relocate-new')">Browse…</button>
         </div>
       </div>
       <div class="btn-row">
@@ -620,7 +635,18 @@
     <div class="card-form">
       <div class="field">
         <label>Music Folder Path</label>
-        <input type="text" id="import-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+        <div class="folder-zone" id="import-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folder here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="import-zone-text" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('import-pills')">Browse…</button>
+            <button class="folder-zone-add" type="button" onclick="importZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="import-pills"></div>
       </div>
       <div class="btn-row">
         <button class="btn btn-ghost" onclick="runImportDry()">Preview Import</button>
@@ -668,7 +694,18 @@
     <div class="card-form">
       <div class="field">
         <label>Music Folder Path</label>
-        <input type="text" id="link-path" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+        <div class="folder-zone" id="link-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folder here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="link-zone-text" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('link-pills')">Browse…</button>
+            <button class="folder-zone-add" type="button" onclick="linkZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="link-pills"></div>
       </div>
       <div class="btn-row">
         <button class="btn btn-neon" id="btn-link" onclick="runLink()">Link Playlists</button>
@@ -732,6 +769,7 @@
           </div>
           <div class="folder-zone-input-row">
             <input type="text" class="folder-zone-text" id="normalize-zone-text" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('normalize-pills')">Browse…</button>
             <button class="folder-zone-add" type="button" onclick="normalizeZoneAdd()">+ Add</button>
           </div>
         </div>
@@ -802,6 +840,7 @@
             </div>
             <div class="folder-zone-input-row">
               <input type="text" class="folder-zone-text" id="convert-zone-text" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+              <button class="folder-zone-browse" type="button" onclick="pickFolderFor('convert-pills')">Browse…</button>
               <button class="folder-zone-add" type="button" onclick="convertZoneAdd()">+ Add</button>
             </div>
           </div>
@@ -890,14 +929,22 @@
           <label>Source folders to scan</label>
           <div id="organize-source-list" style="display:flex;flex-direction:column;gap:6px;">
             <div class="org-source-row" style="display:flex;gap:6px;align-items:center;">
-              <input type="text" class="org-source-input" placeholder="/Volumes/DJMT" style="flex:1">
+              <div class="drop-wrap" style="flex:1">
+                <input type="text" class="org-source-input" placeholder="/Volumes/DJMT" style="flex:1">
+                <span class="drop-badge">⤵ drop</span>
+              </div>
+              <button class="folder-zone-browse" type="button" onclick="pickOrgSource(this)">Browse…</button>
             </div>
           </div>
           <button type="button" onclick="orgAddSource()" style="margin-top:6px;background:none;border:1px dashed var(--border-hi);color:var(--text-dim);border-radius:var(--radius);padding:5px 12px;font-size:.8rem;cursor:pointer;width:100%;text-align:left;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">+ Add another source folder</button>
         </div>
         <div class="field" style="flex:2">
           <label>Target — organised library root</label>
-          <input type="text" id="organize-target" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+          <div class="drop-wrap">
+            <input type="text" id="organize-target" placeholder="/Volumes/DJMT/DJMT PRIMARY" style="flex:1">
+            <span class="drop-badge">⤵ drop</span>
+          </div>
+          <button class="folder-zone-browse" type="button" style="margin-top:5px;width:100%" onclick="pickPathFor('organize-target')">Browse…</button>
         </div>
       </div>
       <div class="field-row">
@@ -982,6 +1029,7 @@
           </div>
           <div class="folder-zone-input-row">
             <input type="text" class="folder-zone-text" id="novelty-zone-text" placeholder="/Volumes/Passport">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('novelty-pills')">Browse…</button>
             <button class="folder-zone-add" type="button" onclick="noveltyZoneAdd()">+ Add</button>
           </div>
         </div>
@@ -1389,7 +1437,7 @@
   </div>
 </div>
 
-<!-- ══ Welcome modal ════════════════════════════════════════════════════════ -->
+<!-- ══ Welcome modal — permission wizard ════════════════════════════════════ -->
 <div id="welcome-backdrop" class="hidden">
   <div id="welcome-modal">
     <div class="welcome-header">
@@ -1398,10 +1446,70 @@
         <h2>Welcome to SuperBox</h2>
         <p>A free, open-source rekordbox library toolkit by Guthrie Entertainment LLC</p>
       </div>
-      <button class="welcome-close" onclick="closeWelcome()" title="Close">✕</button>
     </div>
 
-    <div class="welcome-body">
+    <!-- Step 1: Intro -->
+    <div class="welcome-step active" id="wstep-intro">
+      <div class="welcome-step-body">
+        <p class="welcome-step-sub">SuperBox gives DJs tools that Rekordbox doesn't ship with — bulk path repair, audio tag writing, acoustic duplicate detection, and library organisation. Everything runs locally. No internet, no accounts, no subscription.</p>
+        <p class="welcome-step-sub">Before diving in, we need two quick decisions about what SuperBox is allowed to access. Takes about 30 seconds.</p>
+      </div>
+      <div class="welcome-footer">
+        <button class="welcome-got-it" onclick="welcomeShowStep('read')">Get Started →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Read permission -->
+    <div class="welcome-step" id="wstep-read">
+      <div class="welcome-step-body">
+        <div>
+          <span class="welcome-perm-badge read">● Read Only</span>
+          <p class="welcome-step-title" style="margin-top:12px;">May SuperBox read your RekordBox database?</p>
+        </div>
+        <p class="welcome-step-sub">Reading the database lets SuperBox see what tracks are in your library, where their files are, and whether any paths are broken. It never modifies anything at this stage.</p>
+        <div class="welcome-tool-list">
+          <div class="welcome-tool-item"><strong>▣ Library Audit</strong><span>Maps your full library, flags broken paths, orphaned entries, and missing tags.</span></div>
+          <div class="welcome-tool-item"><strong>🏷 Tag Tracks</strong><span>Cross-references the database when prioritising which files need analysis.</span></div>
+          <div class="welcome-tool-item"><strong>🔎 Find Duplicates</strong><span>Uses DB metadata for smart pre-filtering before acoustic fingerprinting.</span></div>
+        </div>
+        <div class="welcome-btn-row">
+          <button class="wbtn-accept" onclick="welcomeGrantRead()">Allow Read Access</button>
+          <button class="wbtn-deny"   onclick="welcomeDenyRead()">Skip — limited mode</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Write permission (shown after read granted) -->
+    <div class="welcome-step" id="wstep-write">
+      <div class="welcome-step-body">
+        <div>
+          <span class="welcome-perm-badge write">● Read &amp; Write</span>
+          <p class="welcome-step-title" style="margin-top:12px;">May SuperBox write to your RekordBox database?</p>
+        </div>
+        <p class="welcome-step-sub">Some tools make changes to your library. SuperBox always creates a timestamped database backup before any write operation, and RekordBox must be closed first.</p>
+        <div class="welcome-tool-list">
+          <div class="welcome-tool-item"><strong>📍 Fix Broken Paths</strong><span>Updates file paths in the database after a drive rename or folder move.</span></div>
+          <div class="welcome-tool-item"><strong>＋ Import Tracks</strong><span>Adds new audio files to your Rekordbox library.</span></div>
+          <div class="welcome-tool-item"><strong>🔗 Link Playlists</strong><span>Associates imported tracks to playlists based on folder structure.</span></div>
+          <div class="welcome-tool-item"><strong>✂ Prune Duplicates</strong><span>Removes confirmed duplicates from the database and optionally the disk.</span></div>
+        </div>
+        <div class="welcome-btn-row">
+          <button class="wbtn-accept" onclick="welcomeGrantWrite()">Allow Write Access</button>
+          <button class="wbtn-deny"   onclick="welcomeDenyWrite()">Read-only mode</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Ready (content set dynamically) -->
+    <div class="welcome-step" id="wstep-ready">
+      <div class="welcome-step-body" id="wstep-ready-body"></div>
+      <div class="welcome-footer">
+        <button class="welcome-got-it" onclick="completeSetup()">Start SuperBox →</button>
+      </div>
+    </div>
+
+    <!-- legacy placeholder kept so existing refs don't throw -->
+    <div class="welcome-body" style="display:none">
 
       <div class="welcome-section">
         <h3>Why this exists</h3>
@@ -1550,33 +1658,6 @@
 
     </div>
 
-    <!-- Permission block -->
-    <div class="welcome-permission">
-      <h4>⚠️ One thing before you start</h4>
-      <p>SuperBox needs to create a folder on your DJ drive to store logs, backups, quarantined files, and rollback savepoints. It will be placed at the same root level as your music library — nothing inside your library folder is touched.</p>
-      <div class="welcome-permission-tree" id="welcome-archive-tree">
-        <span class="hl">Your DJ Drive/</span><br>
-        ├── DJMT PRIMARY/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← your music (untouched)<br>
-        └── <span class="hl">SuperBox Archive/</span>&nbsp;&nbsp;&nbsp;&nbsp;← created by SuperBox<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;├── Savepoints/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← DB backups before every write<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;├── Quarantine/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← problem files for triage<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;├── Reports/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← audit &amp; scan reports<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;└── Logs/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← per-step operation logs
-      </div>
-      <p>May SuperBox create this folder structure on your drive?</p>
-      <div class="welcome-permission-btns">
-        <button class="welcome-got-it" id="welcome-yes-btn" onclick="welcomeGrantPermission()" style="padding:8px 22px">Yes, create folders</button>
-        <button onclick="welcomeDenyPermission()"
-          style="background:none; border:1px solid var(--border-hi); color:var(--text-muted);
-                 border-radius:7px; padding:8px 22px; font-size:.85rem; cursor:pointer;">
-          Not yet
-        </button>
-      </div>
-    </div>
-
-    <div class="welcome-footer">
-      <button class="welcome-got-it" id="welcome-letsgo-btn" onclick="closeWelcome()" disabled>Let's go →</button>
-    </div>
   </div>
 </div>
 
@@ -1804,46 +1885,150 @@ async function saveSettings() {
   btn.textContent = 'Save & Restart'; btn.disabled = false;
 }
 
-/* ── Welcome modal ─────────────────────────────────────────────────────────── */
-function openWelcome() {
-  _sbFadeBd('welcome-backdrop', true);
-  const _wmb = document.getElementById('welcome-modal');
-  void _wmb.offsetWidth; _sbAnim(_wmb, 'sb-modal-in', '.28s');
-  // Populate the archive tree with the real drive path if config is loaded
-  fetch('/api/config').then(r => r.json()).then(cfg => {
-    if (cfg.archive_root) {
-      const root   = cfg.archive_root;
-      const parent = root.split('/').slice(0, -1).join('/') || '/';
-      const name   = root.split('/').pop();
-      const music  = cfg.music_root ? cfg.music_root.split('/').pop() : 'Music Library';
-      document.getElementById('welcome-archive-tree').innerHTML =
-        `<span class="hl">${parent}/</span><br>` +
-        `├── ${music}/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← your music (untouched)<br>` +
-        `└── <span class="hl">${name}/</span>&nbsp;&nbsp;&nbsp;&nbsp;← created by SuperBox<br>` +
-        `&nbsp;&nbsp;&nbsp;&nbsp;├── Savepoints/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← DB backups before every write<br>` +
-        `&nbsp;&nbsp;&nbsp;&nbsp;├── Quarantine/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← problem files for triage<br>` +
-        `&nbsp;&nbsp;&nbsp;&nbsp;├── Reports/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← audit &amp; scan reports<br>` +
-        `&nbsp;&nbsp;&nbsp;&nbsp;└── Logs/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← per-step operation logs`;
-    }
-  }).catch(() => {});
+/* ── Welcome wizard ─────────────────────────────────────────────────────────
+   Permission keys: superbox-db-read / superbox-db-write = 'granted'|'denied'
+   Setup gate:      superbox-setup-complete = '1'                             */
+
+let _wReadGranted  = false;
+let _wWriteGranted = false;
+
+function welcomeShowStep(id) {
+  document.querySelectorAll('.welcome-step').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('wstep-' + id);
+  if (el) el.classList.add('active');
 }
+
+function openWelcome() {
+  _wReadGranted  = localStorage.getItem('superbox-db-read')  === 'granted';
+  _wWriteGranted = localStorage.getItem('superbox-db-write') === 'granted';
+  // Returning users land on the read step so they can adjust permissions
+  welcomeShowStep(localStorage.getItem('superbox-setup-complete') ? 'read' : 'intro');
+  _sbFadeBd('welcome-backdrop', true);
+  const modal = document.getElementById('welcome-modal');
+  void modal.offsetWidth; _sbAnim(modal, 'sb-modal-in', '.28s');
+}
+
 function closeWelcome() {
   _sbAnim(document.getElementById('welcome-modal'), 'sb-modal-out', '.18s', () => {
     _sbFadeBd('welcome-backdrop', false);
-    localStorage.setItem('superbox-welcome-seen', '1');
   });
 }
-function welcomeGrantPermission() {
-  localStorage.setItem('superbox-archive-permission', 'granted');
-  document.getElementById('welcome-yes-btn').textContent    = '✓ Permission granted';
-  document.getElementById('welcome-yes-btn').disabled       = true;
-  document.getElementById('welcome-letsgo-btn').disabled    = false;
-  fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
+
+function welcomeGrantRead() {
+  _wReadGranted = true;
+  welcomeShowStep('write');
 }
-function welcomeDenyPermission() {
-  localStorage.setItem('superbox-archive-permission', 'denied');
-  document.getElementById('welcome-letsgo-btn').disabled = false;
-  document.getElementById('welcome-letsgo-btn').textContent = 'Continue without folders';
+function welcomeDenyRead() {
+  _wReadGranted  = false;
+  _wWriteGranted = false;
+  _welcomeShowReady();
+}
+function welcomeGrantWrite() {
+  _wWriteGranted = true;
+  _welcomeShowReady();
+}
+function welcomeDenyWrite() {
+  _wWriteGranted = false;
+  _welcomeShowReady();
+}
+
+function _welcomeShowReady() {
+  const body = document.getElementById('wstep-ready-body');
+  if (_wReadGranted && _wWriteGranted) {
+    body.innerHTML =
+      `<p class="welcome-step-title">You're all set.</p>
+       <p class="welcome-step-sub">We'll kick off a quick library audit automatically — it's read-only and maps where Rekordbox thinks everything is. It runs silently in the background. When it's done you'll land on Tag Tracks, and the tools will have data to work with.</p>
+       <p class="welcome-step-sub" style="color:var(--safe)">✓ Full access — all tools enabled.</p>`;
+  } else if (_wReadGranted) {
+    body.innerHTML =
+      `<p class="welcome-step-title">Read-only mode.</p>
+       <p class="welcome-step-sub">We'll run a quick library audit to map your library. Available: Library Audit, Tag Tracks, Find Duplicates, Normalize, Convert, Organize, Novelty Scanner, Pipeline Builder.</p>
+       <p class="welcome-step-sub" style="color:var(--caution)">⚠ Write tools are locked: Fix Broken Paths, Import, Link Playlists, Prune. Enable them anytime via the lightbulb icon.</p>`;
+  } else {
+    body.innerHTML =
+      `<p class="welcome-step-title">Limited mode.</p>
+       <p class="welcome-step-sub">Database tools aren't available. These work without database access: Tag Tracks (file analysis), Find Duplicates (folder scan), Normalize, Convert, Organize, Novelty Scanner.</p>
+       <p class="welcome-step-sub" style="color:var(--text-dim)">Enable database access anytime via the lightbulb icon in the bottom-right corner.</p>`;
+  }
+  welcomeShowStep('ready');
+}
+
+function completeSetup() {
+  localStorage.setItem('superbox-db-read',  _wReadGranted  ? 'granted' : 'denied');
+  localStorage.setItem('superbox-db-write', _wWriteGranted ? 'granted' : 'denied');
+  localStorage.setItem('superbox-setup-complete', '1');
+  // Archive folder: auto-grant alongside write permission
+  if (_wWriteGranted) {
+    localStorage.setItem('superbox-archive-permission', 'granted');
+    fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
+  }
+  applyPermissions();
+  closeWelcome();
+  if (_wReadGranted) {
+    setTimeout(runSilentAudit, 700);
+  } else {
+    setTimeout(() => document.getElementById('step-process')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 500);
+  }
+}
+
+/* ── Permission application ──────────────────────────────────────────────── */
+function applyPermissions() {
+  const readOk  = localStorage.getItem('superbox-db-read')  === 'granted';
+  const writeOk = localStorage.getItem('superbox-db-write') === 'granted';
+  // step-audit is hidden (runs silently on setup) — no lock needed
+  // ['step-audit'] kept in applyPermissions in case card is re-shown later
+  ['step-relocate','step-import','step-link','step-prune'].forEach(id =>
+    document.getElementById(id)?.classList.toggle('permission-locked', !writeOk));
+}
+
+/* Clicking a locked card reopens the wizard at the relevant step */
+document.addEventListener('click', e => {
+  const card = e.target.closest('.card.permission-locked');
+  if (!card) return;
+  e.stopPropagation();
+  _wReadGranted  = localStorage.getItem('superbox-db-read')  === 'granted';
+  _wWriteGranted = localStorage.getItem('superbox-db-write') === 'granted';
+  const needsWrite = ['step-relocate','step-import','step-link','step-prune'].includes(card.id);
+  openWelcome();
+  welcomeShowStep(needsWrite ? 'write' : 'read');
+}, true);
+
+/* ── Silent background audit ─────────────────────────────────────────────── */
+function runSilentAudit() {
+  fetch('/api/run/audit')
+    .then(r => {
+      const reader  = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      function pump() {
+        return reader.read().then(({ done, value }) => {
+          if (done) { _onSilentAuditDone(true); return; }
+          buf += decoder.decode(value, { stream: true });
+          if (buf.includes('[DONE]'))  { reader.cancel(); _onSilentAuditDone(true);  return; }
+          if (buf.includes('[ERROR]')) { reader.cancel(); _onSilentAuditDone(false); return; }
+          return pump();
+        });
+      }
+      return pump();
+    })
+    .catch(() => _onSilentAuditDone(false));
+}
+
+function _onSilentAuditDone(ok) {
+  showToast(ok ? 'Library audit complete ✓' : 'Audit skipped — check Settings for music drive', ok ? 'success' : 'neutral');
+  refreshStatus();
+  setTimeout(() => document.getElementById('step-process')
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 900);
+}
+
+/* ── Toast notification ──────────────────────────────────────────────────── */
+function showToast(message, type = 'neutral') {
+  const t = document.createElement('div');
+  t.className = `sb-toast toast-${type}`;
+  t.textContent = message;
+  document.body.appendChild(t);
+  t.addEventListener('animationend', e => { if (e.animationName === 'sb-toast-out') t.remove(); });
 }
 
 async function interruptScan() {
@@ -2034,18 +2219,16 @@ async function refreshStatus() {
 }
 refreshStatus();
 setInterval(refreshStatus, 6000);
-// First visit: show welcome (one-time onboarding)
-// Every visit after: show the lightweight path picker
-if (!localStorage.getItem('superbox-welcome-seen')) {
+// First launch: show permission wizard (mandatory, can't skip).
+// Returning users: apply stored permissions and resume silently.
+if (!localStorage.getItem('superbox-setup-complete')) {
   openWelcome();
 } else {
+  applyPermissions();
   // Re-run archive setup silently on every launch in case drive was remounted
   if (localStorage.getItem('superbox-archive-permission') === 'granted') {
     fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
   }
-  _sbFadeBd('path-backdrop', true);
-  const _pmb = document.getElementById('path-modal-box');
-  void _pmb.offsetWidth; _sbAnim(_pmb, 'sb-modal-in', '.28s');
 }
 
 function choosePath(mode) {
@@ -2071,7 +2254,7 @@ function lsLoad(id) {
 
 async function prefillDefaults() {
   // Single-path text inputs that still map to the music root
-  const rootFields = ['import-path', 'link-path', 'relocate-new', 'organize-target', 'novelty-dest'];
+  const rootFields = ['relocate-new', 'organize-target', 'novelty-dest'];
   // Free fields — user-specific, restore from localStorage only
   const freeFields = ['relocate-old', 'dupes-output'];
 
@@ -2094,7 +2277,8 @@ async function prefillDefaults() {
         if (el && !el.value) el.value = root;
       });
       // Pill zones — seed with the music root if they're still empty
-      ['process-pills','dupes-pills','normalize-pills','convert-pills','audit-pills'].forEach(pillsId => {
+      ['process-pills','dupes-pills','normalize-pills','convert-pills','audit-pills',
+       'import-pills','link-pills'].forEach(pillsId => {
         if (document.getElementById(pillsId)?.children.length === 0) {
           addFolderPill(pillsId, root);
         }
@@ -2433,24 +2617,27 @@ function runNormalize() {
 }
 
 function runImportDry() {
-  const path = document.getElementById('import-path').value.trim();
-  if (!path) { alert('Enter a music folder path first.'); return; }
+  const paths = getFolderPaths('import-pills');
+  const path  = paths[0] || '';
+  if (!path) { alert('Add a music folder path first.'); return; }
   const p = new URLSearchParams({ path, dry_run: '1' });
   runCommand(`/api/run/import?${p}`, 'Preview Import — Dry Run', null, true, false, null);
 }
 
 function runImport() {
   if (checkRbBlock('import-rb-block')) return;
-  const path = document.getElementById('import-path').value.trim();
-  if (!path) { alert('Enter a music folder path first.'); return; }
+  const paths = getFolderPaths('import-pills');
+  const path  = paths[0] || '';
+  if (!path) { alert('Add a music folder path first.'); return; }
   const p = new URLSearchParams({ path });
   runCommand(`/api/run/import?${p}`, 'Import — Writing Tracks to Database', null, true);
 }
 
 function runLink() {
   if (checkRbBlock('link-rb-block')) return;
-  const path = document.getElementById('link-path').value.trim();
-  if (!path) { alert('Enter a music folder path first.'); return; }
+  const paths = getFolderPaths('link-pills');
+  const path  = paths[0] || '';
+  if (!path) { alert('Add a music folder path first.'); return; }
   const p = new URLSearchParams({ path });
   runCommand(`/api/run/link?${p}`, 'Link Playlists — Matching Tracks to Folders', null, true);
 }
@@ -3300,7 +3487,7 @@ function orgAddSource() {
   const row  = document.createElement('div');
   row.className = 'org-source-row';
   row.style.cssText = 'display:flex;gap:6px;align-items:center;';
-  row.innerHTML = `<input type="text" class="org-source-input" placeholder="/Volumes/AnotherDrive" style="flex:1"><button type="button" onclick="this.closest('.org-source-row').remove()" style="background:none;border:1px solid var(--border-hi);color:var(--text-dim);border-radius:var(--radius);padding:4px 9px;font-size:.8rem;cursor:pointer;flex-shrink:0;" title="Remove this source">✕</button>`;
+  row.innerHTML = `<div class="drop-wrap" style="flex:1"><input type="text" class="org-source-input" placeholder="/Volumes/AnotherDrive" style="flex:1"><span class="drop-badge">⤵ drop</span></div><button class="folder-zone-browse" type="button" onclick="pickOrgSource(this)">Browse…</button><button type="button" onclick="this.closest('.org-source-row').remove()" style="background:none;border:1px solid var(--border-hi);color:var(--text-dim);border-radius:var(--radius);padding:4px 9px;font-size:.8rem;cursor:pointer;flex-shrink:0;" title="Remove this source">✕</button>`;
   list.appendChild(row);
   const inp = row.querySelector('input');
   setupDropZone(inp);
@@ -3985,20 +4172,6 @@ closeLog = function()   { _origCloseLog();  document.body.classList.remove('log-
 /*                    Finder includes URI list data (not always guaranteed).   */
 /* 3. text/plain  — fallback for terminal-style drags (absolute paths only). */
 function _extractDropPath(e) {
-  // ── Diagnostic logging (remove once drop is confirmed working) ────────────
-  console.groupCollapsed('[SuperBox] drop event data');
-  console.log('types:', [...e.dataTransfer.types]);
-  try {
-    const _f = e.dataTransfer.files;
-    console.log('files:', _f.length > 0
-      ? [..._f].map(f => ({ name: f.name, type: f.type, size: f.size, path: f.path }))
-      : '(none)');
-  } catch(_) { console.log('files: (error reading)'); }
-  console.log('text/uri-list:', e.dataTransfer.getData('text/uri-list') || '(empty)');
-  console.log('text/plain:',    e.dataTransfer.getData('text/plain')    || '(empty)');
-  console.groupEnd();
-  // ─────────────────────────────────────────────────────────────────────────
-
   // Strategy 1: Chromium File.path — real filesystem path, no decoding needed
   const files = e.dataTransfer.files;
   if (files && files.length > 0 && files[0].path) {
@@ -4120,9 +4293,11 @@ function setupFolderZone(zoneId, pillsId, textId) {
     const path = _extractDropPath(e);
     if (path) {
       addFolderPill(pillsId, path);
-      // Brief green glow to confirm the drop was received
       zone.classList.add('drop-success');
       zone.addEventListener('animationend', () => zone.classList.remove('drop-success'), { once: true });
+    } else if (e.dataTransfer.files.length > 0 || e.dataTransfer.types.length > 0) {
+      // Path inaccessible (WebView security) — read Finder's selection instead
+      dropFolderFor(pillsId);
     }
   }, true);
 
@@ -4138,7 +4313,71 @@ function processZoneAdd()   { const t = document.getElementById('process-zone-te
 function dupesZoneAdd()     { const t = document.getElementById('dupes-zone-text');     if (t?.value.trim()) { addFolderPill('dupes-pills',     t.value.trim()); t.value = ''; } }
 function normalizeZoneAdd() { const t = document.getElementById('normalize-zone-text'); if (t?.value.trim()) { addFolderPill('normalize-pills', t.value.trim()); t.value = ''; } }
 function convertZoneAdd()   { const t = document.getElementById('convert-zone-text');   if (t?.value.trim()) { addFolderPill('convert-pills',   t.value.trim()); t.value = ''; } }
+function importZoneAdd()    { const t = document.getElementById('import-zone-text');    if (t?.value.trim()) { addFolderPill('import-pills',    t.value.trim()); t.value = ''; } }
+function linkZoneAdd()      { const t = document.getElementById('link-zone-text');      if (t?.value.trim()) { addFolderPill('link-pills',      t.value.trim()); t.value = ''; } }
 function noveltyZoneAdd()   { const t = document.getElementById('novelty-zone-text');   if (t?.value.trim()) { addFolderPill('novelty-pills',   t.value.trim()); t.value = ''; } }
+
+/* Browse buttons — always opens the native folder picker dialog */
+async function pickFolderFor(pillsId) {
+  const r = await fetch('/api/pick-folder');
+  const d = await r.json();
+  if (d.path) addFolderPill(pillsId, d.path);
+}
+async function pickPathFor(inputId) {
+  const r = await fetch('/api/pick-folder');
+  const d = await r.json();
+  if (d.path) {
+    const el = document.getElementById(inputId);
+    if (el) { el.value = d.path; el.dispatchEvent(new Event('input', { bubbles: true })); }
+  }
+}
+async function pickOrgSource(btn) {
+  /* Opens the native picker and populates the org-source-input in the same row. */
+  const r = await fetch('/api/pick-folder');
+  const d = await r.json();
+  if (d.path) {
+    const input = btn.closest('.org-source-row')?.querySelector('.org-source-input');
+    if (input) { input.value = d.path; input.dispatchEvent(new Event('input', { bubbles: true })); }
+  }
+}
+
+/* Drop fallback — reads Finder's selection (which still holds the dragged item
+   immediately after a drop), so the user never has to navigate twice.
+   source=drop tells the server not to open a picker dialog if Finder returns
+   nothing — on some drops pywebview focuses before osascript runs and Finder's
+   selection is momentarily empty. Silently returns null rather than prompting. */
+async function dropFolderFor(pillsId) {
+  // Brief pause: give macOS time to deliver the drop before querying Finder.
+  await new Promise(res => setTimeout(res, 120));
+  const r = await fetch('/api/finder-selection?source=drop');
+  const d = await r.json();
+  if (d.path) {
+    addFolderPill(pillsId, d.path);
+  } else {
+    // Retry once — pywebview focus shift can briefly clear Finder's selection
+    await new Promise(res => setTimeout(res, 400));
+    const r2 = await fetch('/api/finder-selection?source=drop');
+    const d2 = await r2.json();
+    if (d2.path) addFolderPill(pillsId, d2.path);
+  }
+}
+async function dropPathFor(inputId) {
+  await new Promise(res => setTimeout(res, 120));
+  const r = await fetch('/api/finder-selection?source=drop');
+  const d = await r.json();
+  if (d.path) {
+    const el = document.getElementById(inputId);
+    if (el) { el.value = d.path; el.dispatchEvent(new Event('input', { bubbles: true })); }
+  } else {
+    await new Promise(res => setTimeout(res, 400));
+    const r2 = await fetch('/api/finder-selection?source=drop');
+    const d2 = await r2.json();
+    if (d2.path) {
+      const el = document.getElementById(inputId);
+      if (el) { el.value = d2.path; el.dispatchEvent(new Event('input', { bubbles: true })); }
+    }
+  }
+}
 
 function runAudit() {
   const paths = getFolderPaths('audit-pills');
@@ -4201,6 +4440,9 @@ function setupDropZone(input) {
       input.dispatchEvent(new Event('input', { bubbles: true }));
       wrap.classList.add('drop-filled');
       wrap.addEventListener('animationend', () => wrap.classList.remove('drop-filled'), { once: true });
+    } else if (e.dataTransfer.files.length > 0 || e.dataTransfer.types.length > 0) {
+      // Path inaccessible — read Finder's selection instead
+      if (input.id) dropPathFor(input.id);
     }
   }, true);
 }
@@ -4209,7 +4451,7 @@ function setupAllDropZones() {
   // Single-path inputs that keep the legacy drop-wrap style
   [
     'dupes-output', 'prune-csv-path', 'relocate-old', 'relocate-new',
-    'import-path', 'link-path', 'organize-target', 'novelty-dest',
+    'organize-target', 'novelty-dest',
     'settings-custom-input'
   ].forEach(id => { const el = document.getElementById(id); if (el) setupDropZone(el); });
   document.querySelectorAll('.org-source-input').forEach(setupDropZone);
@@ -4224,7 +4466,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFolderZone('normalize-zone', 'normalize-pills', 'normalize-zone-text');
   setupFolderZone('convert-zone',   'convert-pills',   'convert-zone-text');
   setupFolderZone('novelty-zone',   'novelty-pills',   'novelty-zone-text');
-  // Legacy single-path inputs (relocate, import, link, settings, etc.)
+  setupFolderZone('import-zone',    'import-pills',    'import-zone-text');
+  setupFolderZone('link-zone',      'link-pills',      'link-zone-text');
+  // Legacy single-path inputs (relocate, prune CSV, settings, etc.)
   setupAllDropZones();
 });
 
@@ -4264,7 +4508,7 @@ async function _initStateOverlay() {
   } catch (_) {}
 }
 _initStateOverlay();
-['import-path','link-path','organize-target','novelty-dest'].forEach(id => {
+['organize-target','novelty-dest'].forEach(id => {
   const el = document.getElementById(id);
   if (el) el.addEventListener('change', () => { if (el.value.trim()) loadState(el.value.trim()); });
 });

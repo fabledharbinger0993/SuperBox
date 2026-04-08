@@ -36,3 +36,11 @@ soundfile>=0.12.1
 
 pyacoustid==1.3
 # Acoustic fingerprinting wrapper; requires fpcalc binary (see above)
+
+pywebview>=5.0
+# Native OS window (WKWebView on macOS) — replaces the browser launch step.
+# Enables real drag-and-drop path delivery and a proper .app experience.
+
+pyinstaller>=6.0
+# Bundles Python + all deps into a standalone .app.  Run build.sh to produce
+# dist/SuperBox.app.  Not needed at runtime — dev/build tool only.
