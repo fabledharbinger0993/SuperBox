@@ -1909,8 +1909,15 @@ body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28
   gap: 14px;
   margin-top: 16px;
 }
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 16px;
+}
 @media (max-width: 720px) {
   .audit-grid { grid-template-columns: 1fr; }
+  .card-grid  { grid-template-columns: 1fr; }
 }
 .audit-card {
   background: var(--surface);

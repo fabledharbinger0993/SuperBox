@@ -412,18 +412,25 @@
 
     <div class="card-form">
       <!-- Load report -->
-      <div class="prune-toolbar">
-        <div class="field" style="flex:1;margin-bottom:0">
-          <label>Duplicate Report CSV</label>
-          <div class="drop-wrap">
-            <input type="text" id="prune-csv-path" style="flex:1"
-                   placeholder="Leave blank for default: ~/rekordbox-toolkit/duplicate_report.csv">
-            <span class="drop-badge">⤵ drop</span>
+      <div class="prune-toolbar" style="flex-direction:column;gap:8px">
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <div style="flex:1">
+            <label style="font-size:.8rem;color:var(--text-muted);margin-bottom:6px;display:block;font-weight:500;">Duplicate Report CSV</label>
+            <div class="folder-zone" id="prune-csv-zone">
+              <div class="folder-zone-hint">
+                <strong>⤵ Drop CSV report here</strong>
+                or type the path and press Enter
+              </div>
+              <div class="folder-zone-input-row">
+                <input type="text" class="folder-zone-text" id="prune-csv-path"
+                       placeholder="Leave blank for default: ~/rekordbox-toolkit/duplicate_report.csv">
+                <button class="folder-zone-browse" type="button" onclick="pickPathFor('prune-csv-path')">Browse…</button>
+              </div>
+            </div>
           </div>
-          <button class="folder-zone-browse" type="button" style="margin-top:5px;width:100%" onclick="pickPathFor('prune-csv-path')">Browse…</button>
+          <button class="btn btn-ghost" style="margin-top:26px;flex-shrink:0"
+                  onclick="loadPruneReport()">Load Report</button>
         </div>
-        <button class="btn btn-ghost" style="margin-top:19px;flex-shrink:0"
-                onclick="loadPruneReport()">Load Report</button>
       </div>
 
       <!-- Review area — hidden until report is loaded -->
@@ -556,25 +563,48 @@
     </div>
 
     <div class="card-form">
-      <div class="field-row">
-        <div class="field">
-          <label>Old Path Prefix (where files used to be)</label>
-          <div class="drop-wrap">
-            <input type="text" id="relocate-old" placeholder="/Volumes/OLD_DRIVE/Music" style="flex:1">
-            <span class="drop-badge">⤵ drop</span>
+      <div class="card-grid">
+
+        <!-- Left pane: Old path -->
+        <div class="audit-card">
+          <div class="audit-panel-title">
+            <img src="/static/icon-move.png" alt="" class="audit-panel-icon">
+            Old Path — where files used to be
           </div>
-          <button class="folder-zone-browse" type="button" style="margin-top:5px;width:100%" onclick="pickPathFor('relocate-old')">Browse…</button>
-        </div>
-        <div class="field">
-          <label>New Path (where files are now)</label>
-          <div class="drop-wrap">
-            <input type="text" id="relocate-new" placeholder="/Volumes/DJMT/DJMT PRIMARY" style="flex:1">
-            <span class="drop-badge">⤵ drop</span>
+          <p class="audit-panel-blurb">The path prefix currently stored in the Rekordbox database. Does not need to exist on disk — it's matched as text.</p>
+          <div class="folder-zone" id="relocate-old-zone">
+            <div class="folder-zone-hint">
+              <strong>⤵ Drop old folder here</strong>
+              or type the old path prefix
+            </div>
+            <div class="folder-zone-input-row">
+              <input type="text" class="folder-zone-text" id="relocate-old" placeholder="/Volumes/OLD_DRIVE/Music">
+              <button class="folder-zone-browse" type="button" onclick="pickPathFor('relocate-old')">Browse…</button>
+            </div>
           </div>
-          <button class="folder-zone-browse" type="button" style="margin-top:5px;width:100%" onclick="pickPathFor('relocate-new')">Browse…</button>
         </div>
+
+        <!-- Right pane: New path -->
+        <div class="audit-card">
+          <div class="audit-panel-title">
+            <img src="/static/icon-move.png" alt="" class="audit-panel-icon">
+            New Path — where files are now
+          </div>
+          <p class="audit-panel-blurb">The new root where the files actually live. Every matching database path gets its prefix swapped to this location.</p>
+          <div class="folder-zone" id="relocate-new-zone">
+            <div class="folder-zone-hint">
+              <strong>⤵ Drop new folder here</strong>
+              or type / browse to the new root
+            </div>
+            <div class="folder-zone-input-row">
+              <input type="text" class="folder-zone-text" id="relocate-new" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+              <button class="folder-zone-browse" type="button" onclick="pickPathFor('relocate-new')">Browse…</button>
+            </div>
+          </div>
+        </div>
+
       </div>
-      <div class="btn-row">
+      <div class="btn-row" style="margin-top:12px">
         <button class="btn btn-neon" id="btn-relocate" onclick="runRelocate()">Relocate Paths</button>
       </div>
       <div class="rb-block-msg" id="relocate-rb-block">
@@ -924,28 +954,48 @@
     </div>
 
     <div class="card-form">
-      <div class="field-row">
-        <div class="field" style="flex:2">
-          <label>Source folders to scan</label>
-          <div id="organize-source-list" style="display:flex;flex-direction:column;gap:6px;">
-            <div class="org-source-row" style="display:flex;gap:6px;align-items:center;">
-              <div class="drop-wrap" style="flex:1">
-                <input type="text" class="org-source-input" placeholder="/Volumes/DJMT" style="flex:1">
-                <span class="drop-badge">⤵ drop</span>
-              </div>
-              <button class="folder-zone-browse" type="button" onclick="pickOrgSource(this)">Browse…</button>
+      <div class="card-grid">
+
+        <!-- Left pane: Source folders (pill zone) -->
+        <div class="audit-card">
+          <div class="audit-panel-title">
+            <img src="/static/icon-organizer.png" alt="" class="audit-panel-icon">
+            Source Folders — where to scan
+          </div>
+          <p class="audit-panel-blurb">Add every folder you want reorganised. Files are walked recursively — add top-level roots, not individual artist folders.</p>
+          <div class="folder-zone" id="organize-zone">
+            <div class="folder-zone-hint">
+              <strong>⤵ Drop folders here</strong>
+              or type a path and press Enter
+            </div>
+            <div class="folder-zone-input-row">
+              <input type="text" class="folder-zone-text" id="organize-zone-text" placeholder="/Volumes/DJMT">
+              <button class="folder-zone-browse" type="button" onclick="pickFolderFor('organize-source-pills')">Browse…</button>
+              <button class="folder-zone-add" type="button" onclick="organizeZoneAdd()">+ Add</button>
             </div>
           </div>
-          <button type="button" onclick="orgAddSource()" style="margin-top:6px;background:none;border:1px dashed var(--border-hi);color:var(--text-dim);border-radius:var(--radius);padding:5px 12px;font-size:.8rem;cursor:pointer;width:100%;text-align:left;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">+ Add another source folder</button>
+          <div class="folder-pills" id="organize-source-pills"></div>
         </div>
-        <div class="field" style="flex:2">
-          <label>Target — organised library root</label>
-          <div class="drop-wrap">
-            <input type="text" id="organize-target" placeholder="/Volumes/DJMT/DJMT PRIMARY" style="flex:1">
-            <span class="drop-badge">⤵ drop</span>
+
+        <!-- Right pane: Target (single-path zone) -->
+        <div class="audit-card">
+          <div class="audit-panel-title">
+            <img src="/static/icon-organizer.png" alt="" class="audit-panel-icon">
+            Target — organised library root
           </div>
-          <button class="folder-zone-browse" type="button" style="margin-top:5px;width:100%" onclick="pickPathFor('organize-target')">Browse…</button>
+          <p class="audit-panel-blurb">The root where files will be moved or copied into the Artist / Album / Track hierarchy. Must be writable.</p>
+          <div class="folder-zone" id="organize-target-zone">
+            <div class="folder-zone-hint">
+              <strong>⤵ Drop target folder here</strong>
+              or type / browse to the root
+            </div>
+            <div class="folder-zone-input-row">
+              <input type="text" class="folder-zone-text" id="organize-target" placeholder="/Volumes/DJMT/DJMT PRIMARY">
+              <button class="folder-zone-browse" type="button" onclick="pickPathFor('organize-target')">Browse…</button>
+            </div>
+          </div>
         </div>
+
       </div>
       <div class="field-row">
         <div class="field">
@@ -2278,7 +2328,7 @@ async function prefillDefaults() {
       });
       // Pill zones — seed with the music root if they're still empty
       ['process-pills','dupes-pills','normalize-pills','convert-pills','audit-pills',
-       'import-pills','link-pills'].forEach(pillsId => {
+       'import-pills','link-pills','organize-source-pills'].forEach(pillsId => {
         if (document.getElementById(pillsId)?.children.length === 0) {
           addFolderPill(pillsId, root);
         }
@@ -3482,18 +3532,6 @@ async function runPipeline(dryRun = true, confirmMode = false) {
   }
 }
 
-function orgAddSource() {
-  const list = document.getElementById('organize-source-list');
-  const row  = document.createElement('div');
-  row.className = 'org-source-row';
-  row.style.cssText = 'display:flex;gap:6px;align-items:center;';
-  row.innerHTML = `<div class="drop-wrap" style="flex:1"><input type="text" class="org-source-input" placeholder="/Volumes/AnotherDrive" style="flex:1"><span class="drop-badge">⤵ drop</span></div><button class="folder-zone-browse" type="button" onclick="pickOrgSource(this)">Browse…</button><button type="button" onclick="this.closest('.org-source-row').remove()" style="background:none;border:1px solid var(--border-hi);color:var(--text-dim);border-radius:var(--radius);padding:4px 9px;font-size:.8rem;cursor:pointer;flex-shrink:0;" title="Remove this source">✕</button>`;
-  list.appendChild(row);
-  const inp = row.querySelector('input');
-  setupDropZone(inp);
-  inp.focus();
-}
-
 function orgUpdateMode(val) {
   const badge = document.getElementById('organize-risk-badge');
   if (badge) {
@@ -3508,8 +3546,7 @@ function orgUpdateMode(val) {
 }
 
 function runOrganize() {
-  const sources  = Array.from(document.querySelectorAll('.org-source-input'))
-                        .map(i => i.value.trim()).filter(Boolean);
+  const sources  = getFolderPaths('organize-source-pills');
   const target   = document.getElementById('organize-target').value.trim();
   const dryRun   = document.getElementById('organize-dry-run').checked;
   const workers  = document.getElementById('organize-workers')?.value || '1';
@@ -4252,6 +4289,49 @@ function getFolderPaths(pillsId) {
     .map(p => p.dataset.path).filter(Boolean);
 }
 
+/* Single-path drop zone — same glowing visual as setupFolderZone but populates
+   a plain text input directly rather than a pills container.
+   Used by: Relocate (old + new), Prune CSV, Organize target.              */
+function setupSinglePathZone(zoneId, inputId) {
+  const zone  = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+  if (!zone || !input || zone.dataset.zoneReady) return;
+  zone.dataset.zoneReady = '1';
+
+  let _dc = 0;
+
+  zone.addEventListener('dragenter', e => {
+    e.preventDefault();
+    if (++_dc === 1) zone.classList.add('drag-over');
+  }, true);
+
+  zone.addEventListener('dragleave', () => {
+    if (--_dc <= 0) { _dc = 0; zone.classList.remove('drag-over'); }
+  }, true);
+
+  zone.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
+  }, true);
+
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    _dc = 0;
+    zone.classList.remove('drag-over');
+    const path = _extractDropPath(e);
+    if (path) {
+      input.value = path;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      zone.classList.add('drop-success');
+      zone.addEventListener('animationend', () => zone.classList.remove('drop-success'), { once: true });
+    } else if (e.dataTransfer.files.length > 0 || e.dataTransfer.types.length > 0) {
+      dropPathFor(inputId);
+    }
+  }, true);
+}
+
 function setupFolderZone(zoneId, pillsId, textId) {
   const zone = document.getElementById(zoneId);
   const text = document.getElementById(textId);
@@ -4314,6 +4394,7 @@ function dupesZoneAdd()     { const t = document.getElementById('dupes-zone-text
 function normalizeZoneAdd() { const t = document.getElementById('normalize-zone-text'); if (t?.value.trim()) { addFolderPill('normalize-pills', t.value.trim()); t.value = ''; } }
 function convertZoneAdd()   { const t = document.getElementById('convert-zone-text');   if (t?.value.trim()) { addFolderPill('convert-pills',   t.value.trim()); t.value = ''; } }
 function importZoneAdd()    { const t = document.getElementById('import-zone-text');    if (t?.value.trim()) { addFolderPill('import-pills',    t.value.trim()); t.value = ''; } }
+function organizeZoneAdd()  { const t = document.getElementById('organize-zone-text');  if (t?.value.trim()) { addFolderPill('organize-source-pills', t.value.trim()); t.value = ''; } }
 function linkZoneAdd()      { const t = document.getElementById('link-zone-text');      if (t?.value.trim()) { addFolderPill('link-pills',      t.value.trim()); t.value = ''; } }
 function noveltyZoneAdd()   { const t = document.getElementById('novelty-zone-text');   if (t?.value.trim()) { addFolderPill('novelty-pills',   t.value.trim()); t.value = ''; } }
 
@@ -4331,16 +4412,6 @@ async function pickPathFor(inputId) {
     if (el) { el.value = d.path; el.dispatchEvent(new Event('input', { bubbles: true })); }
   }
 }
-async function pickOrgSource(btn) {
-  /* Opens the native picker and populates the org-source-input in the same row. */
-  const r = await fetch('/api/pick-folder');
-  const d = await r.json();
-  if (d.path) {
-    const input = btn.closest('.org-source-row')?.querySelector('.org-source-input');
-    if (input) { input.value = d.path; input.dispatchEvent(new Event('input', { bubbles: true })); }
-  }
-}
-
 /* Drop fallback — reads Finder's selection (which still holds the dragged item
    immediately after a drop), so the user never has to navigate twice.
    source=drop tells the server not to open a picker dialog if Finder returns
@@ -4455,11 +4526,8 @@ function setupDropZone(input) {
 function setupAllDropZones() {
   // Single-path inputs that keep the legacy drop-wrap style
   [
-    'dupes-output', 'prune-csv-path', 'relocate-old', 'relocate-new',
-    'organize-target', 'novelty-dest',
-    'settings-custom-input'
+    'dupes-output', 'novelty-dest',
   ].forEach(id => { const el = document.getElementById(id); if (el) setupDropZone(el); });
-  document.querySelectorAll('.org-source-input').forEach(setupDropZone);
 }
 
 /* Wire all drop zones once the DOM is confirmed ready */
@@ -4473,7 +4541,13 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFolderZone('novelty-zone',   'novelty-pills',   'novelty-zone-text');
   setupFolderZone('import-zone',    'import-pills',    'import-zone-text');
   setupFolderZone('link-zone',      'link-pills',      'link-zone-text');
-  // Legacy single-path inputs (relocate, prune CSV, settings, etc.)
+  setupFolderZone('organize-zone',  'organize-source-pills', 'organize-zone-text');
+  // Single-path zones (visual feedback + Browse/drop, no pills)
+  setupSinglePathZone('relocate-old-zone',    'relocate-old');
+  setupSinglePathZone('relocate-new-zone',    'relocate-new');
+  setupSinglePathZone('prune-csv-zone',       'prune-csv-path');
+  setupSinglePathZone('organize-target-zone', 'organize-target');
+  // Legacy single-path inputs (dupes output, settings, etc.)
   setupAllDropZones();
 });
 
