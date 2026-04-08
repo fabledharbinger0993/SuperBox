@@ -10,6 +10,15 @@
 # and update_content_path call signatures are version-sensitive — test after
 # any pyrekordbox upgrade before distributing a new release.
 
+flask>=3.0
+# Web framework — routes, SSE streaming, JSON responses
+
+waitress>=3.0
+# Production WSGI server (Automator-safe: no stdout bleed unlike dev server)
+
+numpy>=1.26
+# Required by librosa for audio analysis
+
 pyrekordbox==0.4.4
 # Pin any pyrekordbox upgrade before distributing a new release.
 

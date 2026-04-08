@@ -248,7 +248,7 @@ DEPENDENCIES: list[tuple[str, object, str, str, str]] = [
     ),
     (
         "librosa",
-        lambda: has_python_module("librosa"),
+        lambda: _has_python_module("librosa"),
         "",
         "pip install librosa",
         "process (BPM + key detection)",

@@ -47,8 +47,11 @@ def save_state(library_root: str, state: dict):
         return
     state["last_updated"] = datetime.now(timezone.utc).isoformat()
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(state, f, indent=2)
+    except OSError as exc:
+        log.warning("state_tracker: could not write state file %s — %s", path, exc)
 
 def mark_step_complete(library_root: str, step: str, exit_code: int):
     """Journal success/failure for a step. Safe no-op if no root."""

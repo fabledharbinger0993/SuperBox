@@ -405,7 +405,7 @@ def scan_duplicates(
     *,
     max_workers: int = 1,
     pause_seconds: float = 0.0,
-) -> list[DuplicateGroup]:
+) -> ScanResult:
     """
     Fingerprint all audio files under root and return groups of duplicates.
 

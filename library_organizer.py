@@ -85,7 +85,7 @@ def _normalize_artist(name: str) -> str:
         if stripped == name:
             break
         name = stripped
-    return name or name  # never return empty
+    return name or "Unknown"
 
 
 def _folder_artist(path: Path) -> str | None:

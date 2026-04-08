@@ -333,6 +333,7 @@ def import_directory(
     dry_run: bool = False,
     resume: bool = False,
 ) -> ImportReport:
+    clear_caches()  # reset per-session artist/album ID cache before each run
     """
     Import all audio files under root into the database.
 

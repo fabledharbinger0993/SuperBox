@@ -412,13 +412,21 @@ def scan_novel(
         with ThreadPoolExecutor(max_workers=max_workers) as ex:
             futures = {ex.submit(_process, t): t for t in src_tracks}
             for future in as_completed(futures):
-                nonlocal_done = done  # captured below
                 try:
                     r = future.result()
                 except Exception as exc:
                     r = NovelTrack(path=futures[future], action="error",
                                    reason=str(exc))
-                _tally(r, result)
+                if r.action in ("copied", "dry_run"):
+                    copied  += 1
+                    result.novel.append(r)
+                elif r.action == "skipped":
+                    skipped += 1
+                    result.present.append(futures[future])
+                elif r.action == "error":
+                    errors  += 1
+                    result.errors.append(futures[future])
+                    log.error("Error processing %s: %s", futures[future].name, r.reason)
                 done += 1; _emit()
     else:
         for i, src in enumerate(src_tracks):

@@ -143,7 +143,7 @@ def build_fuzzy_index(files: list[Path]) -> dict[str, Path]:
         if key in index:
             log.warning(
                 "Fuzzy index stem collision: %r — keeping %s, dropping %s",
-                key, p.name, index[key].name,
+                key, index[key].name, p.name,
             )
         index[key] = p
     return index

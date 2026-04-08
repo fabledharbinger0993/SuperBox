@@ -704,8 +704,11 @@ def api_duplicates_load():
       per_page  — groups per page (default 200)
     """
     csv_path_str = request.args.get("csv_path", "").strip()
-    page     = max(0, int(request.args.get("page",     0)))
-    per_page = max(1, int(request.args.get("per_page", 200)))
+    try:
+        page     = max(0, int(request.args.get("page",     0)))
+        per_page = max(1, int(request.args.get("per_page", 200)))
+    except (ValueError, TypeError):
+        return jsonify({"error": "page and per_page must be integers"}), 400
 
     csv_path = (
         Path(csv_path_str)

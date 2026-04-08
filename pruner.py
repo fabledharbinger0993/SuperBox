@@ -277,6 +277,7 @@ def prune_files(
     file_paths: list[str],
     db,
     log=None,
+    permanent: bool = False,
 ) -> dict:
     """
     Remove file_paths from DjmdContent and move them to a timestamped
@@ -296,9 +297,13 @@ def prune_files(
             log(msg)
 
     stamp     = datetime.now().strftime("%Y%m%d_%H%M%S")
-    trash_dir = Path.home() / ".Trash" / f"SuperBox_Pruned_{stamp}"
-    trash_dir.mkdir(parents=True, exist_ok=True)
-    emit(f"Recovery folder → {trash_dir}")
+    if permanent:
+        trash_dir = None
+        emit("⚠  Permanent delete mode — files will NOT be recoverable")
+    else:
+        trash_dir = Path.home() / ".Trash" / f"SuperBox_Pruned_{stamp}"
+        trash_dir.mkdir(parents=True, exist_ok=True)
+        emit(f"Recovery folder → {trash_dir}")
     emit("")
 
     db_removed = 0
@@ -325,8 +330,9 @@ def prune_files(
 
     emit("")
 
-    # ── Step 2: Move files to recovery folder ──────────────────────────────
-    emit("  Moving files to recovery folder…")
+    # ── Step 2: Move/delete files ──────────────────────────────────────────
+    action_label = "Permanently deleting" if permanent else "Moving files to recovery folder"
+    emit(f"  {action_label}…")
     for path in file_paths:
         p = Path(path)
         if not p.exists():
@@ -334,22 +340,27 @@ def prune_files(
             skipped += 1
             continue
         try:
-            dest = trash_dir / p.name
-            # Handle name collisions within the recovery folder
-            if dest.exists():
-                dest = trash_dir / f"{p.stem}__{p.parent.name}{p.suffix}"
-            shutil.move(str(p), str(dest))
-            files_moved += 1
-            emit(f"    Moved ✓  {p.name}")
+            if permanent:
+                p.unlink()
+                files_moved += 1
+                emit(f"    Deleted ✓  {p.name}")
+            else:
+                dest = trash_dir / p.name
+                # Handle name collisions within the recovery folder
+                if dest.exists():
+                    dest = trash_dir / f"{p.stem}__{p.parent.name}{p.suffix}"
+                shutil.move(str(p), str(dest))
+                files_moved += 1
+                emit(f"    Moved ✓  {p.name}")
         except Exception as exc:
-            msg = f"Could not move {p.name}: {exc}"
+            msg = f"Could not {'delete' if permanent else 'move'} {p.name}: {exc}"
             errors.append(msg)
-            emit(f"    Move ✗  {msg}")
+            emit(f"    {'Delete' if permanent else 'Move'} ✗  {msg}")
 
     emit("")
     emit("═══ PRUNE SUMMARY ═══")
-    emit(f"  Database entries removed : {db_removed}")
-    emit(f"  Files moved to recovery  : {files_moved}")
+    emit(f"  Database entries removed        : {db_removed}")
+    emit(f"  Files {'permanently deleted' if permanent else 'moved to recovery'} : {files_moved}")
     if skipped:
         emit(f"  Skipped (not on disk)    : {skipped}")
     if errors:

@@ -570,8 +570,7 @@ def process_directory(
             edited += 1
             if r.bpm_written or r.key_written:
                 bpm_key_written += 1
-            if r.bpm_written or r.key_written:
-                tags_written += 1
+            tags_written += 1  # all writes: bpm, key, or normalisation
         elif r.ok:
             clean += 1
         # Build scan index entry — duration via soundfile header (fast, no decode)
