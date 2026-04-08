@@ -3985,6 +3985,20 @@ closeLog = function()   { _origCloseLog();  document.body.classList.remove('log-
 /*                    Finder includes URI list data (not always guaranteed).   */
 /* 3. text/plain  — fallback for terminal-style drags (absolute paths only). */
 function _extractDropPath(e) {
+  // ── Diagnostic logging (remove once drop is confirmed working) ────────────
+  console.groupCollapsed('[SuperBox] drop event data');
+  console.log('types:', [...e.dataTransfer.types]);
+  try {
+    const _f = e.dataTransfer.files;
+    console.log('files:', _f.length > 0
+      ? [..._f].map(f => ({ name: f.name, type: f.type, size: f.size, path: f.path }))
+      : '(none)');
+  } catch(_) { console.log('files: (error reading)'); }
+  console.log('text/uri-list:', e.dataTransfer.getData('text/uri-list') || '(empty)');
+  console.log('text/plain:',    e.dataTransfer.getData('text/plain')    || '(empty)');
+  console.groupEnd();
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Strategy 1: Chromium File.path — real filesystem path, no decoding needed
   const files = e.dataTransfer.files;
   if (files && files.length > 0 && files[0].path) {
