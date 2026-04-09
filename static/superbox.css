@@ -33,7 +33,7 @@
   --sans: system-ui,-apple-system,'Segoe UI',sans-serif;
 
   --radius: 8px;
-  --log-h: 340px;
+  --log-h: clamp(180px, 30vh, 400px);
   --scan-bar-h: 44px;
 }
 
