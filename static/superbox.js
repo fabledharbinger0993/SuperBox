@@ -2158,7 +2158,7 @@ async function executePrune() {
     const res = await fetch('/api/prune/stage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paths, permanent }),
+      body: JSON.stringify({ paths, permanent, csv_path: pruneCsvPath }),
     });
     const data = await res.json();
     if (!res.ok || !data.token) throw new Error(data.error || 'stage failed');

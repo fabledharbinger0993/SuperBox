@@ -724,20 +724,43 @@ _report_cache: dict[str, dict] = {}
 @app.route("/api/prune/stage", methods=["POST"])
 def api_prune_stage():
     """
-    Accept a JSON body {"paths": [...], "permanent": false} and return a single-use token.
-    The token is consumed by GET /api/run/prune?token=<uuid>.
+    Accept a JSON body {"paths": [...], "permanent": false, "csv_path": "..."} and
+    return a single-use token consumed by GET /api/run/prune?token=<uuid>.
+
+    Builds a keeper_map {remove_path → keep_path} from the cached report so that
+    prune_files() can re-thread playlist references before deleting content rows.
     """
     try:
         data = request.get_json(force=True, silent=True) or {}
         paths = data.get("paths", [])
         if not isinstance(paths, list):
             return jsonify({"error": "paths must be a list"}), 400
+
+        # Build keeper_map from the cached report (populated by /api/duplicates/load)
+        keeper_map: dict[str, str] = {}
+        csv_path_str = data.get("csv_path", "").strip()
+        csv_path = (
+            Path(csv_path_str)
+            if csv_path_str
+            else Path.home() / "rekordbox-toolkit" / "duplicate_report.csv"
+        )
+        cache_key = str(csv_path.resolve())
+        cached = _report_cache.get(cache_key)
+        if cached:
+            for g in cached["groups"]:
+                keep_entry = next((e for e in g["entries"] if e["action"] == "KEEP"), None)
+                if keep_entry:
+                    for e in g["entries"]:
+                        if e["action"] == "REVIEW_REMOVE":
+                            keeper_map[e["file_path"]] = keep_entry["file_path"]
+
         token = str(uuid.uuid4())
         _prune_token_store[token] = {
-            "paths":     paths,
-            "permanent": bool(data.get("permanent", False)),
+            "paths":      paths,
+            "permanent":  bool(data.get("permanent", False)),
+            "keeper_map": keeper_map,
         }
-        return jsonify({"token": token})
+        return jsonify({"token": token, "keeper_map_size": len(keeper_map)})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -895,8 +918,9 @@ def api_run_prune():
     """
     token     = request.args.get("token", "")
     staged    = _prune_token_store.pop(token, {})
-    paths: list[str] = staged.get("paths", [])
-    permanent: bool  = staged.get("permanent", False)
+    paths: list[str]      = staged.get("paths", [])
+    permanent: bool       = staged.get("permanent", False)
+    keeper_map: dict      = staged.get("keeper_map", {})
 
     log_q: queue.Queue = queue.Queue()
 
@@ -920,7 +944,7 @@ def api_run_prune():
 
             with write_db(_DB) as db:
                 prune_files(paths, db, log=lambda m: log_q.put(("line", m)),
-                            permanent=permanent)
+                            permanent=permanent, keeper_map=keeper_map)
 
             _prune_root = staged.get("library_root", "")
             if not _prune_root:

@@ -273,23 +273,72 @@ def load_report(csv_path: Path, db=None) -> list[DupeGroup]:
 
 # ── Public: prune files ───────────────────────────────────────────────────────
 
+def _rethread_playlists(remove_content, keeper_path: str, db, emit) -> int:
+    """
+    Before a duplicate content row is deleted, re-point any DjmdSongPlaylist
+    entries that reference it to the keeper track instead.
+
+    For each playlist that contains the duplicate:
+      - If the keeper is NOT already in that playlist → update ContentID in place.
+      - If the keeper IS already in that playlist → delete the duplicate's entry
+        (the keeper already represents the track there; adding another would
+        create a redundant entry).
+
+    Returns the number of playlist slots re-threaded (updated, not dropped).
+    """
+    keeper_rows = db.get_content(FolderPath=keeper_path)
+    if not keeper_rows:
+        emit(f"      ⚠  Keeper not in DB ({Path(keeper_path).name}) — playlist entries left intact")
+        return 0
+
+    keeper_content = keeper_rows[0]
+    song_rows = db.get_playlist_songs(ContentID=remove_content.ID)
+    if not song_rows:
+        return 0
+
+    rethreaded = 0
+    for song_row in song_rows:
+        playlist_id = song_row.PlaylistID
+        # Check whether keeper is already in this playlist
+        already_there = db.get_playlist_songs(
+            ContentID=keeper_content.ID, PlaylistID=playlist_id
+        )
+        if already_there:
+            # Keeper already present — just drop the duplicate's slot
+            db.session.delete(song_row)
+        else:
+            # Re-point the slot to the keeper
+            song_row.ContentID = keeper_content.ID
+            rethreaded += 1
+
+    return rethreaded
+
+
 def prune_files(
     file_paths: list[str],
     db,
     log=None,
     permanent: bool = False,
+    keeper_map: Optional[dict[str, str]] = None,
 ) -> dict:
     """
     Remove file_paths from DjmdContent and move them to a timestamped
     recovery folder inside ~/Trash/.
 
+    keeper_map (optional): {remove_path → keeper_path}
+      When provided, any DjmdSongPlaylist entries pointing at a duplicate are
+      re-threaded to point at the keeper *before* the duplicate row is deleted.
+      This preserves playlist membership — the track stays in every playlist
+      it was in, now backed by the file that is being kept.
+
     Order of operations:
       1. Create recovery folder in Trash.
-      2. Remove DB entries (with the backup already created by write_db).
-      3. Move files to recovery folder.
+      2. Re-thread playlist references for each duplicate that has a keeper.
+      3. Remove DB entries (with the backup already created by write_db).
+      4. Move files to recovery folder.
 
     Returns a summary dict:
-      { db_removed, files_moved, skipped, errors, trash_dir }
+      { db_removed, files_moved, skipped, errors, trash_dir, playlists_rethreaded }
     """
 
     def emit(msg: str) -> None:
@@ -309,15 +358,23 @@ def prune_files(
     db_removed = 0
     files_moved = 0
     skipped    = 0
+    playlists_rethreaded = 0
     errors: list[str] = []
 
-    # ── Step 1: Remove from database ──────────────────────────────────────
+    # ── Step 1: Remove from database (with playlist re-threading) ─────────
     emit("  Removing from RekordBox database…")
     for path in file_paths:
         try:
             rows = db.get_content(FolderPath=path)
             if rows:
                 for row in rows:
+                    # Re-thread playlist slots before deleting the content row
+                    keeper_path = (keeper_map or {}).get(path)
+                    if keeper_path:
+                        n = _rethread_playlists(row, keeper_path, db, emit)
+                        if n:
+                            playlists_rethreaded += n
+                            emit(f"      ↪  {n} playlist slot(s) re-threaded to keeper")
                     db.session.delete(row)
                 db_removed += 1
                 emit(f"    DB ✓  {Path(path).name}")
@@ -360,6 +417,8 @@ def prune_files(
     emit("")
     emit("═══ PRUNE SUMMARY ═══")
     emit(f"  Database entries removed        : {db_removed}")
+    if playlists_rethreaded:
+        emit(f"  Playlist slots re-threaded     : {playlists_rethreaded}")
     emit(f"  Files {'permanently deleted' if permanent else 'moved to recovery'} : {files_moved}")
     if skipped:
         emit(f"  Skipped (not on disk)    : {skipped}")
@@ -371,9 +430,10 @@ def prune_files(
     emit("═════════════════════")
 
     return {
-        "db_removed":  db_removed,
-        "files_moved": files_moved,
-        "skipped":     skipped,
-        "errors":      errors,
-        "trash_dir":   str(trash_dir),
+        "db_removed":           db_removed,
+        "files_moved":          files_moved,
+        "skipped":              skipped,
+        "errors":               errors,
+        "trash_dir":            str(trash_dir),
+        "playlists_rethreaded": playlists_rethreaded,
     }
