@@ -703,6 +703,51 @@ body.log-open #scan-bar { bottom: var(--log-h); }
 }
 
 /* ── Prune duplicates UI ───────────────────────────────────────────────── */
+
+/* Flat explanation blocks */
+.prune-explain {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 18px 20px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 18px;
+}
+.prune-explain-block { display: flex; flex-direction: column; gap: 5px; }
+.prune-explain-label {
+  font-size: .72rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.prune-explain-block p,
+.prune-explain-block ul { margin: 0; font-size: .83rem; color: var(--text-dim); line-height: 1.55; }
+.prune-explain-block ul { padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+/* Auto-populated report file display */
+.prune-report-row {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 14px;
+}
+.prune-report-file {
+  display: flex; align-items: center; gap: 12px;
+  flex: 1;
+  padding: 10px 14px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+.prune-report-file-icon { width: 28px; height: 28px; object-fit: contain; opacity: .85; }
+.prune-report-file-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.prune-report-file-label {
+  font-size: .72rem; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.prune-report-file-path {
+  font-size: .8rem; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: monospace;
+}
+.prune-report-file-path.populated { color: var(--text); }
+
 .prune-toolbar {
   display: flex; align-items: center; gap: 10px;
   flex-wrap: wrap; margin-bottom: 4px;

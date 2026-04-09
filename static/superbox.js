@@ -2947,7 +2947,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Single-path zones (visual feedback + Browse/drop, no pills)
   setupFolderZone('relocate-old-zone', 'relocate-old-pills', 'relocate-old-zone-text');
   setupSinglePathZone('relocate-new-zone',    'relocate-new');
-  setupSinglePathZone('prune-csv-zone',       'prune-csv-path');
+  // prune-csv-path is a hidden input — sync its value to the display element
+  const _pruneCsvInput = document.getElementById('prune-csv-path');
+  if (_pruneCsvInput) {
+    _pruneCsvInput.addEventListener('input', () => {
+      const display = document.getElementById('prune-report-path-display');
+      if (!display) return;
+      const v = _pruneCsvInput.value.trim();
+      if (v) {
+        display.textContent = v.split('/').pop() || v;
+        display.title = v;
+        display.classList.add('populated');
+      } else {
+        display.textContent = 'Auto-filled when Find Duplicates completes';
+        display.title = '';
+        display.classList.remove('populated');
+      }
+    });
+  }
   setupSinglePathZone('organize-target-zone', 'organize-target');
   setupSinglePathZone('dupes-output-zone',    'dupes-output');
   setupSinglePathZone('novelty-dest-zone',    'novelty-dest');

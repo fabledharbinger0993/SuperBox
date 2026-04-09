@@ -384,63 +384,44 @@
       <span class="risk-badge danger">Writes DB + Files</span>
     </div>
 
-    <div class="explainers">
-      <details>
-        <summary>How does the review work?</summary>
-        <div class="explain-body">
-          <p>Each duplicate group shows the <strong>best quality copy</strong> at the top — ranked by format (AIFF/WAV over MP3), then file size, then RARP tier. Lower-quality copies are listed indented beneath it.</p>
-          <p>You get two <strong>Select All</strong> controls:</p>
-          <ul>
-            <li><strong>Select All Best</strong> — checks every top-ranked copy (the ones to keep)</li>
-            <li><strong>Select All Lower Quality</strong> — checks all the duplicates below them</li>
-          </ul>
-          <p>These two are mutually exclusive. You can also override any individual checkbox.</p>
-          <p>The <strong>▶ Preview</strong> button opens each file in your default audio player so you can listen before deciding.</p>
-        </div>
-      </details>
-      <details>
-        <summary>What actually happens when I prune?</summary>
-        <div class="explain-body">
-          <p><strong>Step 1 — Database:</strong> Selected tracks are removed from RekordBox's database. A timestamped backup is created before anything is touched.</p>
-          <p><strong>Step 2 — Files:</strong> Selected audio files are moved to <code>~/.Trash/SuperBox_Pruned_[timestamp]/</code> — a labeled folder inside Trash. They are <strong>not deleted</strong>. They sit in Trash until you empty it yourself.</p>
-          <p>If you realize you made a mistake, open Trash, find the <code>SuperBox_Pruned_</code> folder, and move the files back.</p>
-        </div>
-      </details>
-      <details>
-        <summary>Why so many confirmation steps?</summary>
-        <div class="explain-body">
-          <p>Because this operation touches both the database and the files, and there's no single-step undo. Each confirmation panel appears in a <strong>different position on screen</strong> so you have to move your cursor to proceed — you can't click through by accident.</p>
-          <ul>
-            <li>Step 1 confirms <em>what</em> you're removing (count + summary)</li>
-            <li>Step 2 shows the <em>exact file list</em> for a final read-through</li>
-            <li>Step 3 is the live execute — requires RekordBox to be closed</li>
-          </ul>
-        </div>
-      </details>
+    <div class="prune-explain">
+      <div class="prune-explain-block">
+        <div class="prune-explain-label">What this does</div>
+        <p>Loads the duplicate report from your last scan, shows every group of identical tracks side-by-side, and moves the copies you choose to a labeled folder inside Trash. <strong>Nothing is permanently deleted</strong> until you empty Trash yourself.</p>
+      </div>
+      <div class="prune-explain-block">
+        <div class="prune-explain-label">How duplicates are ranked</div>
+        <p>Every group is sorted by audio quality automatically. Lossless formats (AIFF, WAV, FLAC) beat compressed ones (MP3, M4A). Larger files beat smaller files of the same format. Pioneer-numbered or Mixed In Key tagged files rank above untagged raw files. The top-ranked copy is marked as the keeper — everything else is a candidate to remove.</p>
+      </div>
+      <div class="prune-explain-block">
+        <div class="prune-explain-label">Playlist protection</div>
+        <p>If a duplicate you remove lives in any of your playlists, SuperBox automatically re-threads those playlist slots to point to the keeper track instead — before the duplicate is deleted from the database. Your playlists stay intact. No track vanishes. This is the fix rekordbox's own duplicate tool never got right.</p>
+      </div>
+      <div class="prune-explain-block">
+        <div class="prune-explain-label">Safety measures</div>
+        <ul>
+          <li><strong>RekordBox must be closed</strong> before anything runs — SuperBox checks and blocks if it's open.</li>
+          <li><strong>Database backup</strong> — a timestamped copy of master.db is created before any change is made.</li>
+          <li><strong>Files go to Trash, not the void</strong> — removed files land in <code>~/.Trash/SuperBox_Pruned_[timestamp]/</code> where you can find and restore them at any time.</li>
+          <li><strong>Multi-position confirmation</strong> — each confirm button appears at a different corner of the screen so you can't muscle-memory click through a dangerous operation.</li>
+        </ul>
+      </div>
     </div>
 
     <div class="card-form">
-      <!-- Load report -->
-      <div class="prune-toolbar" style="flex-direction:column;gap:8px">
-        <div style="display:flex;gap:10px;align-items:flex-start">
-          <div style="flex:1">
-            <label style="font-size:.8rem;color:var(--text-muted);margin-bottom:6px;display:block;font-weight:500;">Duplicate Report CSV</label>
-            <div class="folder-zone" id="prune-csv-zone">
-              <div class="folder-zone-hint">
-                <strong>⤵ Drop CSV report here</strong>
-                or type the path and press Enter
-              </div>
-              <div class="folder-zone-input-row">
-                <input type="text" class="folder-zone-text" id="prune-csv-path"
-                       placeholder="Leave blank for default: ~/rekordbox-toolkit/duplicate_report.csv">
-                <button class="folder-zone-browse" type="button" onclick="pickPathFor('prune-csv-path')">Browse…</button>
-              </div>
-            </div>
+      <!-- Report source — auto-populated from Find Duplicates, no input needed -->
+      <div class="prune-report-row">
+        <div class="prune-report-file" id="prune-report-file">
+          <img src="/static/icon-sb-folder.png" alt="Report" class="prune-report-file-icon">
+          <div class="prune-report-file-text">
+            <span class="prune-report-file-label">Duplicate Report</span>
+            <span class="prune-report-file-path" id="prune-report-path-display">Auto-filled when Find Duplicates completes</span>
           </div>
-          <button class="btn btn-ghost" style="margin-top:26px;flex-shrink:0"
-                  onclick="loadPruneReport()">Load Report</button>
         </div>
+        <button class="btn btn-ghost" onclick="loadPruneReport()">Load Report</button>
       </div>
+      <!-- Hidden input — read by loadPruneReport() and written by runDuplicates() callback -->
+      <input type="hidden" id="prune-csv-path">
 
       <!-- Review area — hidden until report is loaded -->
       <div id="prune-review-area" style="display:none;margin-top:16px">
