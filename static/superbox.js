@@ -576,7 +576,7 @@ async function prefillDefaults() {
   // blank prevents accidental runs against an unconfigured path.
   // All fields restore from localStorage only (user's own previous entries).
   const rootFields = [];
-  const freeFields = ['relocate-new', 'organize-target', 'novelty-dest', 'relocate-old', 'dupes-output'];
+  const freeFields = ['relocate-new', 'organize-target', 'novelty-dest', 'relocate-old'];
 
   // Restore any previously saved value for every tracked field first
   [...rootFields, ...freeFields].forEach(id => {
@@ -976,9 +976,8 @@ function runRelocate() {
 function runDuplicates() {
   const paths = getFolderPaths('dupes-pills');
   if (!paths.length) { alert('Add at least one music folder first.'); return; }
-  const p = new URLSearchParams({ path: paths[0] });
-  const out = document.getElementById('dupes-output').value.trim();
-  if (out) p.set('output', out);
+  const p = new URLSearchParams();
+  paths.forEach(path => p.append('path', path));
   const workers = document.getElementById('dupes-workers')?.value || '4';
   if (parseInt(workers) > 1) p.set('workers', workers);
   const title = 'Find Duplicates — Acoustic Fingerprinting';
@@ -2968,7 +2967,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   setupSinglePathZone('organize-target-zone', 'organize-target');
-  setupSinglePathZone('dupes-output-zone',    'dupes-output');
   setupSinglePathZone('novelty-dest-zone',    'novelty-dest');
   setupAllDropZones();
 });

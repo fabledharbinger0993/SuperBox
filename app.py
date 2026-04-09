@@ -687,14 +687,11 @@ def api_novelty():
 
 @app.route("/api/run/duplicates")
 def api_duplicates():
-    path = request.args.get("path", "").strip()
-    if not path:
-        return jsonify({"error": "path is required"}), 400
+    paths = [p.strip() for p in request.args.getlist("path") if p.strip()]
+    if not paths:
+        return jsonify({"error": "at least one path is required"}), 400
 
-    cmd = [sys.executable, str(CLI_PATH), "duplicates", path]
-    output = request.args.get("output", "").strip()
-    if output:
-        cmd += ["--output", output]
+    cmd = [sys.executable, str(CLI_PATH), "duplicates"] + paths
     workers = request.args.get("workers", "").strip()
     if workers and workers.isdigit() and int(workers) > 1:
         cmd += ["--workers", workers]
@@ -705,7 +702,7 @@ def api_duplicates():
                 cmd += ["--pause", pause]
         except ValueError:
             pass
-    library_root = _get_library_root(request, "path")
+    library_root = paths[0] if paths else ""
     return _sse_response(cmd, library_root=library_root, step_name="duplicates")
 
 

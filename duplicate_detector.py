@@ -449,21 +449,24 @@ def _walk_audio_files(root: Path) -> list[Path]:
 # ─── Duplicate scanning ───────────────────────────────────────────────────────
 
 def scan_duplicates(
-    root: Path,
+    root: "Path | list[Path]",
     *,
     max_workers: int = 1,
     pause_seconds: float = 0.0,
 ) -> ScanResult:
     """
-    Fingerprint all audio files under root and return groups of duplicates.
+    Fingerprint all audio files under root (or multiple roots) and return
+    groups of duplicates.
 
     CPU-intensive. For 50k files expect 10–30 minutes depending on hardware.
     Run as an explicit command, not as part of the import workflow.
 
     Parameters
     ----------
-    root : Path
-        Directory to scan recursively.
+    root : Path | list[Path]
+        Directory (or list of directories) to scan recursively.
+        All paths are combined into a single fingerprint pool before comparison,
+        so duplicates that span multiple source folders are detected correctly.
     max_workers : int
         Number of files to fingerprint in parallel using fpcalc subprocesses.
         Default 1 (sequential). fpcalc is subprocess-safe so workers > 1
@@ -478,11 +481,17 @@ def scan_duplicates(
         Only groups with 2+ files are returned. Unique files are not included.
         Groups are sorted by size descending (largest first).
     """
-    if not root.is_dir():
-        raise ValueError(f"scan_duplicates: {root} is not a directory")
+    roots = [root] if isinstance(root, Path) else list(root)
+    for r in roots:
+        if not r.is_dir():
+            raise ValueError(f"scan_duplicates: {r} is not a directory")
 
-    log.info("Walking %s for audio files...", root)
-    all_files = _walk_audio_files(root)
+    log.info("Walking %d root(s) for audio files...", len(roots))
+    all_files: list[Path] = []
+    for r in roots:
+        found = _walk_audio_files(r)
+        log.info("  %s → %d files", r, len(found))
+        all_files.extend(found)
     log.info("Found %d audio files total", len(all_files))
 
     # Apply pre-filter from scan index if available

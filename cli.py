@@ -240,13 +240,18 @@ def cmd_relocate(args: argparse.Namespace) -> None:
 
 
 def cmd_duplicates(args: argparse.Namespace) -> None:
-    """Scan PATH for acoustically identical files and write a CSV report."""
+    """Scan one or more PATHs for acoustically identical files and write a CSV report."""
     from duplicate_detector import scan_duplicates, write_csv_report, write_trash_rescue_report
 
-    root = Path(args.path)
-    if not root.is_dir():
-        log.error("PATH is not a directory: %s", root)
-        sys.exit(1)
+    paths = args.path if isinstance(args.path, list) else [args.path]
+    roots = []
+    for p in paths:
+        r = Path(p)
+        if not r.is_dir():
+            log.error("PATH is not a directory: %s", r)
+            sys.exit(1)
+        roots.append(r)
+    root = roots[0] if len(roots) == 1 else roots
 
     if args.output:
         output = Path(args.output)
@@ -272,7 +277,8 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
     ).with_suffix(".txt")
 
     workers = max(1, args.workers)
-    log.info("Scanning for duplicates under: %s (workers=%d)", root, workers)
+    root_label = ", ".join(str(r) for r in roots)
+    log.info("Scanning for duplicates under: %s (workers=%d)", root_label, workers)
     log.info("This may take a while for large libraries — progress logged every %d files", 100)
 
     try:
@@ -789,7 +795,7 @@ Examples:
         "duplicates",
         help="Find acoustically identical files via Chromaprint",
     )
-    p_dupes.add_argument("path", metavar="PATH", help="Directory to scan")
+    p_dupes.add_argument("path", metavar="PATH", nargs="+", help="Directory (or directories) to scan")
     p_dupes.add_argument(
         "--output", "-o",
         metavar="FILE",
