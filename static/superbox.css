@@ -2024,6 +2024,9 @@ body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28
     inset 0 0 10px  rgba(120, 50, 230, 0.04);
   transition: border-color .18s, box-shadow .18s, background-color .18s, transform .18s;
   cursor: default;
+  width: 100%;
+  max-width: 100%;
+  margin-inline: auto;
 }
 .folder-zone:hover {
   border-color: rgba(130, 60, 240, 0.80);
@@ -2129,8 +2132,32 @@ body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28
   gap: 6px;
   margin-top: 8px;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  margin-inline: auto;
 }
 .folder-pills:empty { margin-top: 0; }
+
+/* Source/destination tools keep the same drop styling, but on a narrower track
+   so side-by-side controls don't feel overextended. */
+.compact-drop-card .folder-zone,
+.compact-drop-card .folder-pills,
+.compact-drop-field .folder-zone,
+.compact-drop-field .folder-pills,
+.compact-drop-field > label {
+  max-width: 520px;
+  margin-inline: auto;
+}
+
+@media (max-width: 720px) {
+  .compact-drop-card .folder-zone,
+  .compact-drop-card .folder-pills,
+  .compact-drop-field .folder-zone,
+  .compact-drop-field .folder-pills,
+  .compact-drop-field > label {
+    max-width: 100%;
+  }
+}
 .folder-pill {
   display: inline-flex;
   align-items: center;

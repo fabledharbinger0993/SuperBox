@@ -86,6 +86,26 @@ def _write_report(subdir: str, filename: str, text: str) -> str | None:
         return None
 
 
+def _log_root_step(action: str, root: Path, index: int, total: int) -> None:
+    """Log a clear boundary before processing a specific source root."""
+    if total > 1:
+        log.info("══ %s %d/%d — %s", action, index, total, root)
+
+
+def _append_root_breakdown(summary_text: str, root_sections: list[tuple[Path, str]]) -> str:
+    """Append per-root summaries below an aggregate summary when multiple roots are used."""
+    if len(root_sections) <= 1:
+        return summary_text
+
+    lines = [summary_text, "", "Per-source breakdown:"]
+    total = len(root_sections)
+    for index, (root, section_text) in enumerate(root_sections, start=1):
+        lines.extend(["", f"[{index}/{total}] {root}"])
+        for line in section_text.splitlines():
+            lines.append(f"  {line}" if line else "")
+    return "\n".join(lines)
+
+
 # ─── Logging setup ────────────────────────────────────────────────────────────
 
 def _setup_logging(verbose: bool) -> None:
@@ -127,21 +147,46 @@ def cmd_audit(args: argparse.Namespace) -> None:
 
 
 def cmd_import(args: argparse.Namespace) -> None:
-    """Import audio files under PATH into the database."""
+    """Import audio files under one or more source paths into the database."""
     from importer import import_directory
     from db_connection import read_db, write_db
 
-    root = Path(args.path)
-    if not root.is_dir():
-        log.error("PATH is not a directory: %s", root)
-        sys.exit(1)
+    roots: list[Path] = [Path(args.path)]
+    for extra in (getattr(args, "also_scan", None) or []):
+        p = Path(extra)
+        if p not in roots:
+            roots.append(p)
+
+    for root in roots:
+        if not root.is_dir():
+            log.error("PATH is not a directory: %s", root)
+            sys.exit(1)
+
+    aggregate = None
+    root_sections: list[tuple[Path, str]] = []
+
+    def _merge(report):
+        nonlocal aggregate
+        if aggregate is None:
+            aggregate = report
+            return
+        aggregate.imported += report.imported
+        aggregate.skipped += report.skipped
+        aggregate.resumed += report.resumed
+        aggregate.failed += report.failed
+        aggregate.results.extend(report.results)
 
     if args.dry_run:
         log.info("DRY RUN — no writes will occur")
         try:
             with read_db(DJMT_DB) as db:
-                report = import_directory(root, db, dry_run=True)
-            summary_text = report.summary()
+                for index, root in enumerate(roots, start=1):
+                    _log_root_step("Import preview", root, index, len(roots))
+                    report = import_directory(root, db, dry_run=True)
+                    _merge(report)
+                    root_sections.append((root, report.summary()))
+            summary_text = aggregate.summary() if aggregate else "No import sources were processed."
+            summary_text = _append_root_breakdown(summary_text, root_sections)
             print(summary_text)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_path = _write_report("Import", f"preview_import_{timestamp}.txt", summary_text)
@@ -151,14 +196,19 @@ def cmd_import(args: argparse.Namespace) -> None:
             log.exception("Dry-run import failed")
             sys.exit(1)
     else:
-        log.info("Importing from: %s", root)
+        log.info("Importing from %d source folder(s)", len(roots))
         try:
             with write_db(DJMT_DB) as db:
-                report = import_directory(root, db, dry_run=False)
-            summary_text = report.summary()
+                for index, root in enumerate(roots, start=1):
+                    _log_root_step("Import", root, index, len(roots))
+                    report = import_directory(root, db, dry_run=False, resume=args.resume)
+                    _merge(report)
+                    root_sections.append((root, report.summary()))
+            summary_text = aggregate.summary() if aggregate else "No import sources were processed."
+            summary_text = _append_root_breakdown(summary_text, root_sections)
             print(summary_text)
-            if report.failed > 0:
-                log.warning("%d tracks failed to import — see log above", report.failed)
+            if aggregate and aggregate.failed > 0:
+                log.warning("%d tracks failed to import — see log above", aggregate.failed)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_path = _write_report("Import", f"import_{timestamp}.txt", summary_text)
             if report_path:
@@ -169,20 +219,47 @@ def cmd_import(args: argparse.Namespace) -> None:
 
 
 def cmd_link(args: argparse.Namespace) -> None:
-    """Link imported tracks under PATH to existing playlists."""
+    """Link imported tracks under one or more source paths to existing playlists."""
     from playlist_linker import link_directory
-    from db_connection import write_db
+    from db_connection import read_db, write_db
 
-    root = Path(args.path)
-    if not root.is_dir():
-        log.error("PATH is not a directory: %s", root)
-        sys.exit(1)
+    roots: list[Path] = [Path(args.path)]
+    for extra in (getattr(args, "also_scan", None) or []):
+        p = Path(extra)
+        if p not in roots:
+            roots.append(p)
 
-    log.info("Linking tracks under: %s", root)
+    for root in roots:
+        if not root.is_dir():
+            log.error("PATH is not a directory: %s", root)
+            sys.exit(1)
+
+    db_ctx = read_db if args.dry_run else write_db
+    aggregate = None
+    root_sections: list[tuple[Path, str]] = []
+
+    def _merge(report):
+        nonlocal aggregate
+        if aggregate is None:
+            aggregate = report
+            return
+        aggregate.linked += report.linked
+        aggregate.unmatched += report.unmatched
+        aggregate.total_links += report.total_links
+        aggregate.failed += report.failed
+        aggregate.results.extend(report.results)
+
+    log.info("Linking tracks under %d source folder(s)", len(roots))
     try:
-        with write_db(DJMT_DB) as db:
-            report = link_directory(root, db)
-        print(report.summary())
+        with db_ctx(DJMT_DB) as db:
+            for index, root in enumerate(roots, start=1):
+                _log_root_step("Link", root, index, len(roots))
+                report = link_directory(root, db, dry_run=args.dry_run)
+                _merge(report)
+                root_sections.append((root, report.summary()))
+        summary_text = aggregate.summary() if aggregate else "No link sources were processed."
+        summary_text = _append_root_breakdown(summary_text, root_sections)
+        print(summary_text)
     except Exception:
         log.exception("Playlist linking failed")
         sys.exit(1)
@@ -280,6 +357,10 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
     root_label = ", ".join(str(r) for r in roots)
     log.info("Scanning for duplicates under: %s (workers=%d)", root_label, workers)
     log.info("This may take a while for large libraries — progress logged every %d files", 100)
+    if len(roots) > 1:
+        log.info(
+            "Selected folders are scanned together as one comparison set so duplicates across different source folders are not missed."
+        )
 
     try:
         result = scan_duplicates(root, max_workers=workers)
@@ -381,9 +462,9 @@ def cmd_process(args: argparse.Namespace) -> None:
         )
 
     all_results = []
-    for root in roots:
-        if len(roots) > 1:
-            log.info("─── Scanning %s ───", root)
+    root_sections: list[tuple[Path, str]] = []
+    for index, root in enumerate(roots, start=1):
+        _log_root_step("Process", root, index, len(roots))
         try:
             results = process_directory(
                 root,
@@ -394,6 +475,27 @@ def cmd_process(args: argparse.Namespace) -> None:
                 max_workers=max(1, args.workers),
             )
             all_results.extend(results)
+            root_total = len(results)
+            root_bpm_written = sum(1 for r in results if r.bpm_written)
+            root_key_written = sum(1 for r in results if r.key_written)
+            root_normalised = sum(1 for r in results if r.normalised)
+            root_errored = sum(1 for r in results if not r.ok)
+            root_skipped_bpm = sum(1 for r in results if r.skipped_bpm)
+            root_skipped_key = sum(1 for r in results if r.skipped_key)
+            root_lines = [f"{root_total} files were analyzed."]
+            if detect_bpm:
+                root_lines.append(
+                    f"BPM written: {root_bpm_written}.{f' {root_skipped_bpm} already had one.' if root_skipped_bpm else ''}"
+                )
+            if detect_key:
+                root_lines.append(
+                    f"Key written: {root_key_written}.{f' {root_skipped_key} already had one.' if root_skipped_key else ''}"
+                )
+            if normalise:
+                root_lines.append(f"Loudness adjusted: {root_normalised} files.")
+            if root_errored:
+                root_lines.append(f"{root_errored} files had errors — check the log above.")
+            root_sections.append((root, "\n".join(root_lines)))
         except Exception:
             log.exception("Processing failed for %s", root)
             sys.exit(1)
@@ -437,7 +539,7 @@ def cmd_process(args: argparse.Namespace) -> None:
         if errored:
             report_lines.append(f"\n{errored} files had errors — check the log above.")
 
-    report_text = "\n".join(report_lines)
+    report_text = _append_root_breakdown("\n".join(report_lines), root_sections)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if normalise:
         _emit_report(report_text, "Normalize", f"normalize_{timestamp}.txt")
@@ -449,17 +551,23 @@ def cmd_process(args: argparse.Namespace) -> None:
 
 
 def cmd_convert(args: argparse.Namespace) -> None:
-    """Convert audio files to target format (mp3, wav, aif, flac) recursively."""
+    """Convert audio files to target format (mp3, wav, aif, flac) across one or more source paths."""
     import concurrent.futures
     import json
     from pathlib import Path
     from audio_processor import _convert_file
     from scanner import scan_directory
 
-    root = Path(args.path)
-    if not root.is_dir():
-        log.error("PATH is not a directory: %s", root)
-        sys.exit(1)
+    roots: list[Path] = [Path(args.path)]
+    for extra in (getattr(args, "also_scan", None) or []):
+        p = Path(extra)
+        if p not in roots:
+            roots.append(p)
+
+    for root in roots:
+        if not root.is_dir():
+            log.error("PATH is not a directory: %s", root)
+            sys.exit(1)
 
     target_format = args.format.lower().lstrip(".")
     if target_format not in ("mp3", "wav", "aif", "aiff", "flac"):
@@ -471,10 +579,14 @@ def cmd_convert(args: argparse.Namespace) -> None:
         target_format = "aiff"
 
     max_workers = max(1, getattr(args, "workers", 1))
-    log.info("Converting audio files to %s in %s (workers=%d)", target_format, root, max_workers)
+    log.info("Converting audio files to %s across %d source folder(s) (workers=%d)", target_format, len(roots), max_workers)
 
-    tracks = list(scan_directory(root))
-    total = len(tracks)
+    tracks_by_root: list[tuple[Path, list]] = []
+    total = 0
+    for root in roots:
+        root_tracks = list(scan_directory(root))
+        tracks_by_root.append((root, root_tracks))
+        total += len(root_tracks)
 
     log.info("Found %d audio files", total)
 
@@ -485,6 +597,7 @@ def cmd_convert(args: argparse.Namespace) -> None:
     done = 0
     success_count = 0
     error_count = 0
+    root_sections: list[tuple[Path, str]] = []
 
     def _emit_progress() -> None:
         print(
@@ -504,34 +617,51 @@ def cmd_convert(args: argparse.Namespace) -> None:
 
     _emit_progress()
 
-    if max_workers > 1:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
-            futures = {ex.submit(_convert_one, track): track for track in tracks}
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    ok, msg, name = future.result()
-                except Exception as exc:
-                    ok, msg, name = False, str(exc), futures[future].path.name
+    for root_index, (root, tracks) in enumerate(tracks_by_root, start=1):
+        _log_root_step("Convert", root, root_index, len(tracks_by_root))
+        root_success = 0
+        root_errors = 0
+        root_total = len(tracks)
+
+        if max_workers > 1:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+                futures = {ex.submit(_convert_one, track): track for track in tracks}
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        ok, msg, name = future.result()
+                    except Exception as exc:
+                        ok, msg, name = False, str(exc), futures[future].path.name
+                    done += 1
+                    if ok:
+                        success_count += 1
+                        root_success += 1
+                        log.info("✓ %s: %s", name, msg)
+                    else:
+                        error_count += 1
+                        root_errors += 1
+                        log.error("✗ %s: %s", name, msg)
+                    _emit_progress()
+        else:
+            for track_index, track in enumerate(tracks, start=1):
+                log.info("[%d/%d] Converting %s", track_index, root_total, track.path.name)
+                ok, msg = _convert_file(track.path, target_format)
                 done += 1
                 if ok:
                     success_count += 1
-                    log.info("✓ %s: %s", name, msg)
+                    root_success += 1
+                    log.info("✓ %s: %s", track.path.name, msg)
                 else:
                     error_count += 1
-                    log.error("✗ %s: %s", name, msg)
+                    root_errors += 1
+                    log.error("✗ %s: %s", track.path.name, msg)
                 _emit_progress()
-    else:
-        for i, track in enumerate(tracks):
-            log.info("[%d/%d] Converting %s", i + 1, total, track.path.name)
-            ok, msg = _convert_file(track.path, target_format)
-            done += 1
-            if ok:
-                success_count += 1
-                log.info("✓ %s: %s", track.path.name, msg)
-            else:
-                error_count += 1
-                log.error("✗ %s: %s", track.path.name, msg)
-            _emit_progress()
+
+        root_lines = [f"{root_success} of {root_total} files were converted to {target_format.upper()}."]
+        if root_errors:
+            root_lines.append(f"{root_errors} files had errors — check the log above.")
+        else:
+            root_lines.append("No errors.")
+        root_sections.append((root, "\n".join(root_lines)))
 
     fmt_upper = target_format.upper()
     lines = [f"Done converting.", "", f"{success_count} of {total} files were converted to {fmt_upper}."]
@@ -540,7 +670,7 @@ def cmd_convert(args: argparse.Namespace) -> None:
     else:
         lines.append("No errors.")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    _emit_report("\n".join(lines), "Convert", f"convert_{timestamp}.txt")
+    _emit_report(_append_root_breakdown("\n".join(lines), root_sections), "Convert", f"convert_{timestamp}.txt")
 
     if error_count > 0:
         log.warning("%d files had errors — check log above", error_count)
@@ -578,18 +708,43 @@ def cmd_organize(args: argparse.Namespace) -> None:
         log.info("DRY RUN — no files will be touched. Pass --no-dry-run to execute.")
 
     verb = "copy" if mode == "integrate" else "move"
+    action_verb = "copied" if mode == "integrate" else "moved"
     log.info(
         "Organizing  sources=%s  target=%s  mode=%s  dry_run=%s  workers=%d  mix_threshold=%.0f min",
         [str(s) for s in sources], target, mode, dry_run, max_workers, threshold / 60,
     )
 
-    results = organize_library(
-        sources, target,
-        mode=mode,
-        dry_run=dry_run,
-        max_workers=max_workers,
-        mix_threshold_sec=threshold,
-    )
+    results = []
+    root_sections: list[tuple[Path, str]] = []
+    for index, source in enumerate(sources, start=1):
+        _log_root_step("Organize", source, index, len(sources))
+        root_results = organize_library(
+            [source], target,
+            mode=mode,
+            dry_run=dry_run,
+            max_workers=max_workers,
+            mix_threshold_sec=threshold,
+        )
+        results.extend(root_results)
+
+        root_moved = sum(1 for r in root_results if r.action in ("moved", "dry_run", "conflict_renamed"))
+        root_skipped = sum(1 for r in root_results if r.action == "skipped")
+        root_conflicts = sum(1 for r in root_results if r.action == "conflict_renamed")
+        root_errors = sum(1 for r in root_results if r.action == "error")
+        root_lines = [f"{len(root_results)} files scanned."]
+        if root_moved:
+            root_lines.append(
+                f"{root_moved} files would be {verb}ed into Artist / Album / Track folders."
+                if dry_run else
+                f"{root_moved} files were {action_verb} into Artist / Album / Track folders."
+            )
+        if root_skipped:
+            root_lines.append(f"{root_skipped} were already at the destination — left alone.")
+        if root_conflicts:
+            root_lines.append(f"{root_conflicts} name clashes were handled by renaming.")
+        if root_errors:
+            root_lines.append(f"{root_errors} files had errors — check the log above.")
+        root_sections.append((source, "\n".join(root_lines)))
 
     moved     = sum(1 for r in results if r.action in ("moved", "dry_run", "conflict_renamed"))
     skipped   = sum(1 for r in results if r.action == "skipped")
@@ -597,7 +752,6 @@ def cmd_organize(args: argparse.Namespace) -> None:
     errors    = sum(1 for r in results if r.action == "error")
 
     src_desc = str(sources[0]) if len(sources) == 1 else f"{len(sources)} source folders"
-    action_verb = "copied" if mode == "integrate" else "moved"
 
     if dry_run:
         dry_verb = "copy" if mode == "integrate" else "move"
@@ -638,7 +792,7 @@ def cmd_organize(args: argparse.Namespace) -> None:
         else:
             lines.append("Empty source folders were cleaned up.")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    _emit_report("\n".join(lines), "Organize", f"organize_{timestamp}.txt")
+    _emit_report(_append_root_breakdown("\n".join(lines), root_sections), "Organize", f"organize_{timestamp}.txt")
 
     if dry_run:
         # Emit planned moves so the UI/log shows what would happen
@@ -682,18 +836,57 @@ def cmd_novelty(args: argparse.Namespace) -> None:
         [str(s) for s in sources], dest, dry_run, max_workers,
     )
 
-    result = scan_novel(
-        sources, dest,
-        dry_run=dry_run,
-        max_workers=max_workers,
-    )
+    total_src = 0
+    dest_index_size = 0
+    aggregate_novel = []
+    aggregate_present = []
+    aggregate_errors = []
+    root_sections: list[tuple[Path, str]] = []
+    verb = "would be copied" if dry_run else "copied"
+
+    for index, source in enumerate(sources, start=1):
+        _log_root_step("Novelty", source, index, len(sources))
+        root_result = scan_novel(
+            [source], dest,
+            dry_run=dry_run,
+            max_workers=max_workers,
+        )
+        total_src += root_result.total_src
+        dest_index_size = max(dest_index_size, root_result.dest_index_size)
+        aggregate_novel.extend(root_result.novel)
+        aggregate_present.extend(root_result.present)
+        aggregate_errors.extend(root_result.errors)
+
+        root_novel = len(root_result.novel)
+        root_present = len(root_result.present)
+        root_errors = len(root_result.errors)
+        root_lines = [
+            f"{root_result.total_src} tracks scanned on source.",
+            f"Destination index: {root_result.dest_index_size} tracks.",
+        ]
+        if root_novel:
+            root_lines.append(f"{root_novel} novel tracks {verb} to destination.")
+        if root_present:
+            root_lines.append(f"{root_present} tracks confirmed already present — skipped.")
+        if root_errors:
+            root_lines.append(f"{root_errors} errors — check log above.")
+        root_sections.append((source, "\n".join(root_lines)))
+
+    class _AggregateNoveltyResult:
+        pass
+
+    result = _AggregateNoveltyResult()
+    result.novel = aggregate_novel
+    result.present = aggregate_present
+    result.errors = aggregate_errors
+    result.total_src = total_src
+    result.dest_index_size = dest_index_size
 
     novel   = len(result.novel)
     present = len(result.present)
     errors  = len(result.errors)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    verb = "would be copied" if dry_run else "copied"
 
     lines = [
         "Novel Track Scan complete.",
@@ -711,7 +904,7 @@ def cmd_novelty(args: argparse.Namespace) -> None:
     if dry_run:
         lines += ["", "Nothing has been copied. Uncheck \"Dry Run\" and run again to execute."]
 
-    _emit_report("\n".join(lines), "Novelty Scan", f"novelty_{timestamp}.txt")
+    _emit_report(_append_root_breakdown("\n".join(lines), root_sections), "Novelty Scan", f"novelty_{timestamp}.txt")
 
     if errors > 0:
         log.warning("%d files had errors — check log above", errors)
@@ -766,15 +959,39 @@ Examples:
     p_import = sub.add_parser("import", help="Import audio files into the database")
     p_import.add_argument("path", metavar="PATH", help="Directory to import")
     p_import.add_argument(
+        "--also-scan",
+        metavar="PATH",
+        action="append",
+        dest="also_scan",
+        help="Additional directory to import (repeatable)",
+    )
+    p_import.add_argument(
         "--dry-run",
         action="store_true",
         help="Scan and report without writing to the database",
+    )
+    p_import.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume an interrupted import using the saved progress state for each source root",
     )
     p_import.set_defaults(func=cmd_import)
 
     # ── link ──
     p_link = sub.add_parser("link", help="Link imported tracks to existing playlists")
     p_link.add_argument("path", metavar="PATH", help="Directory whose tracks to link")
+    p_link.add_argument(
+        "--also-scan",
+        metavar="PATH",
+        action="append",
+        dest="also_scan",
+        help="Additional directory whose tracks to link (repeatable)",
+    )
+    p_link.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview playlist matches without writing any playlist links",
+    )
     p_link.set_defaults(func=cmd_link)
 
     # ── relocate ──
@@ -866,6 +1083,13 @@ Examples:
         help="Convert audio files to target format (mp3, wav, aif, flac)",
     )
     p_convert.add_argument("path", metavar="PATH", help="Directory to convert")
+    p_convert.add_argument(
+        "--also-scan",
+        metavar="PATH",
+        action="append",
+        dest="also_scan",
+        help="Additional directory to convert (repeatable)",
+    )
     p_convert.add_argument(
         "format",
         metavar="FORMAT",

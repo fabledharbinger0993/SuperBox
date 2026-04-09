@@ -591,17 +591,7 @@ async function prefillDefaults() {
     const config = await res.json();
     const root   = config.music_root;
     if (root) {
-      // Single-path text inputs
-      rootFields.forEach(id => {
-        const el = document.getElementById(id);
-        if (el && !el.value) el.value = root;
-      });
-      // Library-root indicator pill — always present, non-removable, dimmed
       _libraryRoot = root;
-      ['process-pills','dupes-pills','normalize-pills','convert-pills','audit-pills',
-       'import-pills','link-pills','organize-source-pills'].forEach(pillsId => {
-        addLibraryPill(pillsId, root);
-      });
     }
   } catch (_) {}
 
@@ -938,27 +928,27 @@ function runNormalize() {
 
 function runImportDry() {
   const paths = getFolderPaths('import-pills');
-  const path  = paths[0] || '';
-  if (!path) { alert('Add a music folder path first.'); return; }
-  const p = new URLSearchParams({ path, dry_run: '1' });
+  if (!paths.length) { alert('Add at least one music folder first.'); return; }
+  const p = new URLSearchParams({ dry_run: '1' });
+  paths.forEach(path => p.append('path', path));
   runCommand(`/api/run/import?${p}`, 'Preview Import — Dry Run', null, true, false, null);
 }
 
 function runImport() {
   if (checkRbBlock('import-rb-block')) return;
   const paths = getFolderPaths('import-pills');
-  const path  = paths[0] || '';
-  if (!path) { alert('Add a music folder path first.'); return; }
-  const p = new URLSearchParams({ path });
+  if (!paths.length) { alert('Add at least one music folder first.'); return; }
+  const p = new URLSearchParams();
+  paths.forEach(path => p.append('path', path));
   runCommand(`/api/run/import?${p}`, 'Import — Writing Tracks to Database', null, true);
 }
 
 function runLink() {
   if (checkRbBlock('link-rb-block')) return;
   const paths = getFolderPaths('link-pills');
-  const path  = paths[0] || '';
-  if (!path) { alert('Add a music folder path first.'); return; }
-  const p = new URLSearchParams({ path });
+  if (!paths.length) { alert('Add at least one music folder first.'); return; }
+  const p = new URLSearchParams();
+  paths.forEach(path => p.append('path', path));
   runCommand(`/api/run/link?${p}`, 'Link Playlists — Matching Tracks to Folders', null, true);
 }
 
@@ -996,10 +986,11 @@ function runDuplicates() {
 function runConvert() {
   const paths = getFolderPaths('convert-pills');
   const format = document.getElementById('convert-format').value.trim();
-  if (!paths.length) { alert('Add a folder first.'); return; }
+  if (!paths.length) { alert('Add at least one folder first.'); return; }
   if (!format) { alert('Select a target format.'); return; }
   const workers = document.getElementById('convert-workers')?.value || '4';
-  const p = new URLSearchParams({ path: paths[0], format });
+  const p = new URLSearchParams({ format });
+  paths.forEach(path => p.append('path', path));
   if (parseInt(workers) > 1) p.set('workers', workers);
   runCommand(`/api/run/convert?${p}`, `Converting Audio Files to ${format.toUpperCase()}`);
 }
@@ -1030,6 +1021,23 @@ let pipeUid = 0;
 function openPipelineWizard() {
   const backdrop = document.getElementById('pipeline-wizard-backdrop');
   backdrop.classList.remove('hidden');
+  // Check for a saved checkpoint and offer to resume
+  const ckpt   = _loadPipeCheckpoint();
+  const banner = document.getElementById('pipe-resume-banner');
+  if (ckpt && ckpt.steps && ckpt.steps.length > 0) {
+    const nextIdx  = ckpt.completedIdx + 1;
+    const nextStep = ckpt.steps[nextIdx];
+    const nextName = nextStep ? ((PIPE_STEPS[nextStep.type] || {}).name || nextStep.type) : '—';
+    const age      = Math.round((Date.now() - (ckpt.ts || 0)) / 60000);
+    const ageText  = age < 1 ? 'just now' : age < 60 ? `${age}m ago` : `${Math.round(age / 60)}h ago`;
+    document.getElementById('pipe-resume-text').textContent =
+      `Checkpoint — resume at step ${nextIdx + 1} of ${ckpt.steps.length}: "${nextName}"`;
+    document.getElementById('pipe-resume-sub').textContent =
+      `Saved ${ageText} · ${ckpt.dryRun ? 'Dry Run' : 'Live Run'}`;
+    if (banner) banner.classList.remove('hidden');
+  } else {
+    if (banner) banner.classList.add('hidden');
+  }
   // Reset to phase 1
   document.getElementById('pipe-wiz-p1').style.opacity = '1';
   document.getElementById('pipe-wiz-p1').classList.remove('hidden');
@@ -1043,6 +1051,46 @@ function closePipelineWizard() {
   document.getElementById('pipeline-wizard-backdrop').classList.add('hidden');
   // Resolve any pending gate promise so it doesn't leak across sessions
   if (_pipeGateResolve) { _pipeGateResolve('stop'); _pipeGateResolve = null; }
+}
+
+/* Resume a previously interrupted pipeline run from its saved checkpoint */
+function resumeFromCheckpoint() {
+  const ckpt = _loadPipeCheckpoint();
+  if (!ckpt || !ckpt.steps || ckpt.steps.length === 0) return;
+  pipelineSteps = ckpt.steps.map(s => ({
+    id: ++pipeUid, type: s.type, _config: s._config || {}, _draftConfig: s._config || {},
+  }));
+  pipelineRender();
+  const banner = document.getElementById('pipe-resume-banner');
+  if (banner) banner.classList.add('hidden');
+  // Transition straight to Phase 2, focused on the next uncompleted step
+  const resumeIdx = Math.min(ckpt.completedIdx + 1, pipelineSteps.length - 1);
+  const p1  = document.getElementById('pipe-wiz-p1');
+  const p2  = document.getElementById('pipe-wiz-p2');
+  const wiz = document.getElementById('pipeline-wizard');
+  p1.style.transition = 'opacity .2s';
+  p1.style.opacity    = '0';
+  setTimeout(() => {
+    p1.classList.add('hidden'); p1.style.opacity = ''; p1.style.transition = '';
+    wiz.classList.add('wizard-wide');
+    pipeWizBuildConfigs();
+    p2.classList.remove('hidden');
+    p2.style.opacity    = '0';
+    p2.style.transition = 'opacity .25s';
+    document.getElementById('wiz-dry-run-2').checked       = ckpt.dryRun !== false;
+    document.getElementById('wiz-confirm-steps-2').checked = true; // always confirm on resume
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      p2.style.opacity = '1';
+      setTimeout(() => { p2.style.transition = ''; p2.style.opacity = ''; }, 280);
+      pipeWizSelectStep(resumeIdx);
+    }));
+  }, 220);
+}
+
+function discardCheckpoint() {
+  _clearPipeCheckpoint();
+  const banner = document.getElementById('pipe-resume-banner');
+  if (banner) banner.classList.add('hidden');
 }
 
 function pipeWizNext() {
@@ -1155,16 +1203,16 @@ function _typeLabel(steps, step, i) {
 
 /* ── Required fields per step type ──────────────────────────────────────── */
 const STEP_REQUIRED_FIELDS = {
-  audit:      [],           // root is optional
-  process:    ['path'],
-  normalize:  ['path'],
-  duplicates: ['path'],
+  audit:      [],           // paths is optional
+  process:    ['paths'],
+  normalize:  ['paths'],
+  duplicates: ['paths'],
   prune:      [],           // auto-uses CSV from prior duplicates step
-  convert:    ['path'],
+  convert:    ['paths'],
   relocate:   ['old_root','new_root'],
-  import:     ['path'],
-  link:       ['path'],
-  organize:   ['source','target'],
+  import:     ['paths'],
+  link:       ['paths'],
+  organize:   ['sources','target'],
   novelty:    ['source','dest'],
 };
 
@@ -1172,7 +1220,11 @@ function _stepIsReady(step) {
   const required = STEP_REQUIRED_FIELDS[step.type] || [];
   if (required.length === 0) return true;
   const cfg = step._draftConfig || {};
-  return required.every(f => (cfg[f] || '').trim() !== '');
+  return required.every(f => {
+    const val = cfg[f];
+    if (Array.isArray(val)) return val.length > 0 && val.some(s => s.trim() !== '');
+    return (val || '').trim() !== '';
+  });
 }
 
 function _wizUpdateProgress() {
@@ -1268,14 +1320,15 @@ function pipeWizSelectStep(i) {
     ${_pipeWizConfigHTML(step, step._draftConfig)}`;
 
   // Wire up all inputs in the panel to update _draftConfig live
-  panel.querySelectorAll('input[type=text], input[type=number], select').forEach(el => {
+  panel.querySelectorAll('input[type=text], input[type=number], select, textarea').forEach(el => {
     el.addEventListener('input', () => {
       _pipeWizReadDraft(step);
       _wizUpdateProgress();
     });
   });
-  // Wire drop zones
+  // Wire drop zones — single-path inputs use setupDropZone; multi-path textareas use setupMultiDropZone
   panel.querySelectorAll('input[type=text]').forEach(setupDropZone);
+  panel.querySelectorAll('textarea.pipe-cfg-input').forEach(setupMultiDropZone);
 }
 
 function _pipeWizConfigHTML(step, saved) {
@@ -1293,6 +1346,23 @@ function _pipeWizConfigHTML(step, saved) {
       </div>
     </div>`;
 
+  /* Multi-path textarea — each line is a folder path, drop appends a new line */
+  const multiPathRow = (field, label, placeholder, required = true) => {
+    const rawVal     = saved && saved[field] !== undefined ? saved[field] : '';
+    const displayVal = Array.isArray(rawVal) ? rawVal.join('\n') : (rawVal || '');
+    return `
+    <div class="pipe-cfg-field">
+      <label class="pipe-cfg-label">${label}${required ? ' <span style="color:var(--danger)">*</span>' : ''}</label>
+      <div class="drop-wrap" style="flex:1">
+        <textarea class="pipe-cfg-input" data-cfg="${field}" rows="3"
+                  placeholder="${placeholder}"
+                  style="width:100%;resize:vertical;min-height:58px;font-family:inherit;line-height:1.5;">${displayVal}</textarea>
+        <span class="drop-badge" style="top:8px">⤵ drop</span>
+      </div>
+      <div style="font-size:.72rem;color:var(--text-dim);margin-top:3px;padding-left:2px">One folder per line — drop to append.</div>
+    </div>`;
+  };
+
   const workersRow = (def = 4) => `
     <div class="pipe-cfg-field" style="max-width:180px">
       <label class="pipe-cfg-label">Workers</label>
@@ -1304,16 +1374,16 @@ function _pipeWizConfigHTML(step, saved) {
 
   switch (step.type) {
     case 'audit':
-      return pathRow('root', 'Music root (optional)', '/Volumes/DJMT/DJMT PRIMARY', false);
+      return multiPathRow('paths', 'Music folders (optional)', '/Volumes/YourDrive/Music', false);
 
     case 'process':
-      return pathRow('path', 'Music folder', '/Volumes/DJMT/DJMT PRIMARY') + workersRow(4);
+      return multiPathRow('paths', 'Music folders', '/Volumes/YourDrive/Music') + workersRow(4);
 
     case 'normalize':
-      return pathRow('path', 'Music folder', '/Volumes/DJMT/DJMT PRIMARY') + workersRow(4);
+      return multiPathRow('paths', 'Music folders', '/Volumes/YourDrive/Music') + workersRow(4);
 
     case 'duplicates':
-      return pathRow('path', 'Scan path', '/Volumes/DJMT/DJMT PRIMARY') + workersRow(4);
+      return multiPathRow('paths', 'Folders to scan', '/Volumes/YourDrive/Music') + workersRow(4);
 
     case 'prune':
       return `<p class="pipe-cfg-note" style="color:var(--text-muted);font-size:.84rem;">
@@ -1322,7 +1392,7 @@ function _pipeWizConfigHTML(step, saved) {
       </p>`;
 
     case 'convert':
-      return pathRow('path', 'Files to convert', '/Volumes/DJMT/DJMT PRIMARY') + `
+      return multiPathRow('paths', 'Folders to convert', '/Volumes/YourDrive/Music') + `
         <div style="display:flex;gap:12px;flex-wrap:wrap">
           <div class="pipe-cfg-field" style="flex:1">
             <label class="pipe-cfg-label">Target format <span style="color:var(--danger)">*</span></label>
@@ -1338,17 +1408,17 @@ function _pipeWizConfigHTML(step, saved) {
 
     case 'relocate':
       return pathRow('old_root', 'Old path prefix (where files were)', '/Volumes/OLD_DRIVE/Music') +
-             pathRow('new_root', 'New path prefix (where files are now)', '/Volumes/DJMT/DJMT PRIMARY');
+             pathRow('new_root', 'New path prefix (where files are now)', '/Volumes/YourDrive/Music');
 
     case 'import':
-      return pathRow('path', 'Import from', '/Volumes/DJMT/DJMT PRIMARY');
+      return multiPathRow('paths', 'Import from (folders)', '/Volumes/YourDrive/Music');
 
     case 'link':
-      return pathRow('path', 'Library path', '/Volumes/DJMT/DJMT PRIMARY');
+      return multiPathRow('paths', 'Library folders', '/Volumes/YourDrive/Music');
 
     case 'organize':
-      return pathRow('source', 'Source path', '/Volumes/DJMT/DJMT PRIMARY') +
-             pathRow('target', 'Target (organized root)', '/Volumes/DJMT/DJMT PRIMARY') + `
+      return multiPathRow('sources', 'Source folders', '/Volumes/YourDrive/Music') +
+             pathRow('target', 'Target (organized root)', '/Volumes/YourDrive/Music') + `
         <div style="display:flex;gap:12px;flex-wrap:wrap">
           <div class="pipe-cfg-field" style="flex:1">
             <label class="pipe-cfg-label">Mode</label>
@@ -1363,7 +1433,7 @@ function _pipeWizConfigHTML(step, saved) {
 
     case 'novelty':
       return pathRow('source', 'Source drive / folder', '/Volumes/Passport') +
-             pathRow('dest',   'Home library destination', '/Volumes/DJMT/DJMT PRIMARY') +
+             pathRow('dest',   'Home library destination', '/Volumes/YourDrive/Music') +
              workersRow(4);
 
     default:
@@ -1373,42 +1443,48 @@ function _pipeWizConfigHTML(step, saved) {
 
 function _pipeWizReadDraft(step) {
   /* Read current values from the active panel into step._draftConfig */
-  const panel = document.getElementById('pipe-wiz-active-cfg');
-  const get  = field => panel.querySelector(`[data-cfg="${field}"]`)?.value?.trim() || '';
-  const getN = (field, def) => parseInt(panel.querySelector(`[data-cfg="${field}"]`)?.value || def);
+  const panel    = document.getElementById('pipe-wiz-active-cfg');
+  const get      = field => panel.querySelector(`[data-cfg="${field}"]`)?.value?.trim() || '';
+  const getN     = (field, def) => parseInt(panel.querySelector(`[data-cfg="${field}"]`)?.value || def);
+  // Read a multi-path textarea: split on newlines, trim, drop blanks
+  const getLines = field => {
+    const el = panel.querySelector(`[data-cfg="${field}"]`);
+    if (!el) return [];
+    return el.value.split('\n').map(s => s.trim()).filter(Boolean);
+  };
 
   const draft = {};
   switch (step.type) {
     case 'audit':
-      draft.root = get('root'); break;
+      draft.paths = getLines('paths'); break;
     case 'import':
-      draft.path = get('path'); break;
+      draft.paths = getLines('paths'); break;
     case 'link':
-      draft.path = get('path'); break;
+      draft.paths = getLines('paths'); break;
     case 'process':
-      draft.path    = get('path');
-      draft.workers = getN('workers', 1);
+      draft.paths       = getLines('paths');
+      draft.workers     = getN('workers', 1);
       draft.no_normalize = true; break;
     case 'normalize':
-      draft.path    = get('path');
+      draft.paths   = getLines('paths');
       draft.workers = getN('workers', 1); break;
     case 'duplicates':
-      draft.path    = get('path');
+      draft.paths   = getLines('paths');
       draft.workers = getN('workers', 1); break;
     case 'prune':
       break; // no required fields
     case 'convert':
-      draft.path    = get('path');
+      draft.paths   = getLines('paths');
       draft.format  = get('format') || 'aiff';
       draft.workers = getN('workers', 1); break;
     case 'relocate':
       draft.old_root = get('old_root');
       draft.new_root = get('new_root'); break;
     case 'organize':
-      draft.sources  = [get('source')].filter(Boolean);
-      draft.target   = get('target');
-      draft.mode     = get('mode') || 'assimilate';
-      draft.workers  = getN('workers', 1); break;
+      draft.sources = getLines('sources');
+      draft.target  = get('target');
+      draft.mode    = get('mode') || 'assimilate';
+      draft.workers = getN('workers', 1); break;
     case 'novelty':
       draft.source  = get('source');
       draft.dest    = get('dest');
@@ -1427,7 +1503,40 @@ function _loadPipeCfg(type) {
   try { return JSON.parse(localStorage.getItem(`sb_pipe_cfg_${type}`)) || {}; } catch(_) { return {}; }
 }
 
+/* ── Pipeline checkpoint: survive interruptions and resume ────────────────── */
+function _savePipeCheckpoint(steps, completedIdx, dryRun) {
+  try {
+    localStorage.setItem('sb_pipe_checkpoint', JSON.stringify({
+      steps: steps.map(s => ({ type: s.type, _config: s._config || {} })),
+      completedIdx,
+      dryRun,
+      ts: Date.now(),
+    }));
+  } catch(_) {}
+}
+function _loadPipeCheckpoint() {
+  try { return JSON.parse(localStorage.getItem('sb_pipe_checkpoint')); } catch(_) { return null; }
+}
+function _clearPipeCheckpoint() {
+  try { localStorage.removeItem('sb_pipe_checkpoint'); } catch(_) {}
+}
+
 function pipelineAddStep(type) {
+  // Prune requires a preceding Find Duplicates step — it has no CSV without one
+  if (type === 'prune') {
+    const hasDuplicates = pipelineSteps.some(s => s.type === 'duplicates');
+    if (!hasDuplicates) {
+      showToast('Add a "Find Duplicates" step first — Prune reads its report.', 'warning');
+      // Pulse the duplicates button to guide the user
+      const dupBtn = [...document.querySelectorAll('#pipe-wiz-p1 .pipe-action-btn')]
+        .find(b => (b.getAttribute('onclick') || '').includes("'duplicates'"));
+      if (dupBtn) {
+        dupBtn.classList.remove('pipe-added'); void dupBtn.offsetWidth; dupBtn.classList.add('pipe-added');
+        dupBtn.addEventListener('animationend', () => dupBtn.classList.remove('pipe-added'), { once: true });
+      }
+      return;
+    }
+  }
   pipelineSteps.push({ id: ++pipeUid, type });
   pipelineRender();
   // Flash the clicked button
@@ -1666,6 +1775,8 @@ async function runPipeline(dryRun = true, confirmMode = false) {
     document.getElementById('pipe-confirm-gate').style.display = 'none';
     // Clean up any dangling gate promise
     if (_pipeGateResolve) { _pipeGateResolve('stop'); _pipeGateResolve = null; }
+    // Clear checkpoint only when the full pipeline completed cleanly
+    if (!failedStep && !stopped && exitCode === 0) _clearPipeCheckpoint();
     appendLog('', '');
     if (stopped) {
       appendLog('⏹ Pipeline stopped by user.', 'log-exit-fail');
@@ -1709,6 +1820,8 @@ async function runPipeline(dryRun = true, confirmMode = false) {
 
       if (el) el.className = result.exitCode === 0 ? 'pipe-step done' : 'pipe-step failed';
       if (result.reportPath) capturedCsv = result.reportPath;
+      // Save a checkpoint so the run can be resumed from this point if interrupted
+      if (result.exitCode === 0) _savePipeCheckpoint(pipelineSteps, i, dryRun);
 
       const succeeded = result.exitCode === 0;
       const nextStep  = pipelineSteps[i + 1];
@@ -1859,7 +1972,7 @@ function runNovelty() {
   if (!sources.length) { alert('Add at least one source drive or folder.'); return; }
   if (!dest)           { alert('Enter a destination (home library) path.'); return; }
   const p = new URLSearchParams();
-  p.set('source', sources[0]);
+  sources.forEach(source => p.append('source', source));
   p.set('dest', dest);
   if (!dryRun) p.set('no_dry_run', '1');
   const label = dryRun
@@ -2239,7 +2352,7 @@ const GLOSSARY = [
   { id:'path', cat:'Tech', term:'File Path',
     short:'The full address of a file on your computer',
     body:`<p>The exact location of a file on your drive, written out as a chain of folders.</p>
-<p>Example: <code>/Volumes/DJMT/DJMT PRIMARY/House/Track.aiff</code></p>
+<p>Example: <code>/Volumes/YourDrive/Music/House/Track.aiff</code></p>
 <p>RekordBox stores the path of every track in its database. If you move a file without telling RekordBox, the path in the database points to nowhere — the track shows as missing. The Relocate tool fixes this.</p>`},
 
   // ── Audio ──────────────────────────────────────────────────────────────────
@@ -2590,6 +2703,7 @@ function getFolderPaths(pillsId) {
   const container = document.getElementById(pillsId);
   if (!container) return [];
   return Array.from(container.querySelectorAll('.folder-pill'))
+    .filter(p => !p.classList.contains('library-pill'))
     .map(p => p.dataset.path).filter(Boolean);
 }
 
@@ -2619,19 +2733,25 @@ function setupSinglePathZone(zoneId, inputId) {
     e.dataTransfer.dropEffect = 'copy';
   }, true);
 
-  zone.addEventListener('drop', e => {
+  zone.addEventListener('drop', async e => {
     e.preventDefault();
     e.stopPropagation();
     _dc = 0;
     zone.classList.remove('drag-over');
-    const path = _extractDropPath(e);
+    let path = _extractDropPath(e);
     if (path) {
       input.value = path;
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      zone.classList.add('drop-success');
-      zone.addEventListener('animationend', () => zone.classList.remove('drop-success'), { once: true });
+      _markZoneDropSuccess(zone);
     } else if (e.dataTransfer.files.length > 0 || e.dataTransfer.types.length > 0) {
-      dropPathFor(inputId);
+      path = await _recoverDroppedPath();
+      if (path) {
+        input.value = path;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        _markZoneDropSuccess(zone);
+      } else {
+        showToast('Could not read the dropped folder path.', 'error');
+      }
     }
   }, true);
 }
@@ -2669,19 +2789,23 @@ function setupFolderZone(zoneId, pillsId, textId) {
     e.dataTransfer.dropEffect = 'copy';
   }, true);
 
-  zone.addEventListener('drop', e => {
+  zone.addEventListener('drop', async e => {
     e.preventDefault();
     e.stopPropagation();
     _dc = 0;
     zone.classList.remove('drag-over');
-    const path = _extractDropPath(e);
+    let path = _extractDropPath(e);
     if (path) {
       addFolderPill(pillsId, path);
-      zone.classList.add('drop-success');
-      zone.addEventListener('animationend', () => zone.classList.remove('drop-success'), { once: true });
+      _markZoneDropSuccess(zone);
     } else if (e.dataTransfer.files.length > 0 || e.dataTransfer.types.length > 0) {
-      // Path inaccessible (WebView security) — read Finder's selection instead
-      dropFolderFor(pillsId);
+      path = await _recoverDroppedPath();
+      if (path) {
+        addFolderPill(pillsId, path);
+        _markZoneDropSuccess(zone);
+      } else {
+        showToast('Could not read the dropped folder path.', 'error');
+      }
     }
   }, true);
 
@@ -2831,11 +2955,9 @@ async function _resolveDropPath() {
   if (_finderPathCache) {
     const p = _finderPathCache;
     _finderPathCache = null;
-    console.log(`[resolveDropPath] using prefetched cache: ${p}`);
     return p;
   }
   // Cache miss (e.g. prefetch failed or was too slow) — fall back to a fresh query
-  console.log(`[resolveDropPath] cache miss, querying finder-selection`);
   try {
     const r = await fetch('/api/finder-selection?source=drop');
     const d = await r.json();
@@ -2848,13 +2970,25 @@ async function _resolveDropPath() {
   } catch { return null; }
 }
 
-async function dropFolderFor(pillsId) {
+function _markZoneDropSuccess(zone) {
+  if (!zone) return;
+  zone.classList.add('drop-success');
+  zone.addEventListener('animationend', () => zone.classList.remove('drop-success'), { once: true });
+}
+
+async function _recoverDroppedPath() {
   const path = await _resolveDropPath();
-  console.log(`[dropFolderFor] resolved: ${path} → ${pillsId}`);
+  if (path) return path;
+  showToast('Drop path was blocked by macOS. Choose the folder once to complete the drop.', 'neutral');
+  return await _nativePick();
+}
+
+async function dropFolderFor(pillsId) {
+  const path = await _recoverDroppedPath();
   if (path) addFolderPill(pillsId, path);
 }
 async function dropPathFor(inputId) {
-  const path = await _resolveDropPath();
+  const path = await _recoverDroppedPath();
   if (path) {
     const el = document.getElementById(inputId);
     if (el) { el.value = path; el.dispatchEvent(new Event('input', { bubbles: true })); }
@@ -2911,26 +3045,80 @@ function setupDropZone(input) {
     e.dataTransfer.dropEffect = 'copy';
   }, true);
 
-  wrap.addEventListener('drop', e => {
+  wrap.addEventListener('drop', async e => {
     e.preventDefault();
     e.stopPropagation();
     _dc = 0;
     wrap.classList.remove('drop-active');
-    const path = _extractDropPath(e);
+    let path = _extractDropPath(e);
     if (path) {
       input.value = path;
       input.dispatchEvent(new Event('input', { bubbles: true }));
       wrap.classList.add('drop-filled');
       wrap.addEventListener('animationend', () => wrap.classList.remove('drop-filled'), { once: true });
     } else if (e.dataTransfer.files.length > 0 || e.dataTransfer.types.length > 0) {
-      // Path inaccessible — read Finder's selection instead
-      if (input.id) dropPathFor(input.id);
+      path = await _recoverDroppedPath();
+      if (path) {
+        input.value = path;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        wrap.classList.add('drop-filled');
+        wrap.addEventListener('animationend', () => wrap.classList.remove('drop-filled'), { once: true });
+      } else {
+        showToast('Could not read the dropped folder path.', 'error');
+      }
     }
   }, true);
 }
 
 function setupAllDropZones() {
   // No legacy plain inputs remain — all zones now use setupSinglePathZone / setupFolderZone
+}
+
+/* ── Multi-path textarea drop zone: dropped paths are appended as new lines ── */
+function setupMultiDropZone(textarea) {
+  if (!textarea || textarea.dataset.dropReady) return;
+  textarea.dataset.dropReady = '1';
+
+  // Ensure a .drop-wrap parent exists (same structure as setupDropZone)
+  if (!textarea.parentElement.classList.contains('drop-wrap')) {
+    const wrap  = document.createElement('div');
+    wrap.className = 'drop-wrap';
+    textarea.parentNode.insertBefore(wrap, textarea);
+    wrap.appendChild(textarea);
+    const badge  = document.createElement('span');
+    badge.className   = 'drop-badge';
+    badge.textContent = '⤵ drop';
+    badge.style.top   = '8px';
+    wrap.appendChild(badge);
+  }
+
+  const wrap = textarea.closest('.drop-wrap');
+  let _dc = 0;
+
+  wrap.addEventListener('dragenter', e => {
+    e.preventDefault();
+    if (++_dc === 1) wrap.classList.add('drop-active');
+  }, true);
+  wrap.addEventListener('dragleave', () => {
+    if (--_dc <= 0) { _dc = 0; wrap.classList.remove('drop-active'); }
+  }, true);
+  wrap.addEventListener('dragover', e => {
+    e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy';
+  }, true);
+  wrap.addEventListener('drop', async e => {
+    e.preventDefault(); e.stopPropagation();
+    _dc = 0; wrap.classList.remove('drop-active');
+    let path = _extractDropPath(e);
+    if (!path && (e.dataTransfer.files.length > 0 || e.dataTransfer.types.length > 0)) {
+      path = await _recoverDroppedPath();
+    }
+    if (path) {
+      const existing = textarea.value.trim();
+      textarea.value  = existing ? existing + '\n' + path : path;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      _markZoneDropSuccess(wrap);
+    }
+  }, true);
 }
 
 /* Wire all drop zones once the DOM is confirmed ready */
