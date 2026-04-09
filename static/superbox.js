@@ -432,8 +432,10 @@ function _superboxUpdateRender(data) {
     msgEl.textContent = current
       ? `SuperBox ${latest} is available (you have an older version).`
       : `A new version of SuperBox (${latest}) is available.`;
-    if (data.release_url) {
-      linkEl.href = data.release_url;
+    const dlUrl = data.download_url || data.release_url;
+    if (dlUrl) {
+      linkEl.href = dlUrl;
+      linkEl.textContent = data.download_url ? 'Download SuperBox.zip' : 'View Release';
       linkEl.style.display = '';
     } else {
       linkEl.style.display = 'none';

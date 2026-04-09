@@ -15,7 +15,8 @@ Status dict shape:
         "update_available": bool,
         "current_version":  str | None,   # local git tag or commit SHA (short)
         "latest_version":   str | None,   # latest GitHub release tag
-        "release_url":      str | None,   # HTML URL of the latest release
+        "release_url":      str | None,   # HTML URL of the latest release page
+        "download_url":     str | None,   # direct download URL for SuperBox.zip
         "is_git_install":   bool,         # False if running from a ZIP extract
         "checked_at":       str | None,   # ISO timestamp of last check
         "error":            str | None,
@@ -34,7 +35,8 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_GITHUB_API  = "https://api.github.com/repos/fabledharbinger0993/SuperBox/releases/latest"
+_GITHUB_API    = "https://api.github.com/repos/fabledharbinger0993/SuperBox/releases/latest"
+_DOWNLOAD_URL  = "https://github.com/fabledharbinger0993/SuperBox/releases/latest/download/SuperBox.zip"
 _STARTUP_DELAY = 20       # seconds after boot before first check (non-blocking)
 _REQUEST_TIMEOUT = 8      # seconds for the GitHub API call
 
@@ -44,6 +46,7 @@ _status: dict = {
     "current_version":  None,
     "latest_version":   None,
     "release_url":      None,
+    "download_url":     None,
     "is_git_install":   False,
     "checked_at":       None,
     "error":            None,
@@ -80,6 +83,7 @@ def check_now() -> dict:
             current_version=current_version,
             latest_version=latest_tag,
             release_url=release_url,
+            download_url=_DOWNLOAD_URL if update_available else None,
             is_git_install=is_git,
             error=None,
         )
