@@ -1,5 +1,5 @@
 """
-SuperBox / app.py
+RekitBox / app.py
 
 Local web dashboard for rekordbox-toolkit.
 Run:  python3 app.py
@@ -26,12 +26,13 @@ import datetime
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request
+from flask_sock import Sock
 
 # ── Resource root — handles both dev and PyInstaller bundle ──────────────────
 # When PyInstaller runs, sys._MEIPASS is the temp dir where everything lives.
-# SUPERBOX_ROOT can also be set by main.py before importing this module.
+# REKITBOX_ROOT can also be set by main.py before importing this module.
 _REPO_ROOT = Path(
-    os.environ.get('SUPERBOX_ROOT')
+    os.environ.get('REKITBOX_ROOT')
     or getattr(sys, '_MEIPASS', None)
     or Path(__file__).parent.resolve()
 )
@@ -43,6 +44,7 @@ app = Flask(
     template_folder=str(_REPO_ROOT / 'templates'),
     static_folder=str(_REPO_ROOT / 'static'),
 )
+sock = Sock(app)
 
 # ── Homebrew update checker (background, weekly) ──────────────────────────────
 from brew_updater import start_background_checker as _start_brew_checker, \
@@ -172,7 +174,7 @@ def _stream_pipeline(steps: list[dict]):
     """
     Generator that runs a list of pipeline steps sequentially.
     Each step dict has: {"name": str, "cmd": list[str]}
-    Some steps produce a SUPERBOX_REPORT_PATH that the next step may consume
+    Some steps produce a REKITBOX_REPORT_PATH that the next step may consume
     (e.g. duplicates → prune). This is captured and injected as needed.
 
     SSE events emitted beyond the normal {"line": "..."} stream:
@@ -212,8 +214,8 @@ def _stream_pipeline(steps: list[dict]):
                 for line in iter(process.stdout.readline, ""):
                     stripped = line.rstrip()
                     # Capture CSV path for downstream steps
-                    if stripped.startswith("SUPERBOX_REPORT_PATH: "):
-                        last_report_path = stripped[len("SUPERBOX_REPORT_PATH: "):]
+                    if stripped.startswith("REKITBOX_REPORT_PATH: "):
+                        last_report_path = stripped[len("REKITBOX_REPORT_PATH: "):]
                     yield f"data: {json.dumps({'line': stripped})}\n\n"
                 process.wait()
                 exit_code = process.returncode
@@ -1043,7 +1045,7 @@ def api_state():
 
 @app.route("/api/setup-archive", methods=["POST"])
 def api_setup_archive():
-    """Create the SuperBox Archive folder structure on the DJ drive."""
+    """Create the RekitBox Archive folder structure on the DJ drive."""
     try:
         from config import ensure_archive_structure  # noqa: PLC0415
         ensure_archive_structure()
@@ -1068,7 +1070,7 @@ def api_settings():
             cfg["excluded_dirs"] = [d for d in data["excluded_dirs"] if isinstance(d, str) and d.strip()]
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             _json.dump(cfg, f, indent=2)
-        return jsonify({"ok": True, "note": "Restart SuperBox for changes to take effect."})
+        return jsonify({"ok": True, "note": "Restart RekitBox for changes to take effect."})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -1119,7 +1121,7 @@ def api_cancel_force():
     return jsonify({"ok": True})
 
 
-# ── SuperBox update route ─────────────────────────────────────────────────────
+# ── RekitBox update route ─────────────────────────────────────────────────────
 
 @app.route("/api/update/status")
 def api_update_status():
@@ -1145,7 +1147,7 @@ def api_brew_check():
 @app.route("/api/run/brew-upgrade")
 def api_brew_upgrade():
     """
-    SSE stream of ``brew upgrade <packages>`` for the packages SuperBox uses.
+    SSE stream of ``brew upgrade <packages>`` for the packages RekitBox uses.
     Only upgrades known-outdated packages reported by the last cached check.
     """
     outdated = _brew_get_status().get("outdated", [])
@@ -1153,7 +1155,7 @@ def api_brew_upgrade():
     if not names:
         # Nothing to do — return an immediate SSE end event
         def _nothing():
-            yield "data: No outdated SuperBox packages found.\n\n"
+            yield "data: No outdated RekitBox packages found.\n\n"
             yield "data: [DONE]\n\n"
         return Response(_nothing(), mimetype="text/event-stream",
                         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -1168,7 +1170,7 @@ def api_brew_upgrade():
 def api_finder_selection():
     """Return the path of the currently selected item in Finder.
 
-    When a user drags a folder from Finder and drops it in SuperBox, Finder
+    When a user drags a folder from Finder and drops it in RekitBox, Finder
     keeps the dragged item selected after the drop.  Querying that selection
     immediately gives us the exact path the WebView security model withholds —
     no dialog, no double navigation.
@@ -1276,19 +1278,19 @@ def api_fs_list():
 
 # ── Quit ──────────────────────────────────────────────────────────────────────
 
-_SUPERBOX_STATE = Path.home() / ".rekordbox-toolkit" / "superbox-state.json"
+_REKITBOX_STATE = Path.home() / ".rekordbox-toolkit" / "rekitbox-state.json"
 
 
 @app.route("/api/setup-status")
 def api_setup_status():
     """Return whether the welcome wizard has been completed and saved permissions.
 
-    Backed by ~/.rekordbox-toolkit/superbox-state.json so state survives across
+    Backed by ~/.rekordbox-toolkit/rekitbox-state.json so state survives across
     pywebview sessions regardless of WKWebView localStorage behaviour.
     """
     try:
-        if _SUPERBOX_STATE.exists():
-            state = json.loads(_SUPERBOX_STATE.read_text())
+        if _REKITBOX_STATE.exists():
+            state = json.loads(_REKITBOX_STATE.read_text())
             return jsonify({
                 "setup_complete": bool(state.get("setup_complete")),
                 "db_read":        state.get("db_read"),
@@ -1309,8 +1311,8 @@ def api_setup_complete():
             "db_read":  data.get("db_read"),
             "db_write": data.get("db_write"),
         }
-        _SUPERBOX_STATE.parent.mkdir(parents=True, exist_ok=True)
-        _SUPERBOX_STATE.write_text(json.dumps(state, indent=2) + "\n")
+        _REKITBOX_STATE.parent.mkdir(parents=True, exist_ok=True)
+        _REKITBOX_STATE.write_text(json.dumps(state, indent=2) + "\n")
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
@@ -1357,10 +1359,1034 @@ def api_quit():
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+
+
+# ── Analysis job state ────────────────────────────────────────────────────────
+# In-memory only — analysis jobs don't need to survive restarts.
+# Each entry: { job_id, track_ids, status, results: { track_id: {...} } }
+_ANALYSIS_JOBS: dict[str, dict] = {}
+_ANALYSIS_LOCK: threading.Lock = threading.Lock()
+
+
+_EXPORT_JOBS: dict[str, dict] = {}
+_EXPORT_LOCK: threading.Lock = threading.Lock()
+
+
+
+# ── Mobile auth ───────────────────────────────────────────────────────────────
+
+def _get_mobile_token() -> str:
+    """
+    Return the RekitGo Bearer token, generating it if absent.
+
+    Token is persisted in ~/.rekordbox-toolkit/config.json under "mobile_token".
+    Printed to console once on first generation so the user can copy it to the app.
+    Returns empty string if RekitBox hasn't been configured yet (safe — auth
+    middleware returns 503 in that case rather than silently accepting requests).
+    """
+    try:
+        from user_config import load_user_config, save_user_config, config_exists  # noqa: PLC0415
+        if not config_exists():
+            return ""
+        cfg = load_user_config()
+        if not cfg.get("mobile_token"):
+            cfg["mobile_token"] = str(uuid.uuid4())
+            save_user_config(cfg)
+            print()
+            print("  ┌──────────────────────────────────────────────────────────┐")
+            print(f"  │  REKITGO TOKEN: {cfg['mobile_token']}  │")
+            print("  │  Copy this into RekitGo → Settings → Auth Token        │")
+            print("  └──────────────────────────────────────────────────────────┘")
+            print()
+        return cfg["mobile_token"]
+    except Exception:
+        return ""
+
+
+MOBILE_TOKEN: str = _get_mobile_token()
+
+
+@app.before_request
+def _check_mobile_auth():
+    """
+    Require Bearer token for all /api/mobile/* routes except /api/mobile/ping.
+    Desktop routes (/, /api/status, /api/run/*, etc.) are unaffected — they are
+    already only reachable on localhost so no auth is needed there.
+    """
+    if not request.path.startswith("/api/mobile/"):
+        return
+    if request.path == "/api/mobile/ping":
+        return
+    if not MOBILE_TOKEN:
+        return jsonify({
+            "error": "server_not_configured",
+            "message": "Run: python3 cli.py setup",
+        }), 503
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer ") or auth[7:] != MOBILE_TOKEN:
+        return jsonify({"error": "unauthorized"}), 401
+
+# ── Mobile API routes ────────────────────────────────────────────────────────
+
+@app.route("/api/mobile/ping")
+def mobile_ping():
+    """
+    Health check for RekitGo. No auth required.
+    Used by the app on startup to confirm network reachability before attempting
+    authenticated calls.
+    """
+    return jsonify({"status": "ok", "version": "1.0.0", "rekitbox_version": "1.0.9"})
+
+
+@app.route("/api/mobile/folders")
+def mobile_folders():
+    """
+    List configured download folders with file counts.
+
+    Reads "download_folders" from ~/.rekordbox-toolkit/config.json.
+    Returns an empty list if the key is absent — the user adds folders
+    via the Settings tab.
+    """
+    try:
+        from user_config import load_user_config  # noqa: PLC0415
+        cfg = load_user_config()
+        folders = cfg.get("download_folders", [])
+    except Exception:
+        folders = []
+
+    result = []
+    for folder_path in folders:
+        p = Path(folder_path)
+        if not p.is_dir():
+            continue
+        try:
+            file_count = sum(
+                1 for f in p.iterdir()
+                if f.is_file() and not f.name.startswith(".")
+            )
+        except PermissionError:
+            file_count = 0
+        result.append({
+            "name":       p.name,
+            "path":       str(p),
+            "file_count": file_count,
+        })
+    return jsonify(result)
+
+
+@app.route("/api/mobile/folders/<path:folder_path>/files")
+def mobile_folder_files(folder_path: str):
+    """
+    List audio files in a specific folder.
+
+    folder_path is URL-encoded by the client and decoded by Flask's <path:>
+    converter. We resolve it to an absolute path and validate it exists.
+    """
+    import datetime  # noqa: PLC0415
+    p = Path("/" + folder_path) if not folder_path.startswith("/") else Path(folder_path)
+
+    if not p.is_dir():
+        return jsonify({"error": "folder_not_found"}), 404
+
+    audio_extensions = {
+        ".mp3", ".wav", ".aiff", ".aif", ".flac", ".m4a", ".ogg", ".opus",
+    }
+
+    files = []
+    try:
+        for f in sorted(p.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+            if not f.is_file():
+                continue
+            if f.suffix.lower() not in audio_extensions:
+                continue
+            if f.name.startswith("."):
+                continue
+            stat = f.stat()
+            files.append({
+                "name":       f.name,
+                "path":       str(f),
+                "size_bytes": stat.st_size,
+                "modified":   datetime.datetime.fromtimestamp(
+                    stat.st_mtime, tz=datetime.timezone.utc
+                ).isoformat(),
+            })
+    except PermissionError:
+        return jsonify({"error": "permission_denied"}), 403
+
+    return jsonify(files)
+
+
+@app.route("/api/mobile/download", methods=["POST"])
+def mobile_download():
+    """
+    Enqueue a download job.
+
+    Body: { "url": "...", "destination": "/Music/New Drops/", "filename": "optional" }
+    Response: { "job_id": "uuid" }
+
+    The download runs asynchronously. Progress and completion are pushed to all
+    connected WebSocket clients via /api/mobile/events.
+    """
+    import downloader  # noqa: PLC0415
+    body = request.get_json(force=True, silent=True) or {}
+    url = (body.get("url") or "").strip()
+    destination = (body.get("destination") or "").strip()
+    filename = (body.get("filename") or "").strip() or None
+
+    if not url:
+        return jsonify({"error": "url is required"}), 400
+    if not destination:
+        return jsonify({"error": "destination is required"}), 400
+
+    job_id = downloader.enqueue(url, destination, filename)
+    return jsonify({"job_id": job_id}), 202
+
+
+@app.route("/api/mobile/jobs")
+def mobile_jobs():
+    """Return all download jobs, newest first (capped at 200)."""
+    import downloader  # noqa: PLC0415
+    return jsonify(downloader.get_all_jobs())
+
+
+@app.route("/api/mobile/jobs/<job_id>")
+def mobile_job(job_id: str):
+    """Return a single job by ID."""
+    import downloader  # noqa: PLC0415
+    job = downloader.get_job(job_id)
+    if job is None:
+        return jsonify({"error": "not_found"}), 404
+    return jsonify(job)
+
+
+@app.route("/api/mobile/rekordbox/tracks")
+def mobile_rekordbox_tracks():
+    """
+    List tracks in the Rekordbox database.
+
+    Query params:
+      search  — filter by title or artist (case-insensitive, optional)
+      sort    — "date_added" (default) | "title" | "artist" | "bpm"
+      limit   — max results (default 200)
+      offset  — pagination offset (default 0)
+
+    Returns a JSON array of track objects.
+    """
+    import datetime  # noqa: PLC0415
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    search = request.args.get("search", "").strip().lower()
+    sort   = request.args.get("sort", "date_added")
+    limit  = int(request.args.get("limit", 200))
+    offset = int(request.args.get("offset", 0))
+
+    try:
+        with read_db(_DB) as db:
+            rows = list(db.get_content())
+
+        results = []
+        for t in rows:
+            title  = t.Title or ""
+            artist = t.Artist.Name if t.Artist else ""
+            path   = t.FolderPath or ""
+
+            # Skip streaming / non-local tracks (no real file path)
+            if not path or not path.startswith("/"):
+                continue
+
+            if search and search not in title.lower() and search not in artist.lower():
+                continue
+
+            bpm = round(t.BPM / 100, 1) if t.BPM else None
+            key = t.Key.Name if t.Key else None
+
+            # StockDate is a date object; DateCreated is often 1969 (epoch artefact)
+            date_added = None
+            sd = t.StockDate
+            if sd and isinstance(sd, (datetime.date, datetime.datetime)):
+                try:
+                    date_added = sd.isoformat()
+                except Exception:
+                    pass
+
+            results.append({
+                "id":         str(t.ID),
+                "title":      title,
+                "artist":     artist,
+                "bpm":        bpm,
+                "key":        key,
+                "duration_ms": (t.Length * 1000) if t.Length else None,
+                "file_path":  path,
+                "date_added": date_added,
+            })
+
+        # Sort
+        if sort == "title":
+            results.sort(key=lambda r: r["title"].lower())
+        elif sort == "artist":
+            results.sort(key=lambda r: r["artist"].lower())
+        elif sort == "bpm":
+            results.sort(key=lambda r: r["bpm"] or 0, reverse=True)
+        else:  # date_added (most recent first)
+            results.sort(key=lambda r: r["date_added"] or "", reverse=True)
+
+        return jsonify(results[offset: offset + limit])
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/mobile/rekordbox/tracks", methods=["POST"])
+def mobile_rekordbox_add_track():
+    """
+    Add a local audio file to the Rekordbox database.
+
+    Body: { "file_path": "/absolute/path/to/track.mp3" }
+    Response: { "track_id": "123456", "status": "added" }
+              or { "track_id": "123456", "status": "already_exists" } (409)
+
+    Requires Rekordbox to be closed (write_db enforces this).
+    """
+    import datetime  # noqa: PLC0415
+    from pathlib import Path as _Path  # noqa: PLC0415
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    data = request.get_json(silent=True) or {}
+    file_path = data.get("file_path", "").strip()
+
+    if not file_path:
+        return jsonify({"error": "file_path required"}), 400
+
+    p = _Path(file_path)
+    if not p.exists():
+        return jsonify({"error": f"File not found: {file_path}"}), 404
+
+    AUDIO_EXTS = {".mp3", ".wav", ".aiff", ".aif", ".flac", ".m4a", ".ogg", ".opus"}
+    if p.suffix.lower() not in AUDIO_EXTS:
+        return jsonify({"error": f"Unsupported file type: {p.suffix}"}), 400
+
+    try:
+        with write_db(_DB) as db:
+            track = db.add_content(file_path)
+            db.flush()
+            track_id = str(track.ID)
+        return jsonify({"track_id": track_id, "status": "added"}), 201
+
+    except ValueError as exc:
+        # "already exists in database"
+        if "already exists" in str(exc):
+            # Look up the existing ID to return it
+            try:
+                from db_connection import read_db as _read  # noqa: PLC0415
+                with _read(_DB) as db:
+                    existing = list(db.get_content())
+                    match = next((t for t in existing if t.FolderPath == file_path), None)
+                    existing_id = str(match.ID) if match else "unknown"
+                return jsonify({"track_id": existing_id, "status": "already_exists"}), 409
+            except Exception:
+                return jsonify({"track_id": "unknown", "status": "already_exists"}), 409
+        return jsonify({"error": str(exc)}), 400
+
+    except RuntimeError as exc:
+        # Rekordbox is running
+        return jsonify({"error": str(exc)}), 503
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+# ── Export job state ─────────────────────────────────────────────────────────
+# In-memory export jobs. Each entry:
+# { job_id, status, tracks_total, tracks_done, current_track, errors: [] }
+_EXPORT_JOBS: dict[str, dict] = {}
+_EXPORT_LOCK: threading.Lock = threading.Lock()
+
+# ── Track analysis ────────────────────────────────────────────────────────────
+
+def _push_analysis_event(
+    job_id: str,
+    track_id: str,
+    status: str,
+    bpm: "float | None" = None,
+    key: "str | None" = None,
+    error: "str | None" = None,
+) -> None:
+    """Push a WebSocket analysis_update event to all connected RekitGo clients."""
+    try:
+        import ws_bus  # noqa: PLC0415
+        ws_bus.broadcast(json.dumps({
+            "type":     "analysis_update",
+            "job_id":   job_id,
+            "track_id": track_id,
+            "status":   status,
+            "bpm":      bpm,
+            "key":      key,
+            "error":    error,
+        }))
+    except Exception:
+        pass  # WS push is best-effort; never block analysis thread
+
+
+def _run_analysis(job_id: str, track_ids: list) -> None:
+    """
+    Background thread: detect BPM and key for each track, write results
+    to file tags and to the Rekordbox DB.
+
+    For each track:
+      1. Fetch file path from DB (read-only).
+      2. Run process_file() — writes BPM/key to file tags via mutagen.
+      3. Try write_db() to update DjmdContent.BPM and .KeyID.
+         If Rekordbox is running, the DB update is skipped (tags still written).
+    """
+    from pathlib import Path as _Path  # noqa: PLC0415
+    from audio_processor import process_file  # noqa: PLC0415
+    from db_connection import read_db, write_db  # noqa: PLC0415
+    from key_mapper import resolve_key_id  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    for track_id in track_ids:
+        # ── mark as analyzing ──────────────────────────────────────────────────
+        with _ANALYSIS_LOCK:
+            _ANALYSIS_JOBS[job_id]["results"][track_id]["status"] = "analyzing"
+        _push_analysis_event(job_id, track_id, "analyzing")
+
+        bpm: "float | None" = None
+        key: "str | None" = None
+        db_note: "str | None" = None
+
+        try:
+            # 1. Resolve file path
+            with read_db(_DB) as db:
+                row = db.get_content(ID=track_id).one_or_none()
+                if row is None:
+                    raise ValueError(f"Track {track_id} not found in DB")
+                file_path = row.FolderPath or ""
+                if not file_path or not file_path.startswith("/"):
+                    raise ValueError(f"Track {track_id} has no local file path")
+
+            # 2. Run analysis — BPM + key detection; loudness normalisation OFF
+            p = _Path(file_path)
+            result = process_file(
+                p,
+                detect_bpm=True,
+                detect_key=True,
+                normalise=False,
+                force=False,   # skip if tags already exist
+            )
+            bpm = result.bpm_detected
+            key = result.key_detected   # Camelot notation or None
+
+            # 3. Update Rekordbox DB
+            try:
+                with write_db(_DB) as db:
+                    row = db.get_content(ID=track_id).one_or_none()
+                    if row:
+                        if bpm is not None:
+                            row.BPM = int(round(bpm * 100))
+                        if key is not None:
+                            kid = resolve_key_id(key, db)
+                            if kid:
+                                row.KeyID = kid
+                    db.commit()
+            except RuntimeError:
+                # Rekordbox is running — tags were written to file, DB update deferred
+                db_note = "DB not updated (Rekordbox is open); file tags written."
+
+            status = "complete"
+
+        except Exception as exc:
+            status = "failed"
+            db_note = str(exc)
+
+        # ── record result ──────────────────────────────────────────────────────
+        with _ANALYSIS_LOCK:
+            _ANALYSIS_JOBS[job_id]["results"][track_id].update({
+                "status": status,
+                "bpm":    bpm,
+                "key":    key,
+                "error":  db_note,
+            })
+        _push_analysis_event(job_id, track_id, status, bpm=bpm, key=key, error=db_note)
+
+    # Job complete
+    with _ANALYSIS_LOCK:
+        _ANALYSIS_JOBS[job_id]["status"] = "complete"
+
+
+@app.route("/api/mobile/rekordbox/analyze", methods=["POST"])
+def mobile_rekordbox_analyze():
+    """
+    Queue BPM + key analysis for one or more Rekordbox tracks.
+
+    Body: { "track_ids": ["123456", "789012"] }
+    Response: { "job_id": "uuid" }  (202 Accepted)
+
+    Analysis runs in a background thread.  Poll GET /analyze/<job_id> for status,
+    or listen for "analysis_update" WebSocket events.
+    """
+    data      = request.get_json(silent=True) or {}
+    track_ids = data.get("track_ids") or []
+
+    if not isinstance(track_ids, list) or not track_ids:
+        return jsonify({"error": "track_ids must be a non-empty list"}), 400
+
+    # Enforce reasonable batch limit
+    track_ids = [str(t) for t in track_ids[:50]]
+
+    job_id = str(uuid.uuid4())
+
+    with _ANALYSIS_LOCK:
+        _ANALYSIS_JOBS[job_id] = {
+            "job_id":    job_id,
+            "track_ids": track_ids,
+            "status":    "running",
+            "results":   {tid: {"status": "queued", "bpm": None, "key": None, "error": None}
+                          for tid in track_ids},
+        }
+
+    t = threading.Thread(
+        target=_run_analysis,
+        args=(job_id, track_ids),
+        daemon=True,
+        name=f"analysis-{job_id[:8]}",
+    )
+    t.start()
+
+    return jsonify({"job_id": job_id}), 202
+
+
+@app.route("/api/mobile/rekordbox/analyze/<job_id>")
+def mobile_rekordbox_analyze_status(job_id: str):
+    """
+    Poll analysis job status.
+
+    Response: { job_id, status, results: { track_id: { status, bpm, key, error } } }
+    """
+    with _ANALYSIS_LOCK:
+        job = _ANALYSIS_JOBS.get(job_id)
+
+    if job is None:
+        return jsonify({"error": "Job not found"}), 404
+
+    return jsonify(job)
+
+
+# ── Rekordbox playlists ────────────────────────────────────────────────────────
+
+@app.route("/api/mobile/rekordbox/playlists")
+def mobile_rekordbox_playlists():
+    """
+    List all non-folder playlists with track count.
+    Returns: [ { id, name, track_count }, ... ] sorted alphabetically.
+    """
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        with read_db(_DB) as db:
+            rows = db.get_playlist().all()
+            result = []
+            for pl in rows:
+                if pl.Attribute != 0:   # 0 = regular playlist; 1 = folder; 4 = smart
+                    continue
+                songs = db.get_playlist_songs(PlaylistID=pl.ID).all()
+                result.append({
+                    "id":          str(pl.ID),
+                    "name":        pl.Name or "",
+                    "track_count": len(songs),
+                })
+            result.sort(key=lambda p: p["name"].lower())
+            return jsonify(result)
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/mobile/rekordbox/playlists", methods=["POST"])
+def mobile_rekordbox_create_playlist():
+    """
+    Create a new playlist at the root level.
+    Body: { "name": "My Playlist" }
+    Response: { "playlist_id": "123456" }  (201)
+    """
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB   # noqa: PLC0415
+
+    data = request.get_json(silent=True) or {}
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+
+    try:
+        with write_db(_DB) as db:
+            pl = db.create_playlist(name)
+            db.commit()
+            return jsonify({"playlist_id": str(pl.ID)}), 201
+
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/mobile/rekordbox/playlists/<playlist_id>")
+def mobile_rekordbox_playlist(playlist_id: str):
+    """
+    Get a single playlist with its ordered track list.
+    Response: { id, name, track_count, tracks: [ Track, ... ] }
+    """
+    import datetime  # noqa: PLC0415
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        with read_db(_DB) as db:
+            pl = db.get_playlist(ID=playlist_id).one_or_none()
+            if pl is None:
+                return jsonify({"error": "Playlist not found"}), 404
+
+            songs = (
+                db.get_playlist_songs(PlaylistID=pl.ID)
+                  .order_by("TrackNo")
+                  .all()
+            )
+
+            tracks = []
+            for song in songs:
+                t = song.Content
+                if t is None:
+                    continue
+
+                date_added = None
+                sd = t.StockDate
+                if sd and isinstance(sd, (datetime.date, datetime.datetime)):
+                    try:
+                        date_added = sd.isoformat()
+                    except Exception:
+                        pass
+
+                tracks.append({
+                    "id":          str(t.ID),
+                    "title":       t.Title or "",
+                    "artist":      t.Artist.Name if t.Artist else "",
+                    "bpm":         round(t.BPM / 100, 1) if t.BPM else None,
+                    "key":         t.Key.Name if t.Key else None,
+                    "duration_ms": (t.Length * 1000) if t.Length else None,
+                    "file_path":   t.FolderPath or "",
+                    "date_added":  date_added,
+                    "track_no":    song.TrackNo,
+                })
+
+            return jsonify({
+                "id":          str(pl.ID),
+                "name":        pl.Name or "",
+                "track_count": len(tracks),
+                "tracks":      tracks,
+            })
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/mobile/rekordbox/playlists/<playlist_id>", methods=["PUT"])
+def mobile_rekordbox_rename_playlist(playlist_id: str):
+    """
+    Rename a playlist.
+    Body: { "name": "New Name" }
+    """
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB   # noqa: PLC0415
+
+    data = request.get_json(silent=True) or {}
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+
+    try:
+        with write_db(_DB) as db:
+            pl = db.get_playlist(ID=playlist_id).one_or_none()
+            if pl is None:
+                return jsonify({"error": "Playlist not found"}), 404
+
+            db.rename_playlist(pl, name)
+            db.commit()
+            return jsonify({"status": "ok"})
+
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/mobile/rekordbox/playlists/<playlist_id>", methods=["DELETE"])
+def mobile_rekordbox_delete_playlist(playlist_id: str):
+    """
+    Delete a playlist (does not delete the tracks themselves).
+    """
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB   # noqa: PLC0415
+
+    try:
+        with write_db(_DB) as db:
+            pl = db.get_playlist(ID=playlist_id).one_or_none()
+            if pl is None:
+                return jsonify({"error": "Playlist not found"}), 404
+
+            db.delete_playlist(pl)
+            db.commit()
+            return jsonify({"status": "deleted"})
+
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/mobile/rekordbox/playlists/<playlist_id>/tracks", methods=["POST"])
+def mobile_rekordbox_add_to_playlist(playlist_id: str):
+    """
+    Append a track to a playlist.
+    Body: { "track_id": "123456" }
+    """
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB   # noqa: PLC0415
+
+    data    = request.get_json(silent=True) or {}
+    track_id = str(data.get("track_id", "")).strip()
+    if not track_id:
+        return jsonify({"error": "track_id required"}), 400
+
+    try:
+        with write_db(_DB) as db:
+            pl = db.get_playlist(ID=playlist_id).one_or_none()
+            if pl is None:
+                return jsonify({"error": "Playlist not found"}), 404
+
+            track = db.get_content(ID=track_id).one_or_none()
+            if track is None:
+                return jsonify({"error": "Track not found"}), 404
+
+            db.add_to_playlist(pl, track, track_no=None)   # appends to end
+            db.commit()
+            return jsonify({"status": "added"}), 201
+
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route(
+    "/api/mobile/rekordbox/playlists/<playlist_id>/tracks/<track_id>",
+    methods=["DELETE"],
+)
+def mobile_rekordbox_remove_from_playlist(playlist_id: str, track_id: str):
+    """
+    Remove a track from a playlist.
+    Does not delete the track from the library.
+    """
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB   # noqa: PLC0415
+
+    try:
+        with write_db(_DB) as db:
+            song = db.get_playlist_songs(
+                PlaylistID=playlist_id, ContentID=track_id
+            ).one_or_none()
+            if song is None:
+                return jsonify({"error": "Track not in playlist"}), 404
+
+            db.remove_from_playlist(playlist_id, song.ID)
+            db.commit()
+            return jsonify({"status": "removed"})
+
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+# ── Drive detection & USB export ─────────────────────────────────────────────
+
+@app.route("/api/mobile/drives")
+def mobile_drives():
+    """
+    List mounted Pioneer-compatible drives.
+
+    A drive qualifies if it has a PIONEER/Master/master.db file — same format
+    as the main Rekordbox library (Rekordbox6Database / SQLite).
+
+    Returns: [ { path, name, free_bytes, total_bytes, pioneer } ]
+    """
+    try:
+        import psutil  # noqa: PLC0415
+        drives = []
+        for part in psutil.disk_partitions():
+            mp = part.mountpoint
+            if not mp.startswith("/Volumes"):
+                continue
+            try:
+                usage      = psutil.disk_usage(mp)
+                name       = Path(mp).name
+                pioneer_db = Path(mp) / "PIONEER" / "Master" / "master.db"
+                drives.append({
+                    "path":       mp,
+                    "name":       name,
+                    "free_bytes":  usage.free,
+                    "total_bytes": usage.total,
+                    "pioneer":     pioneer_db.exists(),
+                })
+            except (PermissionError, OSError):
+                continue
+        return jsonify(drives)
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
+    """
+    Background thread: export selected playlists from the main Rekordbox DB
+    to the Pioneer USB drive's master.db.
+
+    For each track in the selected playlists:
+      1. If the track already exists in the USB DB (by FolderPath), skip it.
+      2. Otherwise add it via db.add_content(file_path).
+    Then create/update playlists in the USB DB and link all tracks.
+
+    Both databases use the Rekordbox6Database (SQLite) format — no .pdb writes.
+    The USB master.db is backed up before any writes.
+    """
+    import shutil as _shutil  # noqa: PLC0415
+    from pathlib import Path as _Path  # noqa: PLC0415
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from pyrekordbox import Rekordbox6Database  # noqa: PLC0415
+    import ws_bus as _ws  # noqa: PLC0415
+
+    def _push(update: dict) -> None:
+        try:
+            _ws.broadcast(json.dumps({"type": "export_update", "job_id": job_id, **update}))
+        except Exception:
+            pass
+
+    def _update(patch: dict) -> None:
+        with _EXPORT_LOCK:
+            _EXPORT_JOBS[job_id].update(patch)
+        _push(patch)
+
+    usb_db_path = _Path(drive_path) / "PIONEER" / "Master" / "master.db"
+
+    try:
+        # ── 1. Validate USB DB ─────────────────────────────────────────────────
+        if not usb_db_path.exists():
+            _update({"status": "failed", "errors": ["PIONEER/Master/master.db not found on drive"]})
+            return
+
+        # ── 2. Backup USB DB ──────────────────────────────────────────────────
+        backup_path = usb_db_path.with_suffix(".export_backup.db")
+        _shutil.copy2(str(usb_db_path), str(backup_path))
+
+        # ── 3. Load source playlists + tracks ────────────────────────────────
+        tracks_by_playlist: dict[str, list] = {}   # playlist_name → [content_row]
+        all_tracks: dict[str, object] = {}          # track_id → content_row (deduplicated)
+
+        with read_db(_DB) as src:
+            for pl_id in playlist_ids:
+                pl = src.get_playlist(ID=pl_id).one_or_none()
+                if pl is None:
+                    continue
+                songs = src.get_playlist_songs(PlaylistID=pl.ID).order_by("TrackNo").all()
+                tracks_in_playlist = []
+                for song in songs:
+                    t = song.Content
+                    if t is None:
+                        continue
+                    path = t.FolderPath or ""
+                    if not path or not path.startswith("/"):
+                        continue  # skip cloud/streaming tracks
+                    if not _Path(path).exists():
+                        continue  # skip tracks whose files aren't accessible
+                    all_tracks[str(t.ID)] = t
+                    tracks_in_playlist.append(t)
+                tracks_by_playlist[pl.Name or f"Playlist {pl_id}"] = tracks_in_playlist
+
+        total = sum(len(v) for v in tracks_by_playlist.values())
+        _update({"tracks_total": total, "tracks_done": 0, "status": "running"})
+
+        if total == 0:
+            _update({"status": "complete", "tracks_done": 0})
+            return
+
+        # ── 4. Open USB DB for writing ────────────────────────────────────────
+        usb = Rekordbox6Database(str(usb_db_path))
+
+        try:
+            # Build index of existing paths in USB DB for fast dedup check
+            existing_paths: set[str] = set()
+            for row in usb.get_content().all():
+                if row.FolderPath:
+                    existing_paths.add(row.FolderPath)
+
+            # path → USB content row (populated as we add tracks)
+            path_to_usb_row: dict[str, object] = {}
+            for row in usb.get_content().all():
+                if row.FolderPath:
+                    path_to_usb_row[row.FolderPath] = row
+
+            done = 0
+            errors = []
+
+            # ── 5. Add missing tracks ────────────────────────────────────────
+            # Process deduplicated set first so each file is added at most once
+            for src_row in all_tracks.values():
+                fp = src_row.FolderPath
+                _update({"current_track": src_row.Title or fp})
+
+                if fp not in existing_paths:
+                    try:
+                        usb_row = usb.add_content(fp)
+                        usb.flush()
+                        path_to_usb_row[fp] = usb_row
+                        existing_paths.add(fp)
+                    except Exception as exc:
+                        errors.append(f"{Path(fp).name}: {exc}")
+
+                done += 1
+                _update({"tracks_done": done})
+
+            # Commit all new content rows in one go
+            usb.commit()
+
+            # ── 6. Create / update playlists in USB DB ───────────────────────
+            for pl_name, src_tracks in tracks_by_playlist.items():
+                # Find or create the playlist
+                existing_pl = usb.get_playlist(Name=pl_name).one_or_none()
+                if existing_pl is None:
+                    usb_pl = usb.create_playlist(pl_name)
+                    usb.flush()
+                else:
+                    usb_pl = existing_pl
+
+                # Build set of content IDs already in this USB playlist
+                already_linked: set[str] = {
+                    str(s.ContentID)
+                    for s in usb.get_playlist_songs(PlaylistID=usb_pl.ID).all()
+                }
+
+                for src_row in src_tracks:
+                    usb_row = path_to_usb_row.get(src_row.FolderPath)
+                    if usb_row is None:
+                        continue
+                    if str(usb_row.ID) not in already_linked:
+                        try:
+                            usb.add_to_playlist(usb_pl, usb_row, track_no=None)
+                        except Exception as exc:
+                            errors.append(f"Link {Path(src_row.FolderPath).name}: {exc}")
+
+            usb.commit()
+
+        finally:
+            usb.close()
+
+        _update({"status": "complete", "errors": errors, "current_track": ""})
+
+    except Exception as exc:
+        _update({"status": "failed", "errors": [str(exc)], "current_track": ""})
+
+
+@app.route("/api/mobile/export", methods=["POST"])
+def mobile_export_start():
+    """
+    Start a USB export job.
+
+    Body: { "playlist_ids": ["123", "456"], "drive_path": "/Volumes/DJMT" }
+    Response: { "job_id": "uuid" }  (202)
+    """
+    data         = request.get_json(silent=True) or {}
+    playlist_ids = data.get("playlist_ids") or []
+    drive_path   = (data.get("drive_path") or "").strip()
+
+    if not playlist_ids:
+        return jsonify({"error": "playlist_ids required"}), 400
+    if not drive_path:
+        return jsonify({"error": "drive_path required"}), 400
+
+    usb_db = Path(drive_path) / "PIONEER" / "Master" / "master.db"
+    if not usb_db.exists():
+        return jsonify({"error": f"No PIONEER/Master/master.db on {drive_path}"}), 400
+
+    job_id = str(uuid.uuid4())
+
+    with _EXPORT_LOCK:
+        _EXPORT_JOBS[job_id] = {
+            "job_id":        job_id,
+            "status":        "running",
+            "tracks_total":  0,
+            "tracks_done":   0,
+            "current_track": "",
+            "errors":        [],
+        }
+
+    threading.Thread(
+        target=_run_export,
+        args=(job_id, [str(p) for p in playlist_ids], drive_path),
+        daemon=True,
+        name=f"export-{job_id[:8]}",
+    ).start()
+
+    return jsonify({"job_id": job_id}), 202
+
+
+@app.route("/api/mobile/export/<job_id>")
+def mobile_export_status(job_id: str):
+    """Poll export job status."""
+    with _EXPORT_LOCK:
+        job = _EXPORT_JOBS.get(job_id)
+    if job is None:
+        return jsonify({"error": "Job not found"}), 404
+    return jsonify(job)
+
+
+@sock.route("/api/mobile/events")
+def mobile_events(ws):
+    """
+    WebSocket event bus for RekitGo.
+
+    The mobile app connects here on startup and holds the connection open.
+    The server pushes JSON events as they occur (download progress, file added,
+    drive connected, analysis complete, export progress, etc.).
+
+    Auth: checked via the before_request hook — flask-sock routes run through
+    the same request pipeline, so _check_mobile_auth fires before this handler.
+
+    Keep-alive: the client should send any message (e.g. "ping") every ~25s.
+    We block on ws.receive(timeout=30) so the loop stays alive without spinning.
+    If the client disconnects or the timeout fires with no message, the exception
+    exits the loop and unregister() cleans up.
+    """
+    import ws_bus  # noqa: PLC0415
+    ws_bus.register(ws)
+    try:
+        while True:
+            ws.receive(timeout=30)
+    except Exception:
+        pass
+    finally:
+        ws_bus.unregister(ws)
+
+
 if __name__ == "__main__":
     print()
     print("  ┌─────────────────────────────────────┐")
-    print("  │  SuperBox  ·  rekordbox-toolkit UI  │")
+    print("  │  RekitBox  ·  rekordbox-toolkit UI  │")
     print("  │  http://localhost:5001              │")
     print("  └─────────────────────────────────────┘")
     print()

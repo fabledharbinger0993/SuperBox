@@ -43,4 +43,4 @@ pywebview>=5.0
 
 pyinstaller>=6.0
 # Bundles Python + all deps into a standalone .app.  Run build.sh to produce
-# dist/SuperBox.app.  Not needed at runtime — dev/build tool only.
+# dist/RekitBox.app.  Not needed at runtime — dev/build tool only.

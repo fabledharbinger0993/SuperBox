@@ -132,7 +132,7 @@ header {
 }
 
 /* ── Brew update banner ────────────────────────────────────────────────── */
-#superbox-update-banner {
+#rekitbox-update-banner {
   display: none;
   align-items: center;
   gap: 12px;

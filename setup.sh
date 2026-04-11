@@ -1,21 +1,21 @@
 #!/bin/bash
-# SuperBox — first-run dependency installer
+# RekitBox — first-run dependency installer
 # Opened automatically by launch.sh when Homebrew formulas or the Python
 # venv are missing. Runs in a visible Terminal window so the user can see
 # progress and respond to any password prompts.
 #
-# When complete it touches ../.superbox_ready so launch.sh knows to proceed.
+# When complete it touches ../.rekitbox_ready so launch.sh knows to proceed.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV="$SCRIPT_DIR/../venv"
-SENTINEL="$SCRIPT_DIR/../.superbox_ready"
+SENTINEL="$SCRIPT_DIR/../.rekitbox_ready"
 
 # ── Banner ────────────────────────────────────────────────────────────────
 clear
 echo ""
 echo "  ╔════════════════════════════════════════════════════════╗"
-echo "  ║            SuperBox — First-Run Setup                  ║"
-echo "  ║  This runs once. SuperBox will launch when it's done.  ║"
+echo "  ║            RekitBox — First-Run Setup                  ║"
+echo "  ║  This runs once. RekitBox will launch when it's done.  ║"
 echo "  ╚════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -44,7 +44,7 @@ if [ -z "$BREW" ]; then
   if [ -z "$BREW" ]; then
     echo ""
     echo "  ✗  Homebrew installation failed. Check the output above."
-    echo "     Fix the issue, then double-click SuperBox again."
+    echo "     Fix the issue, then double-click RekitBox again."
     read -rp "     Press Return to close this window." _
     exit 1
   fi
@@ -112,9 +112,9 @@ pip install -r "$SCRIPT_DIR/requirements.txt" --quiet
 ok "All Python packages installed"
 
 # ── Create launcher .app ─────────────────────────────────────────────────
-step "Creating SuperBox.app launcher"
+step "Creating RekitBox.app launcher"
 
-APP_DEST="$HOME/Applications/SuperBox.app"
+APP_DEST="$HOME/Applications/RekitBox.app"
 LAUNCH_PATH="$SCRIPT_DIR/launch.sh"
 
 mkdir -p "$HOME/Applications"
@@ -126,11 +126,11 @@ do shell script "bash '$LAUNCH_PATH'"
 APPLESCRIPT
 
 if [ -d "$APP_DEST" ]; then
-  ok "SuperBox.app created at ~/Applications/SuperBox.app"
+  ok "RekitBox.app created at ~/Applications/RekitBox.app"
   info "Drag it to your Dock for one-click access."
   info "Or double-click it from ~/Applications."
 else
-  info "Could not create SuperBox.app — run launch.sh directly from Terminal."
+  info "Could not create RekitBox.app — run launch.sh directly from Terminal."
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ touch "$SENTINEL"
 
 echo ""
 echo "  ╔════════════════════════════════════════════════════════╗"
-echo "  ║  ✓  Setup complete. SuperBox is launching now.         ║"
+echo "  ║  ✓  Setup complete. RekitBox is launching now.         ║"
 echo "  ║     This window will close in 4 seconds.               ║"
 echo "  ╚════════════════════════════════════════════════════════╝"
 echo ""

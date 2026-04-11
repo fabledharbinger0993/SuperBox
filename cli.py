@@ -30,7 +30,7 @@ from datetime import datetime
 from pathlib import Path
 
 try:
-    from SuperBox.config import DJMT_DB, MUSIC_ROOT   # when run as a package
+    from RekitBox.config import DJMT_DB, MUSIC_ROOT   # when run as a package
 except ImportError:
     from config import DJMT_DB, MUSIC_ROOT             # when run as a script
 
@@ -44,17 +44,17 @@ def _emit_report(text: str, subdir: str, filename: str) -> None:
     Print a report so the UI can capture it, then save it to disk.
 
     Protocol:
-      SUPERBOX_REPORT_BEGIN — UI starts capturing
+      REKITBOX_REPORT_BEGIN — UI starts capturing
       <plain text lines>   — shown in terminal AND in the inline report card
-      SUPERBOX_REPORT_END  — UI stops capturing
-      SUPERBOX_REPORT_PATH: /path — UI stores the saved file path
+      REKITBOX_REPORT_END  — UI stops capturing
+      REKITBOX_REPORT_PATH: /path — UI stores the saved file path
     """
-    print("SUPERBOX_REPORT_BEGIN", flush=True)
+    print("REKITBOX_REPORT_BEGIN", flush=True)
     print(text, flush=True)
-    print("SUPERBOX_REPORT_END", flush=True)
+    print("REKITBOX_REPORT_END", flush=True)
     report_path = _write_report(subdir, filename, text)
     if report_path:
-        print(f"SUPERBOX_REPORT_PATH: {report_path}", flush=True)
+        print(f"REKITBOX_REPORT_PATH: {report_path}", flush=True)
 
 
 def _write_report(subdir: str, filename: str, text: str) -> str | None:
@@ -66,7 +66,7 @@ def _write_report(subdir: str, filename: str, text: str) -> str | None:
     """
     try:
         try:
-            from SuperBox.config import REPORTS_DIR  # noqa: PLC0415
+            from RekitBox.config import REPORTS_DIR  # noqa: PLC0415
         except ImportError:
             from config import REPORTS_DIR           # noqa: PLC0415
 
@@ -140,7 +140,7 @@ def cmd_audit(args: argparse.Namespace) -> None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_path = _write_report("Audit", f"audit_{timestamp}.txt", summary_text)
         if report_path:
-            print(f"SUPERBOX_REPORT_PATH: {report_path}", flush=True)
+            print(f"REKITBOX_REPORT_PATH: {report_path}", flush=True)
     except Exception:
         log.exception("Audit failed")
         sys.exit(1)
@@ -191,7 +191,7 @@ def cmd_import(args: argparse.Namespace) -> None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_path = _write_report("Import", f"preview_import_{timestamp}.txt", summary_text)
             if report_path:
-                print(f"SUPERBOX_REPORT_PATH: {report_path}", flush=True)
+                print(f"REKITBOX_REPORT_PATH: {report_path}", flush=True)
         except Exception:
             log.exception("Dry-run import failed")
             sys.exit(1)
@@ -212,7 +212,7 @@ def cmd_import(args: argparse.Namespace) -> None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_path = _write_report("Import", f"import_{timestamp}.txt", summary_text)
             if report_path:
-                print(f"SUPERBOX_REPORT_PATH: {report_path}", flush=True)
+                print(f"REKITBOX_REPORT_PATH: {report_path}", flush=True)
         except Exception:
             log.exception("Import failed")
             sys.exit(1)
@@ -337,7 +337,7 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         # otherwise fall back to ~/rekordbox-toolkit/
         try:
             try:
-                from SuperBox.config import REPORTS_DIR  # noqa: PLC0415
+                from RekitBox.config import REPORTS_DIR  # noqa: PLC0415
             except ImportError:
                 from config import REPORTS_DIR           # noqa: PLC0415
             out_dir = REPORTS_DIR / "Duplicates"
@@ -381,7 +381,7 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         if result.unique_in_trash:
             print(f"  ║  {len(result.unique_in_trash):>5} tracks exist ONLY in a trash folder            ║")
             print(f"  ║        → NOT included in the pruning CSV                    ║")
-            print(f"  ║        → SuperBox does not offer an automated rescue step   ║")
+            print(f"  ║        → RekitBox does not offer an automated rescue step   ║")
             print(f"  ║        → move these files manually before clearing trash    ║")
         if trapped_keeps:
             print(f"  ║  {trapped_keeps:>5} duplicate groups have their best copy in trash   ║")
@@ -413,7 +413,7 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         _emit_report("\n".join(lines), "Duplicates",
                      f"duplicates_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
         if groups:
-            print(f"SUPERBOX_REPORT_PATH: {output}", flush=True)
+            print(f"REKITBOX_REPORT_PATH: {output}", flush=True)
 
 
 def cmd_process(args: argparse.Namespace) -> None:
@@ -601,7 +601,7 @@ def cmd_convert(args: argparse.Namespace) -> None:
 
     def _emit_progress() -> None:
         print(
-            "SUPERBOX_PROGRESS: " + json.dumps({
+            "REKITBOX_PROGRESS: " + json.dumps({
                 "done":      done,
                 "total":     total,
                 "remaining": total - done,

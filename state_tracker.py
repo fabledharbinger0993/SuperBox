@@ -1,7 +1,7 @@
 """
-SuperBox / state_tracker.py
+RekitBox / state_tracker.py
 Per-library persistent step tracking.
-Stored as <library_root>/.superbox_state.json
+Stored as <library_root>/.rekitbox_state.json
 Created lazily on first use.
 """
 
@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from datetime import datetime, timezone
 
-STATE_FILENAME = ".superbox_state.json"
+STATE_FILENAME = ".rekitbox_state.json"
 log = logging.getLogger(__name__)
 
 def _state_path(library_root: str) -> Path:
@@ -24,7 +24,7 @@ def load_state(library_root: str) -> dict:
     if not path.exists():
         return {
             "library_root": str(library_root),
-            "superbox_version": "1.4.0",
+            "rekitbox_version": "1.4.0",
             "steps_completed": {},
             "last_updated": datetime.now(timezone.utc).isoformat()
         }

@@ -359,7 +359,7 @@ def scan_novel(
 
     def _emit():
         print(
-            "SUPERBOX_PROGRESS: " + json.dumps({
+            "REKITBOX_PROGRESS: " + json.dumps({
                 "done":           done,
                 "total":          total,
                 "remaining":      total - done,

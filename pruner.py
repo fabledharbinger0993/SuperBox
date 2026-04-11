@@ -1,11 +1,11 @@
 """
-SuperBox / pruner.py
+RekitBox / pruner.py
 
 Loads a duplicate_report.csv, enriches entries with live file metadata,
 and executes confirmed prune operations:
 
   1. Removes selected tracks from DjmdContent (with DB backup via write_db)
-  2. Moves selected files to ~/Trash/SuperBox_Pruned_[timestamp]/
+  2. Moves selected files to ~/Trash/RekitBox_Pruned_[timestamp]/
      — NOT a permanent delete. The folder stays in Trash until the user
        empties it on their own schedule.
 
@@ -16,7 +16,7 @@ Trash rescue gate:
   called and return an empty issues list. If the companion rescue report
   has unresolved items, or the CSV contains keep_in_trash=YES rows, the
   preflight raises TrashRescueRequired. The prune will not proceed until
-  the user has reviewed and cleared those items. SuperBox does not offer
+  the user has reviewed and cleared those items. RekitBox does not offer
   an automated rescue step — the user must act manually.
 
 Public interface:
@@ -57,7 +57,7 @@ def trash_rescue_preflight(csv_path: Path) -> None:
          folder. Pruning the REVIEW_REMOVE copies for that group while the
          KEEP is still in trash would leave no safe copy anywhere.
 
-    SuperBox does not offer an automated rescue step. The user must manually
+    RekitBox does not offer an automated rescue step. The user must manually
     move the flagged files before the prune can run.
 
     Parameters
@@ -115,7 +115,7 @@ def trash_rescue_preflight(csv_path: Path) -> None:
             "║  !!! PRUNE BLOCKED — TRASH RESCUE REQUIRED !!!                  ║",
             "║                                                                  ║",
             "║  Unique or possibly-unique tracks were found inside trash or     ║",
-            "║  trash-adjacent folders. SuperBox does not offer an automated   ║",
+            "║  trash-adjacent folders. RekitBox does not offer an automated   ║",
             "║  rescue step. You must review and act on these manually before  ║",
             "║  any pruning can proceed.                                        ║",
             "╠══════════════════════════════════════════════════════════════════╣",
@@ -350,7 +350,7 @@ def prune_files(
         trash_dir = None
         emit("⚠  Permanent delete mode — files will NOT be recoverable")
     else:
-        trash_dir = Path.home() / ".Trash" / f"SuperBox_Pruned_{stamp}"
+        trash_dir = Path.home() / ".Trash" / f"RekitBox_Pruned_{stamp}"
         trash_dir.mkdir(parents=True, exist_ok=True)
         emit(f"Recovery folder → {trash_dir}")
     emit("")

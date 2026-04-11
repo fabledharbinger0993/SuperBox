@@ -1,12 +1,12 @@
 #!/bin/bash
-# SuperBox launcher
+# RekitBox launcher
 # Run directly: bash launch.sh
 # Or wrap in Automator > Application > Run Shell Script for a dock icon
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV="$SCRIPT_DIR/../venv"
-SENTINEL="$SCRIPT_DIR/../.superbox_ready"
-LOG="$SCRIPT_DIR/../superbox.log"
+SENTINEL="$SCRIPT_DIR/../.rekitbox_ready"
+LOG="$SCRIPT_DIR/../rekitbox.log"
 
 # ── Locate Homebrew (works on both Apple Silicon and Intel) ───────────────
 _brew() {

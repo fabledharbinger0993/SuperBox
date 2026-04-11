@@ -3,7 +3,7 @@
   <p><strong>A free, open-source rekordbox library toolkit for DJs with large, mature libraries.</strong></p>
   <br>
 
-  [![Download](https://img.shields.io/github/v/release/fabledharbinger0993/SuperBox?label=Download%20SuperBox&style=for-the-badge&color=6d28d9&logo=apple&logoColor=white)](https://github.com/fabledharbinger0993/SuperBox/releases/latest)
+  [![Download](https://img.shields.io/github/v/release/fabledharbinger0993/RekitBox?label=Download%20RekitBox&style=for-the-badge&color=6d28d9&logo=apple&logoColor=white)](https://github.com/fabledharbinger0993/RekitBox/releases/latest)
 
   <br>
   <sub>macOS · Free · No account required · Rekordbox must be closed for write operations</sub>
@@ -13,27 +13,27 @@
 
 ## Install
 
-1. Click **Download SuperBox** above
-2. Unzip — you get **SuperBox.app**
+1. Click **Download RekitBox** above
+2. Unzip — you get **RekitBox.app**
 3. Move it to your Desktop or Applications folder
 4. Right-click → **Open** → **Open** (required once — see Gatekeeper note below)
-5. A setup window installs any missing dependencies, then SuperBox opens as a native app
+5. A setup window installs any missing dependencies, then RekitBox opens as a native app
 
-> **First launch** opens a Terminal window and automatically installs everything needed — Homebrew, `ffmpeg`, `chromaprint`, and all Python packages. This runs once and takes a few minutes. After that SuperBox opens as a **standalone native window** — no browser required.
+> **First launch** opens a Terminal window and automatically installs everything needed — Homebrew, `ffmpeg`, `chromaprint`, and all Python packages. This runs once and takes a few minutes. After that RekitBox opens as a **standalone native window** — no browser required.
 
-> **"SuperBox is damaged" or "cannot be opened"?** This is macOS Gatekeeper — it blocks apps that aren't signed with an Apple Developer certificate. To allow it:
-> 1. Right-click `SuperBox.app` → **Open** → **Open Anyway** in the dialog that appears
+> **"RekitBox is damaged" or "cannot be opened"?** This is macOS Gatekeeper — it blocks apps that aren't signed with an Apple Developer certificate. To allow it:
+> 1. Right-click `RekitBox.app` → **Open** → **Open Anyway** in the dialog that appears
 >
 > Or via System Settings:
 > 1. Go to **System Settings → Privacy & Security**
-> 2. Scroll down — you'll see *"SuperBox was blocked from use"*
+> 2. Scroll down — you'll see *"RekitBox was blocked from use"*
 > 3. Click **Open Anyway**
 
 ---
 
 ## What it does
 
-SuperBox fills the gaps Rekordbox leaves open. It reads and writes the Rekordbox database directly and runs entirely on your local machine — no cloud, no account, no subscription.
+RekitBox fills the gaps Rekordbox leaves open. It reads and writes the Rekordbox database directly and runs entirely on your local machine — no cloud, no account, no subscription.
 
 ### Core pipeline — run in order
 
@@ -71,7 +71,7 @@ Chain any combination of tools into one automated run. Choose **auto mode** (run
 - **Browse buttons** — every path field also has a Browse… button that opens the native macOS folder picker
 - **Library indicator pill** — each tool shows a pinned 📍 pill marking your current rekordbox library root so you always know what you're operating on
 - **Session pills** — completed operations tracked for the session, click to re-open output
-- **Glossary** — built-in glossary of every technical term used in SuperBox
+- **Glossary** — built-in glossary of every technical term used in RekitBox
 
 ---
 
@@ -94,7 +94,7 @@ Chain any combination of tools into one automated run. Choose **auto mode** (run
 | [pyloudnorm](https://github.com/csteinmetz1/pyloudnorm) | EBU R128 loudness measurement |
 | [Flask](https://flask.palletsprojects.com) + [Waitress](https://docs.pylonsproject.org/projects/waitress) | Local web server — everything runs on localhost, no internet at runtime |
 | [pywebview](https://pywebview.flowrl.com) | Wraps WKWebView in a native macOS window — no browser required |
-| [PyInstaller](https://pyinstaller.org) | Bundles Python + all dependencies into a self-contained `SuperBox.app` |
+| [PyInstaller](https://pyinstaller.org) | Bundles Python + all dependencies into a self-contained `RekitBox.app` |
 
 ---
 

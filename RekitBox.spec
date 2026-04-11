@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 #
-# SuperBox PyInstaller spec
+# RekitBox PyInstaller spec
 #
 # Build with:  bash build.sh
-# Output:      dist/SuperBox.app
+# Output:      dist/RekitBox.app
 #
 # The bundle is self-contained — Python, all pip dependencies, templates, and
 # static assets are packed inside.  No Python or Homebrew needed on the user's
@@ -12,7 +12,7 @@
 
 from pathlib import Path
 
-SRC = Path('.')  # run PyInstaller from the SuperBox/ directory
+SRC = Path('.')  # run PyInstaller from the RekitBox/ directory
 
 a = Analysis(
     [str(SRC / 'main.py')],
@@ -58,7 +58,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='SuperBox',
+    name='RekitBox',
     debug=False,
     strip=False,
     upx=False,
@@ -67,7 +67,7 @@ exe = EXE(
     target_arch=None,        # universal2 can be forced here if needed
     codesign_identity=None,  # set to your Apple Developer ID to code-sign
     entitlements_file=None,
-    icon=str(SRC / 'static' / 'SuperBox.icns'),
+    icon=str(SRC / 'static' / 'RekitBox.icns'),
 )
 
 coll = COLLECT(
@@ -78,17 +78,17 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='SuperBox',
+    name='RekitBox',
 )
 
 app = BUNDLE(
     coll,
-    name='SuperBox.app',
-    icon=str(SRC / 'static' / 'SuperBox.icns'),
-    bundle_identifier='com.fabledharbinger.superbox',
+    name='RekitBox.app',
+    icon=str(SRC / 'static' / 'RekitBox.icns'),
+    bundle_identifier='com.fabledharbinger.rekitbox',
     info_plist={
-        'CFBundleName':             'SuperBox',
-        'CFBundleDisplayName':      'SuperBox',
+        'CFBundleName':             'RekitBox',
+        'CFBundleDisplayName':      'RekitBox',
         'CFBundleShortVersionString': '1.0.7',
         'NSPrincipalClass':         'NSApplication',
         'NSHighResolutionCapable':  True,
@@ -100,6 +100,6 @@ app = BUNDLE(
         # Required so macOS shows the Automation permission prompt when the
         # bundled app queries Finder's selection via osascript.  Without this
         # key macOS silently blocks the osascript call, breaking drag-and-drop.
-        'NSAppleEventsUsageDescription': 'SuperBox uses Finder to read the path of folders you drag and drop into the app.',
+        'NSAppleEventsUsageDescription': 'RekitBox uses Finder to read the path of folders you drag and drop into the app.',
     },
 )

@@ -1,5 +1,5 @@
 """
-SuperBox / main.py
+RekitBox / main.py
 
 Native-window entry point for both development and PyInstaller builds.
 
@@ -28,7 +28,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 # Tell app.py where to find templates and static when bundled
-os.environ.setdefault('SUPERBOX_ROOT', str(_ROOT))
+os.environ.setdefault('REKITBOX_ROOT', str(_ROOT))
 
 # ── Server config ─────────────────────────────────────────────────────────────
 _HOST = '127.0.0.1'
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     if not _server_running():
         threading.Thread(target=_start_server, daemon=True).start()
         if not _wait_for_server():
-            print('SuperBox: server failed to start', file=sys.stderr)
+            print('RekitBox: server failed to start', file=sys.stderr)
             sys.exit(1)
 
     import webview
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     _api = _Api()
 
     window = webview.create_window(
-        title='SuperBox',
+        title='RekitBox',
         url=_URL,
         width=1400,
         height=900,

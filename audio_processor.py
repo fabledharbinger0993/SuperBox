@@ -547,7 +547,7 @@ def process_directory(
 
     def _emit_progress() -> None:
         print(
-            "SUPERBOX_PROGRESS: " + json.dumps({
+            "REKITBOX_PROGRESS: " + json.dumps({
                 "done":          done,
                 "total":         total,
                 "remaining":     total - done,

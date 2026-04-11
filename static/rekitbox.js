@@ -266,8 +266,8 @@ async function saveSettings() {
 }
 
 /* ── Welcome wizard ─────────────────────────────────────────────────────────
-   Permission keys: superbox-db-read / superbox-db-write = 'granted'|'denied'
-   Setup gate:      superbox-setup-complete = '1'                             */
+   Permission keys: rekitbox-db-read / rekitbox-db-write = 'granted'|'denied'
+   Setup gate:      rekitbox-setup-complete = '1'                             */
 
 let _wReadGranted  = false;
 let _wWriteGranted = false;
@@ -279,10 +279,10 @@ function welcomeShowStep(id) {
 }
 
 function openWelcome() {
-  _wReadGranted  = localStorage.getItem('superbox-db-read')  === 'granted';
-  _wWriteGranted = localStorage.getItem('superbox-db-write') === 'granted';
+  _wReadGranted  = localStorage.getItem('rekitbox-db-read')  === 'granted';
+  _wWriteGranted = localStorage.getItem('rekitbox-db-write') === 'granted';
   // Returning users land on the read step so they can adjust permissions
-  welcomeShowStep(localStorage.getItem('superbox-setup-complete') ? 'read' : 'intro');
+  welcomeShowStep(localStorage.getItem('rekitbox-setup-complete') ? 'read' : 'intro');
   _sbFadeBd('welcome-backdrop', true);
   const modal = document.getElementById('welcome-modal');
   void modal.offsetWidth; _sbAnim(modal, 'sb-modal-in', '.28s');
@@ -337,14 +337,14 @@ async function completeSetup() {
   const readVal  = _wReadGranted  ? 'granted' : 'denied';
   const writeVal = _wWriteGranted ? 'granted' : 'denied';
   // Mirror to localStorage as fast cache, but truth lives server-side
-  localStorage.setItem('superbox-db-read',        readVal);
-  localStorage.setItem('superbox-db-write',       writeVal);
-  localStorage.setItem('superbox-setup-complete', '1');
+  localStorage.setItem('rekitbox-db-read',        readVal);
+  localStorage.setItem('rekitbox-db-write',       writeVal);
+  localStorage.setItem('rekitbox-setup-complete', '1');
   if (_wWriteGranted) {
-    localStorage.setItem('superbox-archive-permission', 'granted');
+    localStorage.setItem('rekitbox-archive-permission', 'granted');
     fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
   }
-  // Persist to ~/.rekordbox-toolkit/superbox-state.json so it survives
+  // Persist to ~/.rekordbox-toolkit/rekitbox-state.json so it survives
   // across pywebview sessions even if WKWebView clears localStorage
   await fetch('/api/setup-complete', {
     method: 'POST',
@@ -363,8 +363,8 @@ async function completeSetup() {
 
 /* ── Permission application ──────────────────────────────────────────────── */
 function applyPermissions() {
-  const readOk  = localStorage.getItem('superbox-db-read')  === 'granted';
-  const writeOk = localStorage.getItem('superbox-db-write') === 'granted';
+  const readOk  = localStorage.getItem('rekitbox-db-read')  === 'granted';
+  const writeOk = localStorage.getItem('rekitbox-db-write') === 'granted';
   // step-audit is hidden (runs silently on setup) — no lock needed
   // ['step-audit'] kept in applyPermissions in case card is re-shown later
   ['step-relocate','step-import','step-link','step-prune'].forEach(id =>
@@ -376,8 +376,8 @@ document.addEventListener('click', e => {
   const card = e.target.closest('.card.permission-locked');
   if (!card) return;
   e.stopPropagation();
-  _wReadGranted  = localStorage.getItem('superbox-db-read')  === 'granted';
-  _wWriteGranted = localStorage.getItem('superbox-db-write') === 'granted';
+  _wReadGranted  = localStorage.getItem('rekitbox-db-read')  === 'granted';
+  _wWriteGranted = localStorage.getItem('rekitbox-db-write') === 'granted';
   const needsWrite = ['step-relocate','step-import','step-link','step-prune'].includes(card.id);
   openWelcome();
   welcomeShowStep(needsWrite ? 'write' : 'read');
@@ -496,24 +496,24 @@ function brewDismiss() {
 }
 
 /* ── SuperBox update checker ───────────────────────────────────────────────── */
-let _superboxUpdateDismissed = false;
+let _rekitboxUpdateDismissed = false;
 
-async function superboxUpdateCheck() {
+async function rekitboxUpdateCheck() {
   try {
     const res = await fetch('/api/update/status');
     if (!res.ok) return;
     const data = await res.json();
-    _superboxUpdateRender(data);
+    _rekitboxUpdateRender(data);
   } catch (_) {}
 }
 
-function _superboxUpdateRender(data) {
-  if (_superboxUpdateDismissed) return;
+function _rekitboxUpdateRender(data) {
+  if (_rekitboxUpdateDismissed) return;
   if (!data.update_available) return;
 
-  const banner  = document.getElementById('superbox-update-banner');
-  const msgEl   = document.getElementById('superbox-update-msg');
-  const linkEl  = document.getElementById('superbox-update-link');
+  const banner  = document.getElementById('rekitbox-update-banner');
+  const msgEl   = document.getElementById('rekitbox-update-msg');
+  const linkEl  = document.getElementById('rekitbox-update-link');
   const latest  = data.latest_version || 'a newer version';
   const current = data.current_version;
 
@@ -539,9 +539,9 @@ function _superboxUpdateRender(data) {
   banner.style.display = 'flex';
 }
 
-function superboxUpdateDismiss() {
-  _superboxUpdateDismissed = true;
-  document.getElementById('superbox-update-banner').style.display = 'none';
+function rekitboxUpdateDismiss() {
+  _rekitboxUpdateDismissed = true;
+  document.getElementById('rekitbox-update-banner').style.display = 'none';
 }
 
 function runBrewUpgrade() {
@@ -552,7 +552,7 @@ function runBrewUpgrade() {
 // Check on page load (non-blocking — banners appear only if updates found)
 brewCheckStatus();
 // Delay the update check slightly so the brew check fires first
-setTimeout(superboxUpdateCheck, 1000);
+setTimeout(rekitboxUpdateCheck, 1000);
 
 async function quitSuperBox() {
   const msg = isRunning
@@ -612,7 +612,7 @@ refreshStatus();
 setInterval(refreshStatus, 6000);
 // First launch: show permission wizard (mandatory, can't skip).
 // Returning users: restore permissions from server-side state file, resume silently.
-// Server-side state (/api/setup-status → superbox-state.json) is the source of
+// Server-side state (/api/setup-status → rekitbox-state.json) is the source of
 // truth; localStorage is used as a fast-path cache on top of it.
 (async () => {
   try {
@@ -620,12 +620,12 @@ setInterval(refreshStatus, 6000);
     const d = await r.json();
     if (d.setup_complete) {
       // Restore permission values from server into localStorage so applyPermissions works
-      if (d.db_read)  localStorage.setItem('superbox-db-read',  d.db_read);
-      if (d.db_write) localStorage.setItem('superbox-db-write', d.db_write);
-      localStorage.setItem('superbox-setup-complete', '1');
+      if (d.db_read)  localStorage.setItem('rekitbox-db-read',  d.db_read);
+      if (d.db_write) localStorage.setItem('rekitbox-db-write', d.db_write);
+      localStorage.setItem('rekitbox-setup-complete', '1');
       applyPermissions();
       if (d.db_write === 'granted') {
-        localStorage.setItem('superbox-archive-permission', 'granted');
+        localStorage.setItem('rekitbox-archive-permission', 'granted');
         fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
       }
     } else {
@@ -633,11 +633,11 @@ setInterval(refreshStatus, 6000);
     }
   } catch (_) {
     // Server not yet ready — fall back to localStorage cache
-    if (!localStorage.getItem('superbox-setup-complete')) {
+    if (!localStorage.getItem('rekitbox-setup-complete')) {
       openWelcome();
     } else {
       applyPermissions();
-      if (localStorage.getItem('superbox-archive-permission') === 'granted') {
+      if (localStorage.getItem('rekitbox-archive-permission') === 'granted') {
         fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
       }
     }
@@ -864,10 +864,10 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
   appendLog(`▸ ${logTitle}`, 'dim');
   appendLog('', 'dim');
 
-  // Report block capture — delimited by SUPERBOX_REPORT_BEGIN / SUPERBOX_REPORT_END
+  // Report block capture — delimited by REKITBOX_REPORT_BEGIN / REKITBOX_REPORT_END
   let reportBuffer = [];
   let inReport = false;
-  let capturedReportPath = null;   // set by SUPERBOX_REPORT_PATH: line
+  let capturedReportPath = null;   // set by REKITBOX_REPORT_PATH: line
 
   activeSource = new EventSource(url);
 
@@ -877,30 +877,30 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
       const line = data.line;
 
       // Detect report block boundaries
-      if (line === 'SUPERBOX_REPORT_BEGIN') { inReport = true; reportBuffer = []; return; }
-      if (line === 'SUPERBOX_REPORT_END')   { inReport = false; return; }
+      if (line === 'REKITBOX_REPORT_BEGIN') { inReport = true; reportBuffer = []; return; }
+      if (line === 'REKITBOX_REPORT_END')   { inReport = false; return; }
       if (inReport) reportBuffer.push(line);
 
       // Machine-readable report path — capture silently, don't echo to log
-      if (line.startsWith('SUPERBOX_REPORT_PATH: ')) {
+      if (line.startsWith('REKITBOX_REPORT_PATH: ')) {
         capturedReportPath = line.slice(22).trim();
         return;
       }
       // Physical scan JSON path — show subtle note in log
-      if (line.startsWith('SUPERBOX_PHYSICAL_SCAN: ')) {
+      if (line.startsWith('REKITBOX_PHYSICAL_SCAN: ')) {
         const physPath = line.slice(24).trim();
         appendLog(`  📁 Physical scan saved → ${physPath}`);
         return;
       }
       // Structured progress — update scan bar, don't echo to log
-      if (line.startsWith('SUPERBOX_PROGRESS: ')) {
+      if (line.startsWith('REKITBOX_PROGRESS: ')) {
         if (useBar) {
           try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
         }
         return;
       }
       // Pre-filter summary — show in log as info line
-      if (line.startsWith('SUPERBOX_PREFILTER: ')) {
+      if (line.startsWith('REKITBOX_PREFILTER: ')) {
         if (showPrefilter) {
           try {
             const pf = JSON.parse(line.slice(20));
@@ -1811,13 +1811,13 @@ async function _runOnePipelineStep(step, dryRun, capturedCsv) {
           exitCode = ev.exit_code;
         } else if (ev.line !== undefined) {
           const line = ev.line;
-          if (line === 'SUPERBOX_REPORT_BEGIN')       { inReport = true; }
-          else if (line === 'SUPERBOX_REPORT_END')    { inReport = false; }
-          else if (line.startsWith('SUPERBOX_PROGRESS: ')) {
+          if (line === 'REKITBOX_REPORT_BEGIN')       { inReport = true; }
+          else if (line === 'REKITBOX_REPORT_END')    { inReport = false; }
+          else if (line.startsWith('REKITBOX_PROGRESS: ')) {
             try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
-          } else if (line.startsWith('SUPERBOX_REPORT_PATH: ')) {
+          } else if (line.startsWith('REKITBOX_REPORT_PATH: ')) {
             reportPath = line.slice(22).trim();
-          } else if (line.startsWith('SUPERBOX_PHYSICAL_SCAN: ')) {
+          } else if (line.startsWith('REKITBOX_PHYSICAL_SCAN: ')) {
             appendLog(`  📁 Physical scan → ${line.slice(24).trim()}`, 'dim');
           } else {
             outputLines.push(line);
@@ -1859,7 +1859,7 @@ async function runPipeline(dryRun = true, confirmMode = false) {
   appendLog('', 'dim');
 
   let reportBuffer = [];
-  let capturedCsv  = null;   // last SUPERBOX_REPORT_PATH from a duplicates step
+  let capturedCsv  = null;   // last REKITBOX_REPORT_PATH from a duplicates step
 
   const finish = (exitCode, failedStep, stopped) => {
     isRunning = false;
@@ -1996,13 +1996,13 @@ async function runPipeline(dryRun = true, confirmMode = false) {
             if (el) el.className = ev.exit_code === 0 ? 'pipe-step done' : 'pipe-step failed';
           } else if (ev.line !== undefined) {
             const line = ev.line;
-            if (line === 'SUPERBOX_REPORT_BEGIN')       { inReport = true; reportBuffer = []; }
-            else if (line === 'SUPERBOX_REPORT_END')    { inReport = false; }
-            else if (line.startsWith('SUPERBOX_PROGRESS: ')) {
+            if (line === 'REKITBOX_REPORT_BEGIN')       { inReport = true; reportBuffer = []; }
+            else if (line === 'REKITBOX_REPORT_END')    { inReport = false; }
+            else if (line.startsWith('REKITBOX_PROGRESS: ')) {
               try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
-            } else if (line.startsWith('SUPERBOX_REPORT_PATH: ')) {
+            } else if (line.startsWith('REKITBOX_REPORT_PATH: ')) {
               /* silently capture */
-            } else if (line.startsWith('SUPERBOX_PHYSICAL_SCAN: ')) {
+            } else if (line.startsWith('REKITBOX_PHYSICAL_SCAN: ')) {
               /* silently capture */
             } else {
               if (inReport) reportBuffer.push(line);

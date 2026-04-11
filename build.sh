@@ -1,18 +1,18 @@
 #!/bin/bash
-# SuperBox build script
+# RekitBox build script
 #
-# Produces dist/SuperBox.app — a self-contained macOS application bundle.
-# Run this from the SuperBox/ directory (where this file lives).
+# Produces dist/RekitBox.app — a self-contained macOS application bundle.
+# Run this from the RekitBox/ directory (where this file lives).
 #
 # Requirements:
 #   - The venv must exist (run launch.sh once to create it, or: python3 -m venv ../venv)
 #   - pywebview and pyinstaller must be installed (pip install -r requirements.txt)
 #
 # Output:
-#   dist/SuperBox.app     ← drag this to /Applications or zip for distribution
+#   dist/RekitBox.app     ← drag this to /Applications or zip for distribution
 #
 # After building:
-#   cd dist && zip -r SuperBox.zip SuperBox.app
+#   cd dist && zip -r RekitBox.zip RekitBox.app
 
 set -e
 
@@ -22,7 +22,7 @@ PYTHON="$VENV/bin/python"
 
 cd "$SCRIPT_DIR"
 
-echo "── SuperBox build ───────────────────────────────────────"
+echo "── RekitBox build ───────────────────────────────────────"
 
 # Ensure venv exists
 if [ ! -f "$PYTHON" ]; then
@@ -40,16 +40,16 @@ echo "→ Cleaning previous build…"
 rm -rf build dist
 
 # Run PyInstaller
-echo "→ Building SuperBox.app…"
-"$VENV/bin/pyinstaller" SuperBox.spec --noconfirm
+echo "→ Building RekitBox.app…"
+"$VENV/bin/pyinstaller" RekitBox.spec --noconfirm
 
 echo ""
-echo "✓ Done: dist/SuperBox.app"
+echo "✓ Done: dist/RekitBox.app"
 echo ""
 echo "  To distribute:"
-echo "    cd dist && zip -r SuperBox.zip SuperBox.app"
+echo "    cd dist && zip -r RekitBox.zip RekitBox.app"
 echo ""
 echo "  NOTE: macOS Gatekeeper will show a security warning for unsigned apps."
 echo "        Users right-click → Open to bypass it (same as the current zip)."
 echo "        To remove the warning permanently, code-sign with an Apple Developer"
-echo "        account: set codesign_identity in SuperBox.spec."
+echo "        account: set codesign_identity in RekitBox.spec."

@@ -28,7 +28,7 @@ Trash-rescue logic:
   After fingerprinting, any file whose ONLY known copy lives inside a
   trash or trash-adjacent folder is captured in ScanResult.unique_in_trash.
   These files are NOT included in the pruning CSV — they require manual
-  rescue. SuperBox does not offer an automated step for this. A separate
+  rescue. RekitBox does not offer an automated step for this. A separate
   plain-text rescue report is written via write_trash_rescue_report().
 
   Two cases are covered:
@@ -347,7 +347,7 @@ class ScanResult:
     unique_in_trash — files with no duplicate anywhere in the scan that
                       live inside a trash or trash-adjacent folder.
                       These are NOT in the CSV. They require manual rescue.
-                      SuperBox does not offer an automated step for these.
+                      RekitBox does not offer an automated step for these.
     """
     groups: list[DuplicateGroup]
     unique_in_trash: list[Path]
@@ -499,7 +499,7 @@ def scan_duplicates(
     if index:
         files = _candidate_pairs(all_files, index)
         print(
-            f"SUPERBOX_PREFILTER: "
+            f"REKITBOX_PREFILTER: "
             + json.dumps({
                 "total": len(all_files),
                 "candidates": len(files),
@@ -630,7 +630,7 @@ def scan_duplicates(
     if unique_in_trash:
         log.warning(
             "RESCUE REQUIRED: %d unique tracks exist ONLY inside trash folders — "
-            "see rescue report. SuperBox will NOT include these in the pruning CSV.",
+            "see rescue report. RekitBox will NOT include these in the pruning CSV.",
             len(unique_in_trash),
         )
     if trapped_keep_count:
@@ -750,7 +750,7 @@ def write_trash_rescue_report(
 
       SECTION 1 — Unique tracks in trash (result.unique_in_trash):
         These files have NO duplicate anywhere in the scan. Their only known
-        copy is inside a trash or trash-adjacent folder. SuperBox does not
+        copy is inside a trash or trash-adjacent folder. RekitBox does not
         offer an automated rescue step for these. The user must manually move
         them to a safe location. They are NOT in the pruning CSV.
 
@@ -781,13 +781,13 @@ def write_trash_rescue_report(
         w = f.write
 
         w("╔══════════════════════════════════════════════════════════════════════╗\n")
-        w("║          !!!  SUPERBOX TRASH RESCUE REPORT  !!!                     ║\n")
+        w("║          !!!  REKITBOX TRASH RESCUE REPORT  !!!                     ║\n")
         w("║                                                                      ║\n")
         w("║  STOP. READ THIS BEFORE DELETING ANYTHING.                          ║\n")
         w("║                                                                      ║\n")
         w("║  The tracks in this report exist ONLY inside trash or trash-         ║\n")
         w("║  adjacent folders. If you clear those folders, these tracks are      ║\n")
-        w("║  PERMANENTLY GONE. SuperBox does not offer an automated rescue       ║\n")
+        w("║  PERMANENTLY GONE. RekitBox does not offer an automated rescue       ║\n")
         w("║  step — you must move these files manually before proceeding.        ║\n")
         w("╚══════════════════════════════════════════════════════════════════════╝\n")
         w(f"\n  Generated : {now}\n")
@@ -805,7 +805,7 @@ def write_trash_rescue_report(
             w("  None found.\n")
         else:
             w(f"  {unique_count} tracks have their ONLY known copy in a trash folder.\n")
-            w("  These are NOT in the pruning CSV. SuperBox will never touch them.\n")
+            w("  These are NOT in the pruning CSV. RekitBox will never touch them.\n")
             w("  You must move them to a safe location manually.\n")
             w("\n")
             for path in sorted(result.unique_in_trash, key=lambda p: p.name.lower()):
