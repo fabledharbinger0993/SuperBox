@@ -56,7 +56,20 @@
   </div>
 </header>
 
-<!-- ══ RekitBox update banner ═══════════════════════════════════════════════ -->
+<!-- ══ RekitBox update modal ══════════════════════════════════════════════════ -->
+<div id="rkb-update-overlay" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(4,2,14,0.82);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+  <div style="position:relative;width:clamp(300px,38vw,480px);background:rgba(12,8,28,0.98);border:1px solid rgba(140,100,255,0.35);border-radius:18px;padding:32px 28px 24px;box-shadow:0 12px 60px rgba(80,40,200,0.5);">
+    <div style="font-size:1.5rem;margin-bottom:10px;">⬆</div>
+    <h2 id="rkb-update-title" style="font-family:system-ui,sans-serif;font-size:1rem;font-weight:700;color:#c4b5fd;margin:0 0 10px;letter-spacing:.04em;">RekitBox Update Available</h2>
+    <p id="rkb-update-body" style="font-family:system-ui,sans-serif;font-size:.85rem;color:rgba(210,205,235,0.85);line-height:1.6;margin:0 0 22px;"></p>
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+      <button id="rkb-update-skip" onclick="rkbUpdateSkip()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(200,195,225,0.8);border-radius:8px;padding:8px 18px;font-size:.82rem;cursor:pointer;">Continue with current</button>
+      <button id="rkb-update-go" onclick="rkbUpdateGo()" style="background:rgba(120,80,255,0.25);border:1px solid rgba(140,100,255,0.45);color:#c4b5fd;border-radius:8px;padding:8px 18px;font-size:.82rem;font-weight:600;cursor:pointer;"></button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RekitBox update banner (fallback after modal dismiss) ═════════════════ -->
 <div id="rekitbox-update-banner">
   <span class="brew-icon">⬆</span>
   <span class="brew-msg" id="rekitbox-update-msg">A new version of RekitBox is available.</span>

@@ -495,52 +495,104 @@ function brewDismiss() {
   document.getElementById('brew-banner').style.display = 'none';
 }
 
-/* ── SuperBox update checker ───────────────────────────────────────────────── */
-let _rekitboxUpdateDismissed = false;
+/* ── RekitBox update checker ────────────────────────────────────────────────── */
+let _rkbUpdateData = null;   // populated when update found; used by modal buttons
 
 async function rekitboxUpdateCheck() {
   try {
     const res = await fetch('/api/update/status');
     if (!res.ok) return;
     const data = await res.json();
-    _rekitboxUpdateRender(data);
-  } catch (_) {}
+    // Silently do nothing if no update or no connection
+    if (!data.update_available) return;
+    _rkbUpdateData = data;
+    _rkbShowUpdateModal(data);
+  } catch (_) {
+    // No internet / server unreachable — silent, keep running current version
+  }
 }
 
-function _rekitboxUpdateRender(data) {
-  if (_rekitboxUpdateDismissed) return;
-  if (!data.update_available) return;
-
-  const banner  = document.getElementById('rekitbox-update-banner');
-  const msgEl   = document.getElementById('rekitbox-update-msg');
-  const linkEl  = document.getElementById('rekitbox-update-link');
+function _rkbShowUpdateModal(data) {
   const latest  = data.latest_version || 'a newer version';
   const current = data.current_version;
+  const overlay = document.getElementById('rkb-update-overlay');
+  const title   = document.getElementById('rkb-update-title');
+  const body    = document.getElementById('rkb-update-body');
+  const goBtn   = document.getElementById('rkb-update-go');
+
+  title.textContent = current
+    ? `RekitBox ${latest} is available`
+    : 'RekitBox update available';
+
+  if (data.is_git_install) {
+    body.textContent = current
+      ? `You're running ${current}. Closing the server now will let it pull ${latest} automatically on next launch. Your library and settings are untouched.`
+      : `A newer version is available. Closing the server now will pull the update automatically on next launch.`;
+    goBtn.textContent = 'Close & update on relaunch';
+  } else {
+    const dlUrl = data.download_url || data.release_url || '#';
+    body.textContent = current
+      ? `You're running ${current}. Download ${latest}, replace your current RekitBox.app, and relaunch.`
+      : `A newer version is available. Download it, replace your current RekitBox.app, and relaunch.`;
+    goBtn.textContent = 'Download RekitBox.zip';
+    goBtn.dataset.dlUrl = dlUrl;
+  }
+
+  overlay.style.display = 'flex';
+}
+
+async function rkbUpdateGo() {
+  const data = _rkbUpdateData;
+  if (!data) return;
+  document.getElementById('rkb-update-overlay').style.display = 'none';
+
+  if (data.is_git_install) {
+    // Quit the server — launch.sh will git pull on the next open
+    try { await fetch('/api/quit', { method: 'POST' }); } catch (_) {}
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;color:#c4b5fd;font-size:1rem;letter-spacing:.04em;">Server closed — relaunch RekitBox to apply the update.</div>';
+  } else {
+    // ZIP install — open download in new tab
+    const url = document.getElementById('rkb-update-go').dataset.dlUrl;
+    if (url && url !== '#') window.open(url, '_blank', 'noopener');
+    // Also show the banner so they can come back to it
+    _rkbShowBanner(data);
+  }
+}
+
+function rkbUpdateSkip() {
+  // Dismiss modal, show the smaller banner as a reminder
+  document.getElementById('rkb-update-overlay').style.display = 'none';
+  if (_rkbUpdateData) _rkbShowBanner(_rkbUpdateData);
+}
+
+function _rkbShowBanner(data) {
+  const latest  = data.latest_version || 'a newer version';
+  const current = data.current_version;
+  const msgEl   = document.getElementById('rekitbox-update-msg');
+  const linkEl  = document.getElementById('rekitbox-update-link');
 
   if (data.is_git_install) {
     msgEl.textContent = current
-      ? `SuperBox ${latest} is available (you have ${current}) — restart to update.`
-      : `SuperBox ${latest} is available — restart to update.`;
+      ? `RekitBox ${latest} available — close and relaunch to update.`
+      : `RekitBox update available — close and relaunch to update.`;
     linkEl.style.display = 'none';
   } else {
     msgEl.textContent = current
-      ? `SuperBox ${latest} is available (you have an older version).`
-      : `A new version of SuperBox (${latest}) is available.`;
+      ? `RekitBox ${latest} available (you have ${current}).`
+      : `RekitBox update available.`;
     const dlUrl = data.download_url || data.release_url;
     if (dlUrl) {
       linkEl.href = dlUrl;
-      linkEl.textContent = data.download_url ? 'Download SuperBox.zip' : 'View Release';
+      linkEl.textContent = 'Download RekitBox.zip';
       linkEl.style.display = '';
     } else {
       linkEl.style.display = 'none';
     }
   }
-
-  banner.style.display = 'flex';
+  document.getElementById('rekitbox-update-banner').style.display = 'flex';
 }
 
 function rekitboxUpdateDismiss() {
-  _rekitboxUpdateDismissed = true;
   document.getElementById('rekitbox-update-banner').style.display = 'none';
 }
 
