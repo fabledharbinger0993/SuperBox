@@ -606,10 +606,10 @@ brewCheckStatus();
 // Delay the update check slightly so the brew check fires first
 setTimeout(rekitboxUpdateCheck, 1000);
 
-async function quitSuperBox() {
+async function quitRekitBox() {
   const msg = isRunning
     ? '⚠️ A scan is still running.\n\nShutting down now will cancel it mid-process. Are you sure?'
-    : 'Shut down SuperBox?\n\nThe server will stop and this window will close.';
+    : 'Shut down RekitBox?\n\nThe server will stop and this window will close.';
   if (!confirm(msg)) return;
   const btn = document.getElementById('quit-btn');
   btn.textContent = 'Shutting down…';
@@ -621,13 +621,13 @@ async function quitSuperBox() {
   setTimeout(() => {
     document.open();
     document.write(
-      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>SuperBox — Stopped</title>'
+      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>RekitBox — Stopped</title>'
       + '<style>body{background:#0a0a0a;color:#555;font-family:ui-monospace,monospace;'
       + 'display:flex;align-items:center;justify-content:center;height:100vh;margin:0;'
       + 'flex-direction:column;gap:16px;}p{margin:0;font-size:.9rem;letter-spacing:.04em;}'
       + 'strong{color:#888;}</style></head><body>'
-      + '<p><strong>SuperBox has shut down.</strong></p>'
-      + '<p>Close this tab or restart the server to continue.</p>'
+      + '<p><strong>RekitBox has shut down.</strong></p>'
+      + '<p>Close this tab or relaunch the app to continue.</p>'
       + '</body></html>'
     );
     document.close();
