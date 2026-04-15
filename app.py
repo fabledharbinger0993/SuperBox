@@ -876,20 +876,24 @@ def api_duplicates_load():
                 }
                 for g in groups
             ]
+            remove_entries = [
+                e
+                for g in all_groups
+                for e in g["entries"]
+                if e["action"] == "REVIEW_REMOVE"
+            ]
             _report_cache[cache_key] = {
-                "groups":       all_groups,
-                "remove_paths": [
-                    e["file_path"]
-                    for g in all_groups
-                    for e in g["entries"]
-                    if e["action"] == "REVIEW_REMOVE"
-                ],
+                "groups":           all_groups,
+                "remove_paths":     [e["file_path"] for e in remove_entries],
                 "keep_paths": [
                     e["file_path"]
                     for g in all_groups
                     for e in g["entries"]
                     if e["action"] == "KEEP"
                 ],
+                "total_remove_mb":  round(
+                    sum(e["file_size_mb"] for e in remove_entries), 1
+                ),
             }
 
         cached      = _report_cache[cache_key]
@@ -899,12 +903,13 @@ def api_duplicates_load():
         page_groups = all_groups[start : start + per_page]
 
         return jsonify({
-            "groups":        page_groups,
-            "total_groups":  total,
-            "total_remove":  len(cached["remove_paths"]),
-            "page":          page,
-            "per_page":      per_page,
-            "csv_path":      str(csv_path),
+            "groups":           page_groups,
+            "total_groups":     total,
+            "total_remove":     len(cached["remove_paths"]),
+            "total_remove_mb":  cached.get("total_remove_mb", 0),
+            "page":             page,
+            "per_page":         per_page,
+            "csv_path":         str(csv_path),
         })
 
     except Exception as exc:

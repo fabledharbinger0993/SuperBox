@@ -95,10 +95,7 @@
     <span class="step-num">🏷</span> Tag Tracks
   </button>
   <button class="step-tab" data-target="step-duplicates">
-    <span class="step-num">🔎</span> Find Duplicates
-  </button>
-  <button class="step-tab" data-target="step-prune">
-    <span class="step-num">✂</span> Prune
+    <span class="step-num">✂</span> Duplicates
   </button>
   <button class="step-tab" data-target="step-relocate">
     <span class="step-num">📍</span> Relocate
@@ -305,164 +302,130 @@
   </div>
 
 
-    <!-- Duplicate detector -->
+    <!-- ── Duplicate Tracks — unified scan + review + prune ─────────────── -->
   <div class="card" id="step-duplicates" style="--card-watermark:url('/static/icon-find-duplicate.png')">
     <div class="card-head">
-      <div class="card-icon safe"><img src="/static/icon-find-duplicate.png" alt="Find Duplicates"></div>
+      <div class="card-icon safe"><img src="/static/icon-find-duplicate.png" alt="Duplicate Tracks"></div>
       <div class="card-meta">
-        <div class="card-title">Find Duplicate Tracks</div>
-        <div class="card-blurb">Acoustically fingerprints every file and groups the ones that are actually the same song — even if they have different filenames, formats, or bitrates. Outputs a CSV report. Never deletes anything.</div>
+        <div class="card-title">Duplicate Tracks</div>
+        <div class="card-blurb">Acoustic fingerprinting finds identical recordings regardless of filename, format, or bitrate. Scan, review, and prune in one panel.</div>
       </div>
-      <span class="risk-badge safe">Read-Only</span>
+      <span class="risk-badge safe" id="dupes-risk-badge">Read-Only Scan</span>
     </div>
 
-    <div class="explainers">
-      <details>
-        <summary>How does it know two files are the same song?</summary>
-        <div class="explain-body">
-          <p>It uses <strong>Chromaprint</strong> (the same fingerprinting engine behind AcoustID / MusicBrainz). It analyzes the actual audio waveform — not the filename or tags — and produces a fingerprint unique to that recording.</p>
-          <p>Two files with an identical fingerprint are the same recording. This catches: same file in two formats (MP3 + AIFF), same file named differently, files with different tags but identical audio.</p>
-          <p>Within each group of duplicates, files are ranked using the <strong>RARP hierarchy</strong> to suggest which to keep:</p>
-          <ul>
-            <li><strong>PN (Pioneer Numbered)</strong> — filename starts with digits and a separator, e.g. <code>01 - Title</code>. Suggests it came from a curated source.</li>
-            <li><strong>MIK (Mixed In Key tagged)</strong> — has a <code>TKEY</code>/<code>initialkey</code> tag already written by Mix In Key.</li>
-            <li><strong>RAW</strong> — neither of the above.</li>
-          </ul>
-          <p>The CSV is yours to review. Nothing is deleted or moved.</p>
-        </div>
-      </details>
-      <details>
-        <summary>How long does this take?</summary>
-        <div class="explain-body">
-          <p>Chromaprint analyzes the first 120 seconds of each file. For a large library (10,000+ tracks), expect 30–90 minutes depending on your drive speed. Progress is logged every 100 files.</p>
-          <p>You can run this with RekordBox open — it never touches the database.</p>
-        </div>
-      </details>
-    </div>
-
-    <div class="card-form">
-      <div class="field">
-        <label>Music Folder(s) to Scan</label>
-        <div class="folder-zone" id="dupes-zone">
-          <div class="folder-zone-hint">
-            <strong>⤵ Drop folders here</strong>
-            or type a path and press Enter
+    <!-- ── Phase 1: Scan config ────────────────────────────────────────── -->
+    <div id="dupes-scan-phase">
+      <div class="explainers">
+        <details>
+          <summary>How fingerprinting works &amp; what the rankings mean</summary>
+          <div class="explain-body">
+            <p>Uses <strong>Chromaprint</strong> (the engine behind AcoustID / MusicBrainz) to analyze the actual audio waveform — not filenames or tags. Two files with an identical fingerprint are the same recording, regardless of format or bitrate.</p>
+            <p>Files are ranked using the <strong>RARP hierarchy</strong> to suggest which copy to keep:</p>
+            <ul>
+              <li><strong>PN</strong> — filename starts with digits + separator (e.g. <code>01 - Title</code>). Curated source.</li>
+              <li><strong>MIK</strong> — has a <code>TKEY</code>/<code>initialkey</code> tag written by Mix In Key.</li>
+              <li><strong>RAW</strong> — neither of the above.</li>
+            </ul>
+            <p>Lossless formats (AIFF, WAV, FLAC) always beat lossy (MP3, M4A). Within the same format, larger file wins. <strong>Playlist protection:</strong> before any duplicate is removed, its playlist slots are re-threaded to point at the keeper. Your playlists stay intact. A timestamped backup of <code>master.db</code> is created before any write.</p>
           </div>
-          <div class="folder-zone-input-row">
-            <input type="text" class="folder-zone-text" id="dupes-zone-text" placeholder="/Volumes/YourDrive/Music">
-            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('dupes-pills')">Browse…</button>
-            <button class="folder-zone-add" type="button" onclick="dupesZoneAdd()">+ Add</button>
+        </details>
+      </div>
+
+      <div class="card-form">
+        <div class="field">
+          <label>Music Folder(s) to Scan</label>
+          <div class="folder-zone" id="dupes-zone">
+            <div class="folder-zone-hint">
+              <strong>⤵ Drop folders here</strong>
+              or type a path and press Enter
+            </div>
+            <div class="folder-zone-input-row">
+              <input type="text" class="folder-zone-text" id="dupes-zone-text" placeholder="/Volumes/YourDrive/Music">
+              <button class="folder-zone-browse" type="button" onclick="pickFolderFor('dupes-pills')">Browse…</button>
+              <button class="folder-zone-add" type="button" onclick="dupesZoneAdd()">+ Add</button>
+            </div>
           </div>
+          <div class="folder-pills" id="dupes-pills"></div>
         </div>
-        <div class="folder-pills" id="dupes-pills"></div>
-      </div>
-      <div class="field">
-        <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— fpcalc processes to run simultaneously (your Mac has 8 cores)</span></label>
-        <select id="dupes-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
-          <option value="1">1 — sequential (safe, slowest)</option>
-          <option value="2">2 workers</option>
-          <option value="4" selected>4 workers (recommended)</option>
-          <option value="6">6 workers (fast)</option>
-          <option value="8">8 workers (max — all cores)</option>
-        </select>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-neon" onclick="runDuplicates()">Find Duplicates</button>
-      </div>
-    </div>
-  </div>
+        <div class="field">
+          <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— fpcalc processes to run simultaneously (your Mac has 8 cores)</span></label>
+          <select id="dupes-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+            <option value="1">1 — sequential (safe, slowest)</option>
+            <option value="2">2 workers</option>
+            <option value="4" selected>4 workers (recommended)</option>
+            <option value="6">6 workers (fast)</option>
+            <option value="8">8 workers (max — all cores)</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-neon" onclick="runDuplicates()">Scan for Duplicates</button>
+        </div>
 
-
-    <!-- ── Prune Duplicates ──────────────────────────────────────────────── -->
-  <div class="card" id="step-prune" style="--card-watermark:url('/static/icon-prune.png')">
-    <div class="card-head">
-      <div class="card-icon danger"><img src="/static/icon-prune.png" alt="Prune"></div>
-      <div class="card-meta">
-        <div class="card-title">Prune Duplicates — Review &amp; Remove</div>
-        <div class="card-blurb">Load a duplicate report, review each group side-by-side, pick what to keep, and move the rest to a labeled recovery folder in Trash. <strong>Nothing is permanently deleted.</strong> RekordBox must be closed.</div>
-      </div>
-      <span class="risk-badge danger">Writes DB + Files</span>
-    </div>
-
-    <div class="prune-explain">
-      <div class="prune-explain-block">
-        <div class="prune-explain-label">What this does</div>
-        <p>Loads the duplicate report from your last scan, shows every group of identical tracks side-by-side, and moves the copies you choose to a labeled folder inside Trash. <strong>Nothing is permanently deleted</strong> until you empty Trash yourself.</p>
-      </div>
-      <div class="prune-explain-block">
-        <div class="prune-explain-label">How duplicates are ranked</div>
-        <p>Every group is sorted by audio quality automatically. Lossless formats (AIFF, WAV, FLAC) beat compressed ones (MP3, M4A). Larger files beat smaller files of the same format. Pioneer-numbered or Mixed In Key tagged files rank above untagged raw files. The top-ranked copy is marked as the keeper — everything else is a candidate to remove.</p>
-      </div>
-      <div class="prune-explain-block">
-        <div class="prune-explain-label">Playlist protection</div>
-        <p>If a duplicate you remove lives in any of your playlists, RekitBox automatically re-threads those playlist slots to point to the keeper track instead — before the duplicate is deleted from the database. Your playlists stay intact. No track vanishes. This is the fix rekordbox's own duplicate tool never got right.</p>
-      </div>
-      <div class="prune-explain-block">
-        <div class="prune-explain-label">Safety measures</div>
-        <ul>
-          <li><strong>RekordBox must be closed</strong> before anything runs — RekitBox checks and blocks if it's open.</li>
-          <li><strong>Database backup</strong> — a timestamped copy of master.db is created before any change is made.</li>
-          <li><strong>Files go to Trash, not the void</strong> — removed files land in <code>~/.Trash/RekitBox_Pruned_[timestamp]/</code> where you can find and restore them at any time.</li>
-          <li><strong>Multi-position confirmation</strong> — each confirm button appears at a different corner of the screen so you can't muscle-memory click through a dangerous operation.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="card-form">
-      <!-- Report source — auto-populated from Find Duplicates, no input needed -->
-      <div class="prune-report-row">
-        <div class="prune-report-file" id="prune-report-file">
-          <img src="/static/icon-rkb-folder.png" alt="Report" class="prune-report-file-icon">
-          <div class="prune-report-file-text">
-            <span class="prune-report-file-label">Duplicate Report</span>
-            <span class="prune-report-file-path" id="prune-report-path-display">Auto-filled when Find Duplicates completes</span>
+        <!-- Load existing report (for re-review without re-scanning) -->
+        <details class="dupes-load-existing">
+          <summary>Load an existing report</summary>
+          <div class="dupes-load-existing-body">
+            <div class="prune-report-row">
+              <input type="text" id="prune-csv-path" class="folder-zone-text"
+                     placeholder="~/rekordbox-toolkit/duplicate_report.csv"
+                     style="flex:1;font-size:.8rem">
+              <button class="btn btn-ghost" onclick="loadPruneReport()">Load</button>
+            </div>
           </div>
-        </div>
-        <button class="btn btn-ghost" onclick="loadPruneReport()">Load Report</button>
+        </details>
       </div>
-      <!-- Hidden input — read by loadPruneReport() and written by runDuplicates() callback -->
-      <input type="hidden" id="prune-csv-path">
+    </div>
 
-      <!-- Review area — hidden until report is loaded -->
-      <div id="prune-review-area" style="display:none;margin-top:16px">
+    <!-- ── Phase 2: Review &amp; Prune (hidden until scan/load completes) ── -->
+    <div id="dupes-results-phase" style="display:none">
 
-        <!-- Select All controls -->
-        <div class="prune-selectall-row">
-          <button class="prune-selectall-btn" id="sa-best-btn" onclick="selectAllBest()">
-            <span class="sa-dot" style="background:var(--safe)"></span>
-            Select All Best Copies
-          </button>
-          <button class="prune-selectall-btn" id="sa-lower-btn" onclick="selectAllLower()">
-            <span class="sa-dot" style="background:var(--danger)"></span>
-            Select All Lower Quality
-          </button>
-          <span class="prune-count-label" id="prune-count-label">0 files selected</span>
+      <!-- Stats bar -->
+      <div class="dupes-stats-bar">
+        <div class="dupes-stats-left">
+          <span class="dupes-stat" id="dupes-stat-groups">— groups</span>
+          <span class="dupes-stat-sep">·</span>
+          <span class="dupes-stat" id="dupes-stat-remove">— to remove</span>
+          <span class="dupes-stat-sep">·</span>
+          <span class="dupes-stat dupes-stat-accent" id="dupes-stat-size">— recoverable</span>
         </div>
+        <button class="btn btn-ghost btn-xs" onclick="resetDupesScan()">↩ New Scan</button>
+      </div>
 
-        <!-- Groups list -->
-        <div id="prune-summary-banner" style="display:none;padding:8px 12px;margin-bottom:10px;background:rgba(129,140,248,.08);border:1px solid rgba(129,140,248,.2);border-radius:6px;font-size:.82rem;color:var(--text-dim)"></div>
-        <div id="prune-groups"></div>
+      <!-- Select All controls -->
+      <div class="prune-selectall-row">
+        <button class="prune-selectall-btn" id="sa-best-btn" onclick="selectAllBest()">
+          <span class="sa-dot" style="background:var(--safe)"></span>
+          Select All Best Copies
+        </button>
+        <button class="prune-selectall-btn" id="sa-lower-btn" onclick="selectAllLower()">
+          <span class="sa-dot" style="background:var(--danger)"></span>
+          Select All Lower Quality
+        </button>
+        <span class="prune-count-label" id="prune-count-label">0 files selected</span>
+      </div>
 
-        <!-- Pagination -->
-        <div id="prune-pagination" style="display:none;align-items:center;gap:12px;padding:10px 0;margin-top:4px">
-          <button class="btn" id="prune-prev-btn" onclick="_loadPrunePage(prunePage-1)">← Prev</button>
-          <span id="prune-page-info" style="font-size:.82rem;color:var(--text-dim);flex:1;text-align:center"></span>
-          <button class="btn" id="prune-next-btn" onclick="_loadPrunePage(prunePage+1)">Next →</button>
-        </div>
+      <!-- Groups list -->
+      <div id="prune-groups"></div>
 
-        <!-- Action bar -->
-        <div class="prune-action-bar">
-          <span class="prune-selected-count" id="prune-selected-summary">Select files above to continue.</span>
-          <label style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-dim);cursor:pointer;user-select:none">
-            <input type="checkbox" id="prune-permanent-cb" style="accent-color:var(--danger)"
-                 onchange="document.getElementById('btn-prune-start').textContent = this.checked ? 'Delete Permanently →' : 'Move to Trash →'">
-            Delete permanently
-          </label>
-          <button class="btn btn-prune-danger" id="btn-prune-start"
-                  onclick="pruneStep1()" disabled>
-            Move to Trash →
-          </button>
-        </div>
+      <!-- Pagination -->
+      <div id="prune-pagination" style="display:none;align-items:center;gap:12px;padding:10px 0;margin-top:4px">
+        <button class="btn" id="prune-prev-btn" onclick="_loadPrunePage(prunePage-1)">← Prev</button>
+        <span id="prune-page-info" style="font-size:.82rem;color:var(--text-dim);flex:1;text-align:center"></span>
+        <button class="btn" id="prune-next-btn" onclick="_loadPrunePage(prunePage+1)">Next →</button>
+      </div>
+
+      <!-- Action bar -->
+      <div class="prune-action-bar">
+        <span class="prune-selected-count" id="prune-selected-summary">Select files above to continue.</span>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-dim);cursor:pointer;user-select:none">
+          <input type="checkbox" id="prune-permanent-cb" style="accent-color:var(--danger)"
+               onchange="document.getElementById('btn-prune-start').textContent = this.checked ? 'Delete Permanently →' : 'Move to Trash →'">
+          Delete permanently
+        </label>
+        <button class="btn btn-prune-danger" id="btn-prune-start"
+                onclick="pruneStep1()" disabled>
+          Move to Trash →
+        </button>
       </div>
 
       <div class="rb-block-msg" id="prune-rb-block">

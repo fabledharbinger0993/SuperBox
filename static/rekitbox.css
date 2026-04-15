@@ -491,6 +491,7 @@ details[open] > summary { color: var(--text); }
   color: var(--text-muted);
 }
 .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--text-muted); }
+.btn-xs { font-size: .72rem; padding: 3px 9px; }
 /* Normalize, Find Duplicates — unified purple like btn-primary */
 .btn-danger-action {
   background: var(--accent);
@@ -702,30 +703,45 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   content: ''; flex: 1; height: 1px; background: var(--border);
 }
 
+/* ── Duplicate Tracks — unified card ──────────────────────────────────── */
+
+/* Stats bar shown after scan completes */
+.dupes-stats-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border-hi);
+  border-radius: var(--radius);
+}
+.dupes-stats-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dupes-stat {
+  font-size: .8rem; font-weight: 600; color: var(--text-muted);
+}
+.dupes-stat-accent { color: var(--accent); }
+.dupes-stat-sep { color: var(--text-dim); font-size: .75rem; }
+
+/* "Load existing report" collapsible */
+.dupes-load-existing {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.dupes-load-existing > summary {
+  font-size: .78rem; color: var(--text-dim); cursor: pointer;
+  list-style: none; user-select: none;
+}
+.dupes-load-existing > summary::-webkit-details-marker { display: none; }
+.dupes-load-existing > summary::before { content: '▸ '; }
+details[open].dupes-load-existing > summary::before { content: '▾ '; }
+.dupes-load-existing-body { padding-top: 10px; }
+
 /* ── Prune duplicates UI ───────────────────────────────────────────────── */
 
-/* Flat explanation blocks */
-.prune-explain {
-  display: flex; flex-direction: column; gap: 14px;
-  padding: 18px 20px;
-  background: rgba(255,255,255,.025);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin-bottom: 18px;
-}
-.prune-explain-block { display: flex; flex-direction: column; gap: 5px; }
-.prune-explain-label {
-  font-size: .72rem; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--text-muted);
-}
-.prune-explain-block p,
-.prune-explain-block ul { margin: 0; font-size: .83rem; color: var(--text-dim); line-height: 1.55; }
-.prune-explain-block ul { padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
-
-/* Auto-populated report file display */
+/* Report file row (used in load-existing) */
 .prune-report-row {
   display: flex; align-items: center; gap: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 .prune-report-file {
   display: flex; align-items: center; gap: 12px;

@@ -367,7 +367,7 @@ function applyPermissions() {
   const writeOk = localStorage.getItem('rekitbox-db-write') === 'granted';
   // step-audit is hidden (runs silently on setup) — no lock needed
   // ['step-audit'] kept in applyPermissions in case card is re-shown later
-  ['step-relocate','step-import','step-link','step-prune'].forEach(id =>
+  ['step-relocate','step-import','step-link','step-duplicates'].forEach(id =>
     document.getElementById(id)?.classList.toggle('permission-locked', !writeOk));
 }
 
@@ -378,7 +378,7 @@ document.addEventListener('click', e => {
   e.stopPropagation();
   _wReadGranted  = localStorage.getItem('rekitbox-db-read')  === 'granted';
   _wWriteGranted = localStorage.getItem('rekitbox-db-write') === 'granted';
-  const needsWrite = ['step-relocate','step-import','step-link','step-prune'].includes(card.id);
+  const needsWrite = ['step-relocate','step-import','step-link','step-duplicates'].includes(card.id);
   openWelcome();
   welcomeShowStep(needsWrite ? 'write' : 'read');
 }, true);
@@ -1125,11 +1125,11 @@ function runDuplicates() {
   const title = 'Find Duplicates — Acoustic Fingerprinting';
   runCommand(`/api/run/duplicates?${p}`, title, (exitCode) => {
     if (exitCode === 0) {
-      // Auto-populate Prune's CSV path from the report this run just produced
       const rp = sessionReports[title]?.reportPath;
       if (rp) {
         const el = document.getElementById('prune-csv-path');
-        if (el) { el.value = rp; el.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (el) el.value = rp;
+        _autoLoadDupeResults(rp);
       }
     }
   }, true, true);
@@ -2134,35 +2134,19 @@ function runNovelty() {
 }
 
 /* ── Prune Duplicates ──────────────────────────────────────────────────────── */
-let pruneGroups      = [];          // current page's groups
-let pruneSelected    = new Set();   // file_paths checked for removal
-let saState          = null;        // 'best' | 'lower' | null
-let prunePage        = 0;
-let prunePageSize    = 200;
-let pruneTotalGroups = 0;
-let pruneTotalRemove = 0;
-let pruneCsvPath     = '';
+let pruneGroups        = [];          // current page's groups
+let pruneSelected      = new Set();   // file_paths checked for removal
+let saState            = null;        // 'best' | 'lower' | null
+let prunePage          = 0;
+let prunePageSize      = 200;
+let pruneTotalGroups   = 0;
+let pruneTotalRemove   = 0;
+let pruneTotalRemoveMb = 0;
+let pruneCsvPath       = '';
 
 async function loadPruneReport() {
-  pruneCsvPath = document.getElementById('prune-csv-path').value.trim();
-  prunePage    = 0;
-  pruneSelected.clear();
-  saState = null;
-
-  const btn = document.querySelector('[onclick="loadPruneReport()"]');
-  btn.disabled = true;
-  btn.textContent = 'Loading…';
-
-  try {
-    await _loadPrunePage(0);
-    // Auto-select all lower-quality copies across the full report
-    await selectAllLower();
-  } catch (err) {
-    alert('Error loading report: ' + err);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Load Report';
-  }
+  const csvPath = document.getElementById('prune-csv-path').value.trim();
+  await _autoLoadDupeResults(csvPath);
 }
 
 async function _loadPrunePage(page) {
@@ -2173,14 +2157,14 @@ async function _loadPrunePage(page) {
   const data = await res.json();
   if (!res.ok) { alert('Could not load report:\n' + data.error); return; }
 
-  pruneGroups      = data.groups;
-  prunePage        = data.page;
-  pruneTotalGroups = data.total_groups;
-  if (data.total_remove != null) pruneTotalRemove = data.total_remove;
+  pruneGroups        = data.groups;
+  prunePage          = data.page;
+  pruneTotalGroups   = data.total_groups;
+  if (data.total_remove    != null) pruneTotalRemove   = data.total_remove;
+  if (data.total_remove_mb != null) pruneTotalRemoveMb = data.total_remove_mb;
 
   _renderPruneGroups();
   _renderPrunePagination();
-  document.getElementById('prune-review-area').style.display = 'block';
   _syncCheckboxes();
   _updateSaButtons();
   _updatePruneSummary();
@@ -2297,12 +2281,62 @@ function _renderPrunePagination() {
   document.getElementById('prune-prev-btn').disabled = prunePage === 0;
   document.getElementById('prune-next-btn').disabled = prunePage >= totalPages - 1;
 
-  const banner = document.getElementById('prune-summary-banner');
-  if (pruneTotalGroups > 0) {
-    banner.style.display = 'block';
-    banner.textContent =
-      `${pruneTotalGroups.toLocaleString()} duplicate groups — ${pruneTotalRemove.toLocaleString()} lower-quality copies identified`;
+  _updateDupesStats();
+}
+
+/* ── Duplicate Tracks — phase switching & stats ────────────────────────── */
+
+async function _autoLoadDupeResults(csvPath) {
+  pruneCsvPath = csvPath || document.getElementById('prune-csv-path')?.value.trim() || '';
+  prunePage    = 0;
+  pruneSelected.clear();
+  saState = null;
+
+  try {
+    await _loadPrunePage(0);
+    await selectAllLower();
+
+    // Switch card into review/prune phase
+    document.getElementById('dupes-scan-phase').style.display    = 'none';
+    document.getElementById('dupes-results-phase').style.display = 'block';
+    const badge = document.getElementById('dupes-risk-badge');
+    if (badge) { badge.textContent = 'Writes DB + Files'; badge.className = 'risk-badge danger'; }
+    document.getElementById('step-duplicates')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error('Failed to load duplicate results:', err);
+    alert('Could not load results: ' + err);
   }
+}
+
+function resetDupesScan() {
+  document.getElementById('dupes-results-phase').style.display = 'none';
+  document.getElementById('dupes-scan-phase').style.display    = '';
+  const badge = document.getElementById('dupes-risk-badge');
+  if (badge) { badge.textContent = 'Read-Only Scan'; badge.className = 'risk-badge safe'; }
+
+  pruneCsvPath       = '';
+  pruneTotalRemoveMb = 0;
+  pruneSelected.clear();
+  pruneGroups = [];
+  const groupsEl = document.getElementById('prune-groups');
+  if (groupsEl) groupsEl.innerHTML = '';
+  const pgEl = document.getElementById('prune-pagination');
+  if (pgEl) pgEl.style.display = 'none';
+  _updatePruneSummary();
+  _updateDupesStats();
+}
+
+function _updateDupesStats() {
+  const grpEl = document.getElementById('dupes-stat-groups');
+  const rmEl  = document.getElementById('dupes-stat-remove');
+  const szEl  = document.getElementById('dupes-stat-size');
+  if (!grpEl) return;
+  grpEl.textContent = `${pruneTotalGroups.toLocaleString()} group${pruneTotalGroups !== 1 ? 's' : ''}`;
+  rmEl.textContent  = `${pruneTotalRemove.toLocaleString()} to remove`;
+  const gb = pruneTotalRemoveMb / 1024;
+  szEl.textContent  = gb >= 1
+    ? `${gb.toFixed(1)} GB recoverable`
+    : `${Math.round(pruneTotalRemoveMb)} MB recoverable`;
 }
 
 function _syncCheckboxes() {
@@ -3292,24 +3326,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Single-path zones (visual feedback + Browse/drop, no pills)
   setupFolderZone('relocate-old-zone', 'relocate-old-pills', 'relocate-old-zone-text');
   setupSinglePathZone('relocate-new-zone',    'relocate-new');
-  // prune-csv-path is a hidden input — sync its value to the display element
-  const _pruneCsvInput = document.getElementById('prune-csv-path');
-  if (_pruneCsvInput) {
-    _pruneCsvInput.addEventListener('input', () => {
-      const display = document.getElementById('prune-report-path-display');
-      if (!display) return;
-      const v = _pruneCsvInput.value.trim();
-      if (v) {
-        display.textContent = v.split('/').pop() || v;
-        display.title = v;
-        display.classList.add('populated');
-      } else {
-        display.textContent = 'Auto-filled when Find Duplicates completes';
-        display.title = '';
-        display.classList.remove('populated');
-      }
-    });
-  }
   setupSinglePathZone('organize-target-zone', 'organize-target');
   setupSinglePathZone('novelty-dest-zone',    'novelty-dest');
   setupAllDropZones();
@@ -3320,7 +3336,7 @@ document.addEventListener('DOMContentLoaded', () => {
    Cards get .step-complete or .step-error CSS classes.              */
 const STATE_STEP_MAP = {
   audit:'step-audit', process:'step-process', duplicates:'step-duplicates',
-  prune:'step-prune', relocate:'step-relocate', import:'step-import',
+  prune:'step-duplicates', relocate:'step-relocate', import:'step-import',
   link:'step-link', normalize:'step-normalize', convert:'step-convert',
   organize:'step-organize', novelty:'step-novelty',
 };
