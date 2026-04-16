@@ -336,13 +336,21 @@ def _convert_file(path: Path, target_format: str) -> tuple[bool, str]:
     if target_format == "aif":
         target_format = "aiff"
 
-    if path.suffix.lower().lstrip(".") in ("aif", "aiff"):
+    # Compute target extension. When converting *to* AIFF, normalise .aif → .aiff
+    # so we always land on the canonical extension. For every other target format,
+    # just use the format name as-is regardless of the input extension.
+    if target_format == "aiff":
         target_ext = ".aiff"
     else:
         target_ext = f".{target_format}"
 
+    # Normalise source extension for the skip check so .aif and .aiff both match
+    src_ext = path.suffix.lower()
+    if src_ext == ".aif":
+        src_ext = ".aiff"
+
     # If already target format, skip
-    if path.suffix.lower() == target_ext.lower():
+    if src_ext == target_ext.lower():
         return True, f"Already {target_format}"
 
     new_path = path.with_suffix(target_ext)
@@ -379,9 +387,10 @@ def _convert_file(path: Path, target_format: str) -> tuple[bool, str]:
             "-id3v2_version", "3",
             str(tmp_path),
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True)
         if result.returncode != 0:
-            return False, f"ffmpeg failed: {result.stderr[-200:]}"
+            stderr_str = result.stderr.decode("utf-8", errors="replace")[-200:]
+            return False, f"ffmpeg failed: {stderr_str}"
 
         # Verify output without loading into RAM
         try:
@@ -559,12 +568,22 @@ def _write_tags(path: Path, bpm: float | None, key: str | None) -> None:
 
     tag_type = type(audio.tags).__name__
     is_vorbis = "VCFLACDict" in tag_type or "VComment" in tag_type
+    is_mp4 = "MP4Tags" in tag_type or "MP4" in tag_type
 
     if is_vorbis:
         if bpm is not None:
             audio.tags["bpm"] = [str(int(round(bpm)))]
         if key is not None:
             audio.tags["initialkey"] = [key]
+    elif is_mp4:
+        # MP4/M4A uses atom keys — tmpo for BPM (integer list), freeform atom for key
+        if bpm is not None:
+            audio.tags["tmpo"] = [int(round(bpm))]
+        if key is not None:
+            from mutagen.mp4 import MP4FreeForm
+            audio.tags["----:com.apple.iTunes:initialkey"] = [
+                MP4FreeForm(key.encode("utf-8"))
+            ]
     else:
         # delall() before setting ensures a clean overwrite regardless of the
         # existing frame's encoding or format (handles WAV + force-overwrite).

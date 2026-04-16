@@ -438,7 +438,10 @@ def _candidate_pairs(
         )
         candidates |= tag_candidates
 
-    result = list(candidates) + no_index
+    # Merge: preserve order (candidates first, then no_index not already included)
+    seen: set[Path] = set(candidates)
+    extra = [p for p in no_index if p not in seen]
+    result = list(candidates) + extra
     skipped = len(files) - len(result)
     if skipped > 0:
         log.info(
@@ -962,7 +965,9 @@ def scan_duplicates(
                 if fp is None:
                     failed += 1
                 else:
-                    fp_map.setdefault(fp, []).append(path)
+                    bucket = fp_map.setdefault(fp, [])
+                    if path not in bucket:
+                        bucket.append(path)
                     dur_map.setdefault(fp, dur)
                 if completed % _LOG_EVERY == 0:
                     log.info(
@@ -981,7 +986,9 @@ def scan_duplicates(
                 failed += 1
             else:
                 dur, fp = result
-                fp_map.setdefault(fp, []).append(path)
+                bucket = fp_map.setdefault(fp, [])
+                if path not in bucket:
+                    bucket.append(path)
                 dur_map.setdefault(fp, dur)
             if pause_seconds > 0 and i < total - 1:
                 time.sleep(pause_seconds)
