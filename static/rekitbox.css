@@ -80,6 +80,13 @@ input:focus, select:focus {
   border-color: var(--accent);
 }
 input::placeholder { color: var(--text-dim); }
+/* Checkboxes/radios should stay at their natural size — the global width:100%
+   above is meant for text fields and selects. */
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  padding: 0;
+}
 label { display: block; color: var(--text-muted); font-size: .78rem;
         letter-spacing: .04em; text-transform: uppercase; margin-bottom: 5px; }
 
