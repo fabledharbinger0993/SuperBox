@@ -1,9 +1,11 @@
 name: Attach RekitBox.zip to release
 
-# Every release needs a RekitBox.zip asset so the in-app update checker can
-# resolve https://github.com/.../releases/latest/download/RekitBox.zip. This
-# workflow builds the zip from the release tag via `git archive` and uploads
-# it automatically whenever a release is published.
+# Every release needs a RekitBox.zip containing the bootstrap RekitBox.app
+# bundle so the in-app update checker can resolve
+# https://github.com/.../releases/latest/download/RekitBox.zip. The bundle
+# itself is committed at packaging/RekitBox.app/ — when users unzip the
+# download they get a double-clickable .app that clones the repo on first
+# run and hands off to launch.sh afterwards.
 
 on:
   release:
@@ -21,8 +23,18 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
+      - name: Stage RekitBox.app with preserved exec bits
+        run: |
+          mkdir -p dist
+          cp -R packaging/RekitBox.app dist/RekitBox.app
+          # cp -R preserves exec bits on Linux/macOS; belt-and-braces:
+          chmod +x dist/RekitBox.app/Contents/MacOS/RekitBox
+
       - name: Build RekitBox.zip
-        run: git archive --format=zip --prefix=RekitBox/ -o /tmp/RekitBox.zip HEAD
+        run: |
+          cd dist
+          zip -r -y /tmp/RekitBox.zip RekitBox.app
+          unzip -l /tmp/RekitBox.zip
 
       - name: Upload to release
         env:
