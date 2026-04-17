@@ -1624,41 +1624,31 @@
           <div class="db-panel-tool-blurb">Updates the database when you move or rename your music folders. <strong>RekordBox must be closed.</strong></div>
         </div>
       </div>
-      <div class="card-grid" style="margin-top:10px">
-        <div class="audit-card compact-drop-card">
-          <div class="audit-panel-title">
-            <img src="/static/icon-move.png" alt="" class="audit-panel-icon">
-            Old Paths
+      <div class="field" style="margin-top:10px">
+        <label>Old Paths</label>
+        <div class="folder-zone" id="relocate-old-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop old folder</strong>
+            or type prefix and press Enter
           </div>
-          <p class="audit-panel-blurb">Path prefixes stored in RekordBox that no longer exist on disk.</p>
-          <div class="folder-zone" id="relocate-old-zone">
-            <div class="folder-zone-hint">
-              <strong>⤵ Drop old folder</strong>
-              or type prefix and press Enter
-            </div>
-            <div class="folder-zone-input-row">
-              <input type="text" class="folder-zone-text" id="relocate-old-zone-text" placeholder="/Volumes/OLD_DRIVE/Music">
-              <button class="folder-zone-browse" type="button" onclick="pickFolderFor('relocate-old-pills')">Browse…</button>
-              <button class="folder-zone-add"    type="button" onclick="relocateOldZoneAdd()">+ Add</button>
-            </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="relocate-old-zone-text" placeholder="/Volumes/OLD_DRIVE/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('relocate-old-pills')">Browse…</button>
+            <button class="folder-zone-add"    type="button" onclick="relocateOldZoneAdd()">+ Add</button>
           </div>
-          <div class="folder-pills" id="relocate-old-pills"></div>
         </div>
-        <div class="audit-card compact-drop-card">
-          <div class="audit-panel-title">
-            <img src="/static/icon-move.png" alt="" class="audit-panel-icon">
-            New Path
+        <div class="folder-pills" id="relocate-old-pills"></div>
+      </div>
+      <div class="field">
+        <label>New Path</label>
+        <div class="folder-zone" id="relocate-new-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop new folder</strong>
+            or type / browse to the new root
           </div>
-          <p class="audit-panel-blurb">The root where the files actually live now.</p>
-          <div class="folder-zone" id="relocate-new-zone">
-            <div class="folder-zone-hint">
-              <strong>⤵ Drop new folder</strong>
-              or type / browse to the new root
-            </div>
-            <div class="folder-zone-input-row">
-              <input type="text" class="folder-zone-text" id="relocate-new" placeholder="/Volumes/YourDrive/Music">
-              <button class="folder-zone-browse" type="button" onclick="pickPathFor('relocate-new')">Browse…</button>
-            </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="relocate-new" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickPathFor('relocate-new')">Browse…</button>
           </div>
         </div>
       </div>

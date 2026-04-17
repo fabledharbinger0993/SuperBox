@@ -2502,6 +2502,11 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   transform: translateX(0);
 }
 
+/* Compact drop zones inside the narrow side panel */
+#db-panel .folder-zone {
+  min-height: 100px;
+}
+
 .db-panel-header {
   display: flex;
   align-items: center;
