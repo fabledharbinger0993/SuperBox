@@ -487,6 +487,33 @@
         </div>
         <div class="folder-pills" id="normalize-pills"></div>
       </div>
+
+      <!-- ── Loudness preview player ─────────────────────────────────────── -->
+      <div id="norm-preview">
+        <div id="norm-preview-status" class="norm-preview-status">
+          Add a folder above to load loudness previews.
+        </div>
+        <div id="norm-sample-list">
+          <!-- rows: quietest original, quietest normalised, loudest original, loudest normalised -->
+          <div class="norm-sample-row norm-sample-placeholder" data-slot="0">
+            <div class="norm-sample-meta"><span class="norm-sample-kind">Quietest</span><span class="norm-sample-tag">Original</span></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+          </div>
+          <div class="norm-sample-row norm-sample-placeholder" data-slot="1">
+            <div class="norm-sample-meta"><span class="norm-sample-kind">Quietest</span><span class="norm-sample-tag norm-sample-tag--norm">Normalized  −8 LUFS</span></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+          </div>
+          <div class="norm-sample-row norm-sample-placeholder" data-slot="2">
+            <div class="norm-sample-meta"><span class="norm-sample-kind">Loudest</span><span class="norm-sample-tag">Original</span></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+          </div>
+          <div class="norm-sample-row norm-sample-placeholder" data-slot="3">
+            <div class="norm-sample-meta"><span class="norm-sample-kind">Loudest</span><span class="norm-sample-tag norm-sample-tag--norm">Normalized  −8 LUFS</span></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+          </div>
+        </div>
+      </div>
+
       <div class="field">
         <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
         <select id="normalize-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">

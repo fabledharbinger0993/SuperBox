@@ -25,7 +25,7 @@ import uuid
 import datetime
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request, send_file
 from flask_sock import Sock
 
 # ── Resource root — handles both dev and PyInstaller bundle ──────────────────
@@ -1137,6 +1137,209 @@ def api_cancel_force():
         return jsonify({"ok": False, "error": "No active scan"}), 404
     proc.kill()
     return jsonify({"ok": True})
+
+
+# ── Normalize preview ─────────────────────────────────────────────────────────
+# Scans a folder for loudest/quietest tracks, extracts 10-second clips at the
+# 50 % mark, normalises copies to -8 LUFS, and stores them in a temp dir so
+# the browser can play them via /api/normalize/preview/clip/<id>.
+
+import random as _random
+import re as _re
+
+_PREVIEW_TMP  = Path.home() / ".rekordbox-toolkit" / "previews"
+_PREVIEW_TMP.mkdir(parents=True, exist_ok=True)
+
+_PREVIEW_JOBS: dict[str, dict] = {}
+_PREVIEW_LOCK  = threading.Lock()
+
+_PREVIEW_AUDIO_EXTS = {'.aiff', '.aif', '.wav', '.flac', '.mp3', '.m4a', '.alac', '.ogg', '.opus'}
+_PREVIEW_MIN_DUR    = 120    # track must be ≥ 2 min
+_PREVIEW_MAX_SCAN   = 40     # cap random sample for large folders
+_PREVIEW_WINDOW     = 20     # seconds of audio measured for LUFS
+
+
+def _preview_set(job_id: str, **kw) -> None:
+    with _PREVIEW_LOCK:
+        if job_id in _PREVIEW_JOBS:
+            _PREVIEW_JOBS[job_id].update(kw)
+
+
+def _preview_duration(path: Path) -> "float | None":
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+             "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True, timeout=8,
+        )
+        v = float(r.stdout.strip())
+        return v if v > 0 else None
+    except Exception:
+        return None
+
+
+def _preview_lufs(path: Path, start: float) -> "float | None":
+    """Measure integrated LUFS over _PREVIEW_WINDOW seconds starting at start."""
+    try:
+        r = subprocess.run(
+            ["ffmpeg", "-ss", str(max(0, start)), "-t", str(_PREVIEW_WINDOW),
+             "-i", str(path), "-af", "loudnorm=print_format=json",
+             "-f", "null", "/dev/null"],
+            capture_output=True, text=True, timeout=40,
+        )
+        m = _re.search(r'"input_i"\s*:\s*"(-?\d+\.?\d*)"', r.stderr)
+        if m:
+            val = float(m.group(1))
+            return val if val > -70 else None   # treat near-silence as invalid
+    except Exception:
+        pass
+    return None
+
+
+def _preview_extract(src: Path, start: float, dest: Path) -> bool:
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-ss", str(max(0, start)), "-t", "10",
+             "-i", str(src), "-acodec", "libmp3lame", "-q:a", "2",
+             str(dest)],
+            capture_output=True, timeout=30, check=True,
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _preview_normalize(src: Path, dest: Path) -> bool:
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", str(src),
+             "-af", "loudnorm=I=-8:TP=-1.5:LRA=11",
+             "-acodec", "libmp3lame", "-q:a", "2", str(dest)],
+            capture_output=True, timeout=30, check=True,
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _run_preview_job(job_id: str, folder: Path) -> None:
+    try:
+        _preview_set(job_id, status="scanning", msg="Listing audio files…", progress=0, total=0)
+
+        all_audio = [f for f in sorted(folder.iterdir())
+                     if f.suffix.lower() in _PREVIEW_AUDIO_EXTS
+                     and not f.name.startswith('.')]
+
+        # Duration filter — only tracks ≥ 2 min
+        qualified: list[tuple[Path, float]] = []
+        for f in all_audio:
+            d = _preview_duration(f)
+            if d and d >= _PREVIEW_MIN_DUR:
+                qualified.append((f, d))
+
+        if len(qualified) < 2:
+            _preview_set(job_id, status="error",
+                         msg=f"Need at least 2 tracks ≥ 2 min (found {len(qualified)}).")
+            return
+
+        # Random-sample large folders
+        sample = (qualified if len(qualified) <= _PREVIEW_MAX_SCAN
+                  else _random.sample(qualified, _PREVIEW_MAX_SCAN))
+
+        _preview_set(job_id, status="measuring",
+                     msg=f"Measuring loudness of {len(sample)} tracks…",
+                     total=len(sample))
+
+        measured: list[tuple[Path, float, float]] = []   # path, duration, lufs
+        for i, (f, dur) in enumerate(sample):
+            start = max(0, dur / 2 - _PREVIEW_WINDOW / 2)
+            lufs  = _preview_lufs(f, start)
+            if lufs is not None:
+                measured.append((f, dur, lufs))
+            _preview_set(job_id, progress=i + 1)
+
+        if len(measured) < 2:
+            _preview_set(job_id, status="error",
+                         msg="Could not measure loudness for enough tracks.")
+            return
+
+        measured.sort(key=lambda x: x[2])
+        quietest = measured[0]
+        loudest  = measured[-1]
+
+        _preview_set(job_id, status="extracting", msg="Extracting preview clips…")
+
+        clips = []
+        for tag, (f, dur, lufs) in [("q", quietest), ("l", loudest)]:
+            clip_start = max(0, dur / 2 - 5)   # centre 10 s clip on midpoint
+
+            orig_id   = f"{job_id}_{tag}_orig"
+            norm_id   = f"{job_id}_{tag}_norm"
+            orig_path = _PREVIEW_TMP / f"{orig_id}.mp3"
+            norm_path = _PREVIEW_TMP / f"{norm_id}.mp3"
+
+            ok_orig = _preview_extract(f, clip_start, orig_path)
+            ok_norm = ok_orig and _preview_normalize(orig_path, norm_path)
+
+            clips.append({
+                "clip_id":  orig_id if ok_orig else None,
+                "track":    f.name,
+                "lufs":     round(lufs, 1),
+                "label":    "Original",
+                "kind":     "quietest" if tag == "q" else "loudest",
+            })
+            clips.append({
+                "clip_id":  norm_id if ok_norm else None,
+                "track":    f.name,
+                "lufs":     -8.0,
+                "label":    "Normalized  −8 LUFS",
+                "kind":     "quietest" if tag == "q" else "loudest",
+            })
+
+        _preview_set(job_id, status="done", msg="", clips=clips)
+
+    except Exception as exc:
+        _preview_set(job_id, status="error", msg=str(exc))
+
+
+@app.route("/api/normalize/preview", methods=["POST"])
+def api_normalize_preview():
+    data   = request.get_json(silent=True) or {}
+    path   = data.get("path") or request.form.get("path", "")
+    folder = Path(path)
+    if not path or not folder.is_dir():
+        return jsonify({"error": "valid folder path required"}), 400
+
+    job_id = uuid.uuid4().hex[:8]
+    with _PREVIEW_LOCK:
+        _PREVIEW_JOBS[job_id] = {"status": "queued", "msg": "", "progress": 0,
+                                 "total": 0, "clips": []}
+
+    threading.Thread(target=_run_preview_job, args=(job_id, folder),
+                     daemon=True, name=f"preview-{job_id}").start()
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/normalize/preview/<job_id>")
+def api_normalize_preview_status(job_id):
+    if not _re.match(r'^[0-9a-f]{8}$', job_id):
+        return jsonify({"error": "invalid"}), 400
+    with _PREVIEW_LOCK:
+        job = _PREVIEW_JOBS.get(job_id)
+    if job is None:
+        return jsonify({"error": "not found"}), 404
+    return jsonify(job)
+
+
+@app.route("/api/normalize/preview/clip/<clip_id>")
+def api_normalize_preview_clip(clip_id):
+    if not _re.match(r'^[0-9a-f]{8}_[ql]_(orig|norm)$', clip_id):
+        return jsonify({"error": "invalid"}), 400
+    clip_path = _PREVIEW_TMP / f"{clip_id}.mp3"
+    if not clip_path.exists():
+        return jsonify({"error": "not found"}), 404
+    return send_file(str(clip_path), mimetype="audio/mpeg",
+                     conditional=True)
 
 
 # ── RekitBox update route ─────────────────────────────────────────────────────
