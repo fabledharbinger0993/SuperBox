@@ -538,9 +538,9 @@ function _rkbShowUpdateModal(data) {
 
   if (data.is_git_install) {
     body.textContent = current
-      ? `You're running ${current}. Closing the server now will let it pull ${latest} automatically on next launch. Your library and settings are untouched.`
-      : `A newer version is available. Closing the server now will pull the update automatically on next launch.`;
-    goBtn.textContent = 'Close & update on relaunch';
+      ? `You're running ${current}. RekitBox will pull ${latest} and restart itself — takes about 10 seconds. Your library and settings are untouched.`
+      : `A newer version is available. RekitBox will pull it and restart itself — takes about 10 seconds.`;
+    goBtn.textContent = 'Update now';
   } else {
     const dlUrl = data.download_url || data.release_url || '#';
     body.textContent = current
@@ -556,19 +556,105 @@ function _rkbShowUpdateModal(data) {
 async function rkbUpdateGo() {
   const data = _rkbUpdateData;
   if (!data) return;
-  document.getElementById('rkb-update-overlay').style.display = 'none';
 
-  if (data.is_git_install) {
-    // Quit the server — launch.sh will git pull on the next open
-    try { await fetch('/api/quit', { method: 'POST' }); } catch (_) {}
-    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;color:#c4b5fd;font-size:1rem;letter-spacing:.04em;">Server closed — relaunch RekitBox to apply the update.</div>';
-  } else {
-    // ZIP install — open download in new tab
+  if (!data.is_git_install) {
+    // ZIP install — open download in new tab, hide modal, leave banner reminder
+    document.getElementById('rkb-update-overlay').style.display = 'none';
     const url = document.getElementById('rkb-update-go').dataset.dlUrl;
     if (url && url !== '#') window.open(url, '_blank', 'noopener');
-    // Also show the banner so they can come back to it
     _rkbShowBanner(data);
+    return;
   }
+
+  // Git install — pull + restart in place
+  const body     = document.getElementById('rkb-update-body');
+  const goBtn    = document.getElementById('rkb-update-go');
+  const skipBtn  = document.getElementById('rkb-update-skip');
+  const titleEl  = document.getElementById('rkb-update-title');
+
+  goBtn.disabled   = true;
+  skipBtn.disabled = true;
+  goBtn.style.opacity   = '0.5';
+  skipBtn.style.opacity = '0.5';
+  goBtn.textContent = 'Updating…';
+  body.textContent  = 'Pulling the latest release from GitHub…';
+
+  let resp;
+  try {
+    resp = await fetch('/api/update/apply', { method: 'POST' });
+  } catch (e) {
+    _rkbShowUpdateError('Could not reach the server to start the update.');
+    return;
+  }
+
+  let payload;
+  try { payload = await resp.json(); } catch (_) { payload = null; }
+
+  if (!resp.ok || !payload || !payload.ok) {
+    const err = (payload && payload.error) || `Update failed (HTTP ${resp.status}).`;
+    _rkbShowUpdateError(err);
+    return;
+  }
+
+  // Server pulled successfully and is now shutting itself down.
+  titleEl.textContent = 'Restarting RekitBox…';
+  body.innerHTML =
+    '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(196,181,253,0.3);'
+    + 'border-top-color:#c4b5fd;border-radius:50%;animation:spin .7s linear infinite;margin-right:10px;'
+    + 'vertical-align:middle;"></span>'
+    + 'Waiting for the server to come back online. The page will reload automatically.';
+  goBtn.style.display = 'none';
+  skipBtn.style.display = 'none';
+
+  _rkbWaitForServerThenReload();
+}
+
+// Poll /api/update/status until the server responds again, then reload.
+// Gap timeline: SIGTERM ~0.7s, port free ~0.2s, helper sleep 2s, Flask boot
+// a few seconds — typical total 4-8s. Give up after ~60s.
+async function _rkbWaitForServerThenReload() {
+  // Initial grace so we don't race the old process that's still shutting down
+  await new Promise(r => setTimeout(r, 1500));
+
+  const started = Date.now();
+  while (Date.now() - started < 60000) {
+    try {
+      const ctrl = new AbortController();
+      const t    = setTimeout(() => ctrl.abort(), 1500);
+      const res  = await fetch('/api/update/status', { signal: ctrl.signal, cache: 'no-store' });
+      clearTimeout(t);
+      if (res.ok) {
+        // Small buffer so the server finishes initializing other routes too
+        await new Promise(r => setTimeout(r, 400));
+        window.location.reload();
+        return;
+      }
+    } catch (_) { /* server still down — keep polling */ }
+    await new Promise(r => setTimeout(r, 800));
+  }
+
+  _rkbShowUpdateError(
+    'Server did not come back online after 60 seconds. '
+    + 'Try launching RekitBox manually from your dock.'
+  );
+}
+
+function _rkbShowUpdateError(msg) {
+  const body    = document.getElementById('rkb-update-body');
+  const goBtn   = document.getElementById('rkb-update-go');
+  const skipBtn = document.getElementById('rkb-update-skip');
+  const titleEl = document.getElementById('rkb-update-title');
+
+  titleEl.textContent    = 'Update failed';
+  body.textContent       = msg;
+  goBtn.style.display    = '';
+  skipBtn.style.display  = '';
+  goBtn.disabled         = false;
+  skipBtn.disabled       = false;
+  goBtn.style.opacity    = '';
+  skipBtn.style.opacity  = '';
+  goBtn.textContent      = 'Retry';
+  skipBtn.textContent    = 'Close';
 }
 
 function rkbUpdateSkip() {
