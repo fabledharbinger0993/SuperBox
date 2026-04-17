@@ -551,6 +551,19 @@ details[open] > summary { color: var(--text); }
   padding: 0 18px;
   gap: 0;
 }
+/* Stat counters live inside a scrollable flex row so they can't push the
+   action buttons (Interrupt / Emergency Stop) off the right edge. */
+.scan-bar-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.scan-bar-scroll::-webkit-scrollbar { display: none; }
+
 #scan-bar .scan-bar-item,
 #scan-bar .scan-bar-right { opacity: 0; pointer-events: none; transition: opacity .2s; }
 #scan-bar.active .scan-bar-item,
