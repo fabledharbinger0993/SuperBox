@@ -1147,6 +1147,78 @@ def api_update_status():
     return jsonify(_update_get_status())
 
 
+@app.route("/api/update/apply", methods=["POST"])
+def api_update_apply():
+    """
+    Pull the latest release in-place, then relaunch RekitBox.
+
+    Flow:
+      1. Refuse if a scan/subprocess is running or Rekordbox is open.
+      2. Run ``git pull --ff-only`` in the repo root.
+      3. On success, spawn a detached helper that waits for the port to free,
+         then re-runs launch.sh. Finally SIGTERM self so the helper can bind.
+      4. Frontend polls /api/update/status until it responds, then reloads.
+    """
+    # Refuse mid-scan — interrupt would leave the DB in an ambiguous state.
+    with _proc_lock:
+        active = _active_proc
+    if active is not None and active.poll() is None:
+        return jsonify({
+            "ok": False,
+            "error": "A scan is still running — cancel or finish it before updating.",
+        }), 409
+
+    # Only git installs can pull in place.
+    launch_sh = _REPO_ROOT / "launch.sh"
+    if not (_REPO_ROOT / ".git").exists() or not launch_sh.exists():
+        return jsonify({
+            "ok": False,
+            "error": "Not a git install — download the new release manually.",
+        }), 400
+
+    # Do the pull.
+    try:
+        pull = subprocess.run(
+            ["git", "pull", "origin", "main", "--ff-only"],
+            cwd=str(_REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except FileNotFoundError:
+        return jsonify({"ok": False, "error": "git is not installed."}), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({"ok": False, "error": "git pull timed out — check your connection."}), 504
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"git pull failed: {exc}"}), 500
+
+    if pull.returncode != 0:
+        err = (pull.stderr or pull.stdout or "").strip() or "git pull failed"
+        return jsonify({"ok": False, "error": err}), 500
+
+    # Schedule the relaunch: detached helper sleeps 2s (letting this process
+    # exit and the port free) then execs launch.sh. start_new_session detaches
+    # it from our process group so SIGTERM to us doesn't reach it.
+    def _relaunch() -> None:
+        import time
+        time.sleep(0.7)  # let the JSON response reach the browser
+        try:
+            subprocess.Popen(
+                ["bash", "-c", 'sleep 2 && exec bash "$0"', str(launch_sh)],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+                close_fds=True,
+                cwd=str(_REPO_ROOT),
+            )
+        finally:
+            os.kill(os.getpid(), signal.SIGTERM)
+
+    threading.Thread(target=_relaunch, daemon=True).start()
+    return jsonify({"ok": True, "output": pull.stdout.strip()})
+
+
 # ── Homebrew update routes ────────────────────────────────────────────────────
 
 @app.route("/api/brew/status")
