@@ -1,0 +1,17 @@
+#!/bin/bash
+# RekitBox bootstrap launcher
+# First run: clones the repo. Every run: hands off to launch.sh.
+
+PARENT_DIR="$HOME/RekitBox"
+INSTALL_DIR="$PARENT_DIR/RekitBox"
+REPO_URL="https://github.com/fabledharbinger0993/RekitBox.git"
+
+if [ -d "$INSTALL_DIR/.git" ]; then
+  # Already installed — hand off to launch.sh (handles git pull + server start)
+  bash "$INSTALL_DIR/launch.sh"
+else
+  # First install — open Terminal so the user can see clone + setup progress
+  CLONE_CMD="mkdir -p '$PARENT_DIR' && git clone '$REPO_URL' '$INSTALL_DIR' && bash '$INSTALL_DIR/launch.sh'"
+  osascript -e "tell application \"Terminal\" to do script \"$CLONE_CMD\""
+  osascript -e "tell application \"Terminal\" to activate"
+fi
