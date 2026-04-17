@@ -2502,6 +2502,11 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   transform: translateX(0);
 }
 
+/* Compact drop zones inside the narrow side panel */
+#db-panel .folder-zone {
+  min-height: 100px;
+}
+
 .db-panel-header {
   display: flex;
   align-items: center;
@@ -2731,4 +2736,161 @@ body { padding-right: var(--db-rail-w); }
   color: var(--text-dim);
   margin: 4px 0 0;
   line-height: 1.5;
+}
+
+/* ══ Normalize loudness preview player ══════════════════════════════════════ */
+
+#norm-preview {
+  border-top: 1px solid var(--border);
+  padding: 14px 0 6px;
+}
+
+.norm-preview-status {
+  font-size: .72rem;
+  color: var(--text-dim);
+  letter-spacing: .03em;
+  padding: 0 0 8px;
+  min-height: 1.2em;
+}
+
+/* Each of the 4 sample rows */
+.norm-sample-row {
+  margin-bottom: 10px;
+}
+.norm-sample-row:last-child { margin-bottom: 0; }
+
+/* Label row above the line */
+.norm-sample-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-bottom: 5px;
+  line-height: 1;
+}
+.norm-sample-kind {
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.norm-sample-name {
+  font-size: .72rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+.norm-sample-lufs {
+  font-size: .68rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.norm-sample-tag {
+  font-size: .68rem;
+  color: var(--text-dim);
+  letter-spacing: .03em;
+}
+.norm-sample-tag--norm {
+  color: #86efac;   /* soft green — indicates normalised */
+}
+
+/* Play button — glowing green triangle */
+.norm-sample-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.norm-play-btn {
+  flex-shrink: 0;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  opacity: .35;
+  transition: opacity .15s;
+}
+.norm-play-btn:not([disabled]) { opacity: 1; }
+
+/* Triangle arrow via ::before */
+.norm-play-btn::before {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 10px solid #4ade80;
+  filter: drop-shadow(0 0 3px #4ade80) drop-shadow(0 0 7px #16a34a);
+  transition: filter .15s, border-color .15s;
+}
+.norm-play-btn:hover:not([disabled])::before {
+  filter: drop-shadow(0 0 6px #4ade80) drop-shadow(0 0 14px #22c55e);
+}
+
+/* Pause state — two vertical bars via ::before + ::after */
+.norm-play-btn.playing::before {
+  border: none;
+  width: 3px;
+  height: 11px;
+  background: #4ade80;
+  border-radius: 1px;
+  filter: drop-shadow(0 0 4px #4ade80);
+  transform: translateX(-3px);
+}
+.norm-play-btn.playing::after {
+  content: '';
+  display: block;
+  position: absolute;
+  width: 3px;
+  height: 11px;
+  background: #4ade80;
+  border-radius: 1px;
+  filter: drop-shadow(0 0 4px #4ade80);
+  transform: translateX(3px);
+}
+
+/* Progress track (the glowing line itself) */
+.norm-progress-track {
+  flex: 1;
+  height: 2px;
+  background: rgba(196,181,253,.12);
+  border-radius: 1px;
+  position: relative;
+  cursor: pointer;
+  /* Expand hit area without affecting layout */
+  padding: 6px 0;
+  margin: -6px 0;
+}
+.norm-progress-fill {
+  position: absolute;
+  top: 6px;   /* offset matches padding */
+  left: 0;
+  height: 2px;
+  width: 0%;
+  border-radius: 1px;
+  background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 60%, #c4b5fd 100%);
+  box-shadow: 0 0 6px rgba(196,181,253,.55), 0 0 14px rgba(139,92,246,.35);
+  transition: width .1s linear;
+  pointer-events: none;
+}
+
+/* Placeholder dimming when no data */
+.norm-sample-placeholder .norm-progress-fill {
+  width: 0% !important;
+}
+.norm-sample-placeholder .norm-progress-track {
+  background: rgba(196,181,253,.06);
 }
