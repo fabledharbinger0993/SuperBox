@@ -57,10 +57,10 @@ async function fbNavigateTo(path) {
 
     const img = document.createElement('img');
     img.alt = '';
-    img.src = entry.is_dir   ? '/static/icon-sb-folder.png'
-            : entry.is_audio ? '/static/icon-sb-track.png'
-            :                  '/static/icon-sb-file.png';
-    img.onerror = () => { img.src = '/static/icon-sb-file.png'; };
+    img.src = entry.is_dir   ? '/static/icon-rb-folder.png'
+            : entry.is_audio ? '/static/icon-track.png'
+            :                  '/static/icon-rb-file.png';
+    img.onerror = () => { img.src = '/static/icon-rb-file.png'; };
 
     const nameEl = document.createElement('span');
     nameEl.className = 'fb-item-name';

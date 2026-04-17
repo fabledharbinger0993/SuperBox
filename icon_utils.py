@@ -11,9 +11,9 @@ for virtual-environment Pythons. Every public function silently no-ops when:
   • the icon PNG file is missing from static/
 
 Icon files expected at (relative to this module):
-  static/icon-rkb-folder.png  — green folder icon  (applied to every new
+  static/icon-rb-folder.png   — green folder icon  (applied to every new
                                 Archive sub-folder created by RekitBox)
-  static/icon-rkb-file.png    — blue document icon (applied to every new
+  static/icon-rb-file.png     — blue document icon (applied to every new
                                 report, savepoint, or log file written)
 
 Public interface:
@@ -31,8 +31,8 @@ _IS_MACOS: bool = platform.system() == "Darwin"
 
 # Resolve icon paths relative to this file so imports work from any CWD.
 _HERE        = Path(__file__).parent
-FOLDER_ICON  = _HERE / "static" / "icon-rkb-folder.png"
-FILE_ICON    = _HERE / "static" / "icon-rkb-file.png"
+FOLDER_ICON  = _HERE / "static" / "icon-rb-folder.png"
+FILE_ICON    = _HERE / "static" / "icon-rb-file.png"
 
 
 # ── PyObjC helpers ────────────────────────────────────────────────────────────
