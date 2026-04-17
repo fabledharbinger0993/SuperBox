@@ -1489,32 +1489,40 @@
 <div id="scan-bar">
   <!-- Shown only when idle (no active scan) -->
   <span id="scan-bar-idle" style="font-family:var(--mono);font-size:.72rem;color:var(--text-dim);letter-spacing:.05em;">RekitBox — Ready</span>
-  <div class="scan-bar-item">
-    <span class="scan-bar-label">Remaining</span>
-    <span class="scan-bar-val" id="sb-remaining">—</span>
+   <!-- Stat counters scroll horizontally when they overflow, so the action
+       buttons in .scan-bar-right stay anchored to the right edge. -->
+  <div class="scan-bar-scroll">
+    <div class="scan-bar-item">
+      <span class="scan-bar-label">Remaining</span>
+      <span class="scan-bar-val" id="sb-remaining">—</span>
+    </div>
+    <div class="scan-bar-item">
+      <span class="scan-bar-label">Complete w/o Edits</span>
+      <span class="scan-bar-val safe" id="sb-clean">0</span>
+    </div>
+    <div class="scan-bar-item">
+      <span class="scan-bar-label">Edited</span>
+      <span class="scan-bar-val safe" id="sb-edited">0</span>
+    </div>
+    <div class="scan-bar-item">
+      <span class="scan-bar-label">Errors</span>
+      <span class="scan-bar-val danger" id="sb-errors">0</span>
+      <span class="scan-bar-note">(see report)</span>
+    </div>
+    <div class="scan-bar-item" id="sb-quarantine-wrap" style="display:none">
+      <span class="scan-bar-label">Quarantined</span>
+      <span class="scan-bar-val danger" id="sb-quarantined">0</span>
+      <span class="scan-bar-note">(corrupt)</span>
+    </div>
+    <div class="scan-bar-item">
+      <span class="scan-bar-label">Warnings</span>
+      <span class="scan-bar-val caution" id="sb-warnings">0</span>
+      <span class="scan-bar-note">(see report)</span>
+    </div>
   </div>
   <div class="scan-bar-item">
     <span class="scan-bar-label">Complete w/o Edits</span>
     <span class="scan-bar-val safe" id="sb-clean">0</span>
-  </div>
-  <div class="scan-bar-item">
-    <span class="scan-bar-label">Edited</span>
-    <span class="scan-bar-val safe" id="sb-edited">0</span>
-  </div>
-  <div class="scan-bar-item">
-    <span class="scan-bar-label">Errors</span>
-    <span class="scan-bar-val danger" id="sb-errors">0</span>
-    <span class="scan-bar-note">(see report)</span>
-  </div>
-  <div class="scan-bar-item" id="sb-quarantine-wrap" style="display:none">
-    <span class="scan-bar-label">Quarantined</span>
-    <span class="scan-bar-val danger" id="sb-quarantined">0</span>
-    <span class="scan-bar-note">(corrupt)</span>
-  </div>
-  <div class="scan-bar-item">
-    <span class="scan-bar-label">Warnings</span>
-    <span class="scan-bar-val caution" id="sb-warnings">0</span>
-    <span class="scan-bar-note">(see report)</span>
   </div>
   <div class="scan-bar-right">
     <span id="scan-bar-title"></span>
