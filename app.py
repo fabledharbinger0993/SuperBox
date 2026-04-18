@@ -1669,7 +1669,6 @@ def api_set_music_root():
         return jsonify({"error": str(exc)}), 500
 
 
-@app.route("/api/migrate-pioneer-db")
 @app.route("/api/migrate-pioneer-db", methods=["POST"])
 def api_migrate_pioneer_db():
     """Stream progress of migrating ~/Library/Pioneer/rekordbox/ to the target drive."""
