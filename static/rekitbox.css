@@ -1,10 +1,10 @@
 /* ── Design tokens ─────────────────────────────────────────────────────── */
 :root {
-  --bg:            #07070f;
-  --surface:       #0d0d1a;
-  --surface-hi:    #13132a;
-  --border:        #1a1a30;
-  --border-hi:     #252540;
+  --bg:            #0b0b0e;
+  --surface:       #121218;
+  --surface-hi:    #1c1c26;
+  --border:        #222232;
+  --border-hi:     #2e2e40;
 
   --text:          #dde3f0;
   --text-muted:    #5a6280;
@@ -26,8 +26,10 @@
   --danger-dim:    rgba(248,113,113,.1);
   --danger-border: rgba(248,113,113,.25);
 
-  --accent:        #818cf8;
-  --accent-dim:    rgba(129,140,248,.1);
+  --accent:        #ff6600;
+  --accent-dim:    rgba(255,102,0,.1);
+  --accent2:       #7b2fff;
+  --accent2-dim:   rgba(123,47,255,.1);
 
   --mono: 'JetBrains Mono','Fira Code','Cascadia Code',ui-monospace,monospace;
   --sans: system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -157,7 +159,7 @@ header {
   align-items: center;
   gap: 12px;
   padding: 8px 24px;
-  background: var(--accent-dim, rgba(139, 92, 246, 0.12));
+  background: var(--accent-dim, rgba(255, 102, 0, 0.12));
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   border-bottom: 1px solid rgba(139, 92, 246, 0.35);
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
@@ -260,11 +262,11 @@ main { max-width: 1080px; margin: 0 auto; padding: 32px 28px; }
 }
 .card-icon img {
   width: 40px; height: 40px; object-fit: contain;
-  filter: drop-shadow(0 0 6px rgba(129,140,248,0.35));
+  filter: drop-shadow(0 0 6px rgba(255,102,0,0.35));
   transition: filter .2s ease;
 }
 .card:hover .card-icon img {
-  filter: drop-shadow(0 0 12px rgba(129,140,248,0.75));
+  filter: drop-shadow(0 0 12px rgba(255,102,0,0.75));
 }
 
 .card-meta { flex: 1; }
@@ -490,7 +492,7 @@ details[open] > summary { color: var(--text); }
 .btn:disabled { opacity: .35; cursor: not-allowed; }
 .btn-primary {
   background: var(--accent);
-  border: 1px solid rgba(129,140,248,.5);
+  border: 1px solid rgba(255,102,0,.5);
 }
 .btn-ghost {
   background: transparent;
@@ -502,24 +504,24 @@ details[open] > summary { color: var(--text); }
 /* Normalize, Find Duplicates — unified purple like btn-primary */
 .btn-danger-action {
   background: var(--accent);
-  border: 1px solid rgba(129,140,248,.5);
+  border: 1px solid rgba(255,102,0,.5);
 }
 /* Relocate step flow button — unified purple */
 .btn-warn-action {
   background: var(--accent);
-  border: 1px solid rgba(129,140,248,.5);
+  border: 1px solid rgba(255,102,0,.5);
 }
 /* Neon variant — Convert & Relocate primary actions */
 .btn-neon {
   background: var(--accent);
-  border: 1px solid rgba(129,140,248,.6);
-  box-shadow: 0 0 8px rgba(129,140,248,.55), 0 0 18px rgba(129,140,248,.25);
+  border: 1px solid rgba(255,102,0,.6);
+  box-shadow: 0 0 8px rgba(255,102,0,.55), 0 0 18px rgba(255,102,0,.25);
   text-shadow: 0 0 6px rgba(180,160,255,.45);
   transition: opacity .15s, transform .1s, box-shadow .2s;
 }
 .btn-neon:hover:not(:disabled) {
   opacity: 1;
-  box-shadow: 0 0 12px rgba(129,140,248,.75), 0 0 28px rgba(129,140,248,.35);
+  box-shadow: 0 0 12px rgba(255,102,0,.75), 0 0 28px rgba(255,102,0,.35);
   text-shadow: 0 0 8px rgba(180,160,255,.65);
 }
 /* Keep prune danger buttons visually distinct — safety signal */
@@ -643,7 +645,7 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   display: flex; flex-direction: column;
   transform: translateY(100%);
   transition: transform .25s cubic-bezier(.4,0,.2,1);
-  box-shadow: inset 0 0 60px rgba(129,140,248,0.04);
+  box-shadow: inset 0 0 60px rgba(255,102,0,0.04);
 }
 #log-panel.open { transform: translateY(0); }
 .log-bar {
@@ -867,7 +869,7 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
   font-size:.65rem; font-weight:700; padding:1px 5px; border-radius:3px;
   flex-shrink:0; letter-spacing:.03em;
 }
-.rank-pn  { background:rgba(129,140,248,.12); color:var(--accent); }
+.rank-pn  { background:rgba(255,102,0,.12); color:var(--accent); }
 .rank-mik { background:rgba(251,191,36,.1);   color:var(--caution); }
 .rank-raw { background:var(--border);          color:var(--text-dim); }
 .prune-indb { font-size:.65rem; color:var(--accent); background:var(--accent-dim);
@@ -994,13 +996,13 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
 .tool-btn:hover {
   background: var(--accent-dim);
   border-color: var(--accent);
-  box-shadow: 0 6px 28px rgba(129,140,248,.35);
+  box-shadow: 0 6px 28px rgba(255,102,0,.35);
 }
 
 .tool-btn.active {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: 0 6px 28px rgba(129,140,248,.35);
+  box-shadow: 0 6px 28px rgba(255,102,0,.35);
 }
 
 .tool-folder {
@@ -1050,13 +1052,13 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
 
 /* ── Modal open pulse ───────────────────────────────────────────────────── */
 /* Single accent glow bloom that plays once whenever any modal opens.
-   --accent is #818cf8 → rgb(129,140,248).
+   --accent is #ff6600 → rgb(255,102,0).  --accent2 is #7b2fff (ultraviolet).
    Applied via JS: pulseModal(el) adds .modal-pulse-once, which auto-removes
    on animationend so the animation can fire again on a subsequent open.     */
 @keyframes modal-open-pulse {
-  0%   { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(129,140,248,.5); }
-  45%  { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0 36px 10px rgba(129,140,248,.18); }
-  100% { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(129,140,248,.0); }
+  0%   { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(255,102,0,.5); }
+  45%  { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0 36px 10px rgba(255,102,0,.18); }
+  100% { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(255,102,0,.0); }
 }
 .modal-pulse-once {
   animation: modal-open-pulse 650ms cubic-bezier(.22,1,.36,1) forwards;
@@ -1424,20 +1426,20 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
   pointer-events: all;
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--accent);
-  border: 1px solid rgba(129,140,248,.6);
+  border: 1px solid rgba(255,102,0,.6);
   border-radius: 24px;
   padding: 7px 14px 7px 12px;
   font-size: .76rem; font-weight: 700; letter-spacing: .04em;
   color: #000;
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(129,140,248,.55), 0 0 18px rgba(129,140,248,.25);
+  box-shadow: 0 0 8px rgba(255,102,0,.55), 0 0 18px rgba(255,102,0,.25);
   text-shadow: 0 0 6px rgba(180,160,255,.45);
   transition: box-shadow .2s, opacity .15s;
   user-select: none;
   white-space: nowrap;
 }
 .summary-pill:hover {
-  box-shadow: 0 0 12px rgba(129,140,248,.75), 0 0 28px rgba(129,140,248,.4);
+  box-shadow: 0 0 12px rgba(255,102,0,.75), 0 0 28px rgba(255,102,0,.4);
   text-shadow: 0 0 8px rgba(180,160,255,.65);
 }
 .summary-pill-icon { font-size: .9rem; line-height: 1; }
@@ -1726,7 +1728,7 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
   to   { opacity:1; transform:scale(1)  translateY(0); }
 }
 .gls-card:hover { z-index: 9997 !important;
-                  border-color: rgba(129,140,248,.35); }
+                  border-color: rgba(255,102,0,.35); }
 .gls-card-head {
   display: flex; align-items: center; gap: 8px;
   padding: 9px 11px 8px;
@@ -2198,8 +2200,8 @@ body.log-open #rekitgo-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 1
 
 /* Step button added flash */
 @keyframes pipe-btn-flash {
-  0%   { background: var(--accent-dim); border-color: var(--accent); box-shadow: 0 0 0 0 rgba(129,140,248,.6); }
-  40%  { background: rgba(129,140,248,.25); border-color: var(--accent); box-shadow: 0 0 18px 4px rgba(129,140,248,.25); }
+  0%   { background: var(--accent-dim); border-color: var(--accent); box-shadow: 0 0 0 0 rgba(255,102,0,.6); }
+  40%  { background: rgba(255,102,0,.25); border-color: var(--accent); box-shadow: 0 0 18px 4px rgba(255,102,0,.25); }
   100% { background: var(--surface-hi); border-color: var(--border); box-shadow: none; }
 }
 .pipe-action-btn.pipe-added {
@@ -3011,7 +3013,7 @@ body { padding-right: var(--db-rail-w); }
   height: 2px;
   width: 0%;
   border-radius: 1px;
-  background: linear-gradient(90deg, #7c3aed 0%, #a78bfa 60%, #c4b5fd 100%);
+  background: linear-gradient(90deg, #3b1060 0%, #7b2fff 55%, #a855f7 100%);
   box-shadow: 0 0 6px rgba(196,181,253,.55), 0 0 14px rgba(139,92,246,.35);
   transition: width .1s linear;
   pointer-events: none;
