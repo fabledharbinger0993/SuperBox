@@ -967,25 +967,73 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
 #confirm-backdrop.open { display:block; }
 
 /* ── Owl / Glossary key system ─────────────────────────────────────────── */
-#owl-btn {
+/* ══ Tools Panel — unified right-side tool buttons ═════════════════════════ */
+#tools-panel {
   position: fixed;
   bottom: calc(var(--scan-bar-h) + 28px); right: 28px;
   z-index: 9999;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px;
+  transition: bottom .25s;
+}
+body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28px); }
+
+.tool-btn {
+  position: relative;
   display: flex; align-items: center; justify-content: center;
+  width: 52px; height: 52px;
   background: var(--surface-hi);
   border: 1px solid var(--border-hi);
-  border-radius: 50%;
-  width: 44px; height: 44px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: background .2s, border-color .2s, bottom .25s;
+  transition: all .2s;
   user-select: none;
   box-shadow: 0 4px 20px rgba(0,0,0,.55);
 }
-#owl-btn:hover, #owl-btn.active {
+
+.tool-btn:hover {
   background: var(--accent-dim);
   border-color: var(--accent);
+  box-shadow: 0 6px 28px rgba(129,140,248,.35);
 }
-.owl-icon { line-height: 1; }
+
+.tool-folder {
+  position: absolute;
+  width: 48px; height: 48px;
+  color: var(--text-dim);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.tool-icon {
+  position: relative;
+  z-index: 1;
+  width: 28px; height: 28px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.tool-dot {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  border: 1.5px solid var(--surface-hi);
+  transition: background .3s, box-shadow .3s;
+  z-index: 2;
+}
+.tool-dot.remote { background: var(--safe); box-shadow: 0 0 6px var(--safe); }
+.tool-dot.lan { background: var(--caution); box-shadow: 0 0 6px var(--caution); }
+
+/* ── Horizontal glow divider between tool groups ─────────────────────────── */
+.tools-divider {
+  width: 32px; height: 1px;
+  background: linear-gradient(to right, transparent, var(--accent), transparent);
+  box-shadow: 0 0 12px var(--accent);
+  opacity: 0.5;
+  margin: 4px 0;
+}
 
 /* ── Modal open pulse ───────────────────────────────────────────────────── */
 /* Single accent glow bloom that plays once whenever any modal opens.
@@ -1340,31 +1388,8 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
 }
 .path-skip:hover { color: var(--text); }
 
-/* ── Lightbulb / Welcome button ─────────────────────────────────────────── */
-#lightbulb-btn {
-  position: fixed;
-  bottom: calc(var(--scan-bar-h) + 84px); right: 28px;
-  z-index: 9999;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--surface-hi);
-  border: 1px solid var(--border-hi);
-  border-radius: 50%;
-  width: 44px; height: 44px;
-  cursor: pointer;
-  transition: background .2s, border-color .2s, bottom .25s;
-  user-select: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,.55);
-}
-#lightbulb-btn:hover {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: var(--accent);
-}
+/* ── Lightbulb / Welcome button (in tools panel) ────────────────────────── */
 /* Scan bar is always visible (--scan-bar-h), so base offset already includes it */
-body.log-open #owl-btn                     { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28px); }
-body.log-open #lightbulb-btn               { bottom: calc(var(--log-h) + var(--scan-bar-h) + 84px); }
-body.log-open #pipeline-btn                { bottom: calc(var(--log-h) + var(--scan-bar-h) + 140px); }
-body.log-open #rekitgo-btn                 { bottom: calc(var(--log-h) + var(--scan-bar-h) + 196px); }
 body.log-open #fb-toggle-btn               { bottom: calc(var(--log-h) + var(--scan-bar-h) + 252px); }
 body.log-open #owl-hover-panel             { bottom: calc(var(--log-h) + var(--scan-bar-h) + 74px); }
 body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--scan-bar-h) + 308px); }
@@ -1901,36 +1926,7 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
   letter-spacing: .02em;
 }
 
-/* ══ Pipeline Wizard floating button ════════════════════════════════════════ */
-/* ══ RekitGo button + pairing panel ═════════════════════════════════════════ */
-#rekitgo-btn {
-  position: fixed;
-  bottom: calc(var(--scan-bar-h) + 196px); right: 28px;
-  z-index: 9999;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--surface-hi);
-  border: 1px solid var(--border-hi);
-  border-radius: 50%;
-  width: 44px; height: 44px;
-  font-size: 1.25rem; line-height: 1;
-  cursor: pointer;
-  transition: background .2s, border-color .2s, bottom .25s;
-  user-select: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,.55);
-}
-#rekitgo-btn:hover { background: var(--accent-dim); border-color: var(--accent); }
-
-#rekitgo-btn-dot {
-  position: absolute;
-  top: 6px; right: 6px;
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--text-dim);
-  border: 1.5px solid var(--surface-hi);
-  transition: background .3s;
-}
-#rekitgo-btn-dot.remote { background: var(--safe); }
-#rekitgo-btn-dot.lan    { background: var(--caution); }
+/* ══ RekitGo button (in tools panel) + pairing panel ════════════════════════ */
 
 #rekitgo-backdrop {
   display: none;
@@ -1943,7 +1939,7 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
 #rekitgo-panel {
   display: none;
   position: fixed;
-  bottom: calc(var(--scan-bar-h) + 252px); right: 28px;
+  bottom: calc(var(--scan-bar-h) + 100px); right: 28px;
   z-index: 10001;
   width: 300px;
   background: var(--surface);
@@ -1954,7 +1950,7 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
   overflow: hidden;
 }
 #rekitgo-panel.open { display: block; }
-body.log-open #rekitgo-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 252px); }
+body.log-open #rekitgo-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 100px); }
 
 /* RekitGo icon watermark — floats centred behind panel content */
 #rekitgo-panel::before {
@@ -2031,25 +2027,7 @@ body.log-open #rekitgo-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 2
   margin-top: 14px; text-align: center;
 }
 
-/* ══ Pipeline button ═════════════════════════════════════════════════════════ */
-#pipeline-btn {
-  position: fixed;
-  bottom: calc(var(--scan-bar-h) + 140px); right: 28px;
-  z-index: 9999;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--surface-hi);
-  border: 1px solid var(--border-hi);
-  border-radius: 50%;
-  width: 44px; height: 44px;
-  cursor: pointer;
-  transition: background .2s, border-color .2s, bottom .25s;
-  user-select: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,.55);
-}
-#pipeline-btn:hover {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-}
+/* ══ Pipeline button (in tools panel) ════════════════════════════════════════ */
 /* log-open shift handled in the consolidated block above */
 
 /* ══ Pipeline Wizard modal ═══════════════════════════════════════════════════ */

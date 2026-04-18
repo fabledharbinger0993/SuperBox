@@ -1123,24 +1123,41 @@
   <div id="fb-drag-hint">Drag any item to a drop zone ↗</div>
 </div>
 
-<!-- ── Pipeline Wizard button ─────────────────────────────────────────────── -->
-<div id="rekitgo-btn" onclick="openRekitGo()" title="RekitGo — iOS companion app">
-  <span id="rekitgo-btn-dot"></span><img src="/static/icon-rekitgo.png" style="width:26px;height:26px;object-fit:contain;border-radius:4px;">
-</div>
+<!-- ══ Tools Panel (RekitBox modals + Rekordbox tools) ══════════════════════ -->
+<div id="tools-panel">
+  <!-- Rekordbox Tools -->
+  <button id="rekitgo-btn" onclick="openRekitGo()" class="tool-btn" title="RekitGo — iOS companion app">
+    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <img src="/static/icon-rekitgo.png" class="tool-icon" alt="RekitGo">
+    <span id="rekitgo-btn-dot" class="tool-dot"></span>
+  </button>
 
-<div id="pipeline-btn" onclick="openPipelineWizard()" title="Pipeline Wizard">
-  <img src="/static/icon-start-wizard.png" style="width:24px;height:24px;object-fit:contain">
-</div>
+  <!-- RekitBox Modals -->
+  <div class="tools-divider"></div>
 
-<div id="lightbulb-btn" onclick="openWelcome()" title="About RekitBox">
-  <img src="/static/icon-welcome-info.png" style="width:24px;height:24px;object-fit:contain">
-</div>
+  <button id="pipeline-btn" onclick="openPipelineWizard()" class="tool-btn" title="Pipeline Wizard">
+    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <img src="/static/icon-start-wizard.png" class="tool-icon" alt="Pipeline">
+  </button>
 
-<!-- ══ Owl / Glossary ════════════════════════════════════════════════════════ -->
-<div id="owl-btn"
-     onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()"
-     onclick="owlClick()">
-  <img src="/static/icon-site-key.png" style="width:24px;height:24px;object-fit:contain" class="owl-icon">
+  <button id="lightbulb-btn" onclick="openWelcome()" class="tool-btn" title="About RekitBox">
+    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <img src="/static/icon-welcome-info.png" class="tool-icon" alt="About">
+  </button>
+
+  <!-- Glossary -->
+  <button id="owl-btn" onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()" onclick="owlClick()" class="tool-btn" title="Glossary &amp; Concepts">
+    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <img src="/static/icon-site-key.png" class="tool-icon owl-icon" alt="Glossary">
+  </button>
 </div>
 
 <div id="owl-hover-panel"
