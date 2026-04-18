@@ -188,7 +188,10 @@ final class APIClient: ObservableObject {
 
     private func request(_ method: String, _ path: String, body: Data? = nil) async throws -> Data {
         guard let cfg = config else { throw APIError.notConfigured }
-        var req = URLRequest(url: cfg.baseURL.appendingPathComponent(path))
+        guard let url = URL(string: path, relativeTo: cfg.baseURL)?.absoluteURL else {
+            throw APIError.message("Invalid request URL.")
+        }
+        var req = URLRequest(url: url)
         req.httpMethod = method
         req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
         if let b = body {
