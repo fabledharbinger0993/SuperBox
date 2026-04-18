@@ -1124,6 +1124,10 @@
 </div>
 
 <!-- ── Pipeline Wizard button ─────────────────────────────────────────────── -->
+<div id="rekitgo-btn" onclick="openRekitGo()" title="RekitGo — iOS companion app">
+  <span id="rekitgo-btn-dot"></span>📱
+</div>
+
 <div id="pipeline-btn" onclick="openPipelineWizard()" title="Pipeline Wizard">
   <img src="/static/icon-start-wizard.png" style="width:24px;height:24px;object-fit:contain">
 </div>
@@ -1734,6 +1738,45 @@
 
 <!-- backdrop -->
 <div id="db-panel-backdrop" onclick="closeDbPanel()"></div>
+
+<!-- ══ RekitGo pairing panel ════════════════════════════════════════════════ -->
+<div id="rekitgo-backdrop" onclick="closeRekitGo()"></div>
+<div id="rekitgo-panel">
+  <div class="rekitgo-header">
+    <span class="rekitgo-title">📱 RekitGo</span>
+    <button class="rekitgo-close" onclick="closeRekitGo()">✕</button>
+  </div>
+
+  <div id="rekitgo-status-row">
+    <span id="rekitgo-status-dot"></span>
+    <span id="rekitgo-status-label">Checking…</span>
+  </div>
+
+  <div id="rekitgo-qr-wrap">
+    <div id="rekitgo-qr"></div>
+    <p class="rekitgo-hint">Scan with the RekitGo app to connect</p>
+  </div>
+
+  <div id="rekitgo-detail">
+    <div class="rekitgo-row">
+      <span class="rekitgo-key">Local</span>
+      <span class="rekitgo-val" id="rekitgo-local">—</span>
+    </div>
+    <div class="rekitgo-row" id="rekitgo-ts-row">
+      <span class="rekitgo-key">Remote</span>
+      <span class="rekitgo-val" id="rekitgo-tailscale">—</span>
+    </div>
+    <div class="rekitgo-row">
+      <span class="rekitgo-key">Token</span>
+      <span class="rekitgo-val rekitgo-mono" id="rekitgo-token">—</span>
+    </div>
+  </div>
+
+  <p class="rekitgo-offline-msg" id="rekitgo-offline-msg" style="display:none">
+    RekitBox is running offline — local tools work normally.<br>
+    Install <strong>Tailscale</strong> on this Mac and your iPhone for remote access.
+  </p>
+</div>
 
 </body>
 </html>

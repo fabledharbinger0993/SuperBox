@@ -1899,6 +1899,111 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
 }
 
 /* ══ Pipeline Wizard floating button ════════════════════════════════════════ */
+/* ══ RekitGo button + pairing panel ═════════════════════════════════════════ */
+#rekitgo-btn {
+  position: fixed;
+  bottom: calc(var(--scan-bar-h) + 28px); right: 196px;
+  z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface-hi);
+  border: 1px solid var(--border-hi);
+  border-radius: 50%;
+  width: 44px; height: 44px;
+  font-size: 1.25rem; line-height: 1;
+  cursor: pointer;
+  transition: background .2s, border-color .2s, bottom .25s;
+  user-select: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,.55);
+}
+#rekitgo-btn:hover { background: var(--accent-dim); border-color: var(--accent); }
+body.log-open #rekitgo-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28px); }
+
+#rekitgo-btn-dot {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  border: 1.5px solid var(--surface-hi);
+  transition: background .3s;
+}
+#rekitgo-btn-dot.remote { background: var(--safe); }
+#rekitgo-btn-dot.lan    { background: var(--caution); }
+
+#rekitgo-backdrop {
+  display: none;
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(3px);
+}
+#rekitgo-backdrop.open { display: block; }
+
+#rekitgo-panel {
+  display: none;
+  position: fixed;
+  bottom: calc(var(--scan-bar-h) + 82px); right: 28px;
+  z-index: 10001;
+  width: 300px;
+  background: #0d0d1f;
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.7);
+}
+#rekitgo-panel.open { display: block; }
+
+.rekitgo-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.rekitgo-title { font-size: .95rem; font-weight: 700; color: var(--text); }
+.rekitgo-close {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 1rem; cursor: pointer; padding: 2px 4px;
+}
+.rekitgo-close:hover { color: var(--text); }
+
+#rekitgo-status-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 16px;
+}
+#rekitgo-status-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--text-dim); flex-shrink: 0;
+  transition: background .3s;
+}
+#rekitgo-status-dot.remote { background: var(--safe); box-shadow: 0 0 6px var(--safe); }
+#rekitgo-status-dot.lan    { background: var(--caution); box-shadow: 0 0 6px var(--caution); }
+#rekitgo-status-dot.offline { background: var(--danger); }
+#rekitgo-status-label { font-size: .78rem; color: var(--text-dim); }
+
+#rekitgo-qr-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  background: #fff; border-radius: 8px;
+  padding: 12px; margin-bottom: 14px;
+}
+#rekitgo-qr svg { display: block; width: 180px; height: 180px; }
+.rekitgo-hint {
+  font-size: .68rem; color: #555; margin: 8px 0 0;
+  text-align: center;
+}
+
+#rekitgo-detail { display: flex; flex-direction: column; gap: 6px; }
+.rekitgo-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  font-size: .72rem;
+}
+.rekitgo-key { color: var(--text-muted); }
+.rekitgo-val { color: var(--text); text-align: right; max-width: 180px;
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rekitgo-mono { font-family: var(--mono); font-size: .65rem; color: var(--text-dim); }
+
+.rekitgo-offline-msg {
+  font-size: .75rem; color: var(--text-dim); line-height: 1.5;
+  margin-top: 14px; text-align: center;
+}
+
+/* ══ Pipeline button ═════════════════════════════════════════════════════════ */
 #pipeline-btn {
   position: fixed;
   bottom: calc(var(--scan-bar-h) + 28px); right: 140px;

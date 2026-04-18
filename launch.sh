@@ -54,6 +54,13 @@ source "$VENV/bin/activate"
 cd "$SCRIPT_DIR"
 git pull origin main --ff-only >> "$LOG" 2>&1
 
+# ── Bring up Tailscale for RekitGo remote access (best-effort, non-blocking) ─
+# RekitBox runs fully offline without this. Tailscale just enables the iOS app
+# to connect remotely. Silent on failure — missing Tailscale is not an error.
+if command -v tailscale &>/dev/null; then
+  tailscale up --accept-routes >> "$LOG" 2>&1 &
+fi
+
 # ── Launch native window (main.py handles "already running" gracefully) ──────
 # main.py detects whether port 5001 is occupied and reuses the existing server
 # rather than starting a second one — safe to call even if already open.

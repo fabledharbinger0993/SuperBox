@@ -1731,6 +1731,80 @@ def mobile_ping():
     return jsonify({"status": "ok", "version": "1.0.0", "rekitbox_version": "1.0.9"})
 
 
+@app.route("/api/connectivity")
+def api_connectivity():
+    """
+    Connection info for the RekitGo pairing panel in the RekitBox UI.
+    No auth required — this is served to the local desktop page only.
+
+    Returns:
+      local_ip      — LAN IP (reachable on same WiFi)
+      tailscale_ip  — Tailscale IP if connected, else null
+      port          — always 5001
+      remote_ready  — true when Tailscale is up
+      token         — mobile_token from config (for QR pairing)
+      qr_svg        — SVG QR code encoding rekitgo://<best_ip>:5001?token=<token>
+    """
+    import socket, subprocess as _sp  # noqa: E401
+
+    # Best local IP (non-loopback)
+    local_ip: str | None = None
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        local_ip = "127.0.0.1"
+
+    # Tailscale IP — fast check, 2 s timeout
+    tailscale_ip: str | None = None
+    try:
+        ts = _sp.run(["tailscale", "ip", "-4"],
+                     capture_output=True, text=True, timeout=2)
+        if ts.returncode == 0:
+            tailscale_ip = ts.stdout.strip() or None
+    except Exception:
+        pass
+
+    # Mobile auth token
+    token: str | None = None
+    try:
+        import json as _json, pathlib as _pl  # noqa: E401
+        cfg_path = _pl.Path.home() / ".rekordbox-toolkit" / "config.json"
+        if cfg_path.exists():
+            token = _json.loads(cfg_path.read_text()).get("mobile_token")
+    except Exception:
+        pass
+
+    best_ip = tailscale_ip or local_ip
+    remote_ready = tailscale_ip is not None
+
+    # QR code — encode rekitgo://ip:5001?token=... as inline SVG
+    qr_svg: str | None = None
+    if token and best_ip:
+        try:
+            import qrcode, qrcode.image.svg, io  # noqa: E401
+            payload = f"rekitgo://{best_ip}:5001?token={token}"
+            qr = qrcode.make(payload,
+                             image_factory=qrcode.image.svg.SvgPathImage,
+                             box_size=6, border=2)
+            buf = io.BytesIO()
+            qr.save(buf)
+            qr_svg = buf.getvalue().decode("utf-8")
+        except Exception:
+            qr_svg = None
+
+    return jsonify({
+        "local_ip":     local_ip,
+        "tailscale_ip": tailscale_ip,
+        "port":         5001,
+        "remote_ready": remote_ready,
+        "token":        token,
+        "qr_svg":       qr_svg,
+    })
+
+
 @app.route("/api/mobile/folders")
 def mobile_folders():
     """

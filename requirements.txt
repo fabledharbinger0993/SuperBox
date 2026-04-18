@@ -42,6 +42,9 @@ yt-dlp>=2024.1
 # Audio download from Bandcamp, Beatport, Soundcloud, and direct URLs.
 # Requires ffmpeg (already a system dep) for post-download format conversion.
 
+qrcode[svg]>=7.4
+# QR code generation for the RekitGo pairing panel (inline SVG, no Pillow needed).
+
 pywebview>=5.0
 # Native OS window (WKWebView on macOS) — replaces the browser launch step.
 # Enables real drag-and-drop path delivery and a proper .app experience.

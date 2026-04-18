@@ -3701,3 +3701,71 @@ _initStateOverlay();
   const el = document.getElementById(id);
   if (el) el.addEventListener('change', () => { if (el.value.trim()) loadState(el.value.trim()); });
 });
+
+// ── RekitGo pairing panel ───────────────────────────────────────────────────
+function openRekitGo() {
+  document.getElementById('rekitgo-panel').classList.add('open');
+  document.getElementById('rekitgo-backdrop').classList.add('open');
+  _loadConnectivity();
+}
+
+function closeRekitGo() {
+  document.getElementById('rekitgo-panel').classList.remove('open');
+  document.getElementById('rekitgo-backdrop').classList.remove('open');
+}
+
+function _loadConnectivity() {
+  fetch('/api/connectivity')
+    .then(r => r.json())
+    .then(d => {
+      const dot      = document.getElementById('rekitgo-status-dot');
+      const btnDot   = document.getElementById('rekitgo-btn-dot');
+      const label    = document.getElementById('rekitgo-status-label');
+      const qr       = document.getElementById('rekitgo-qr');
+      const localEl  = document.getElementById('rekitgo-local');
+      const tsEl     = document.getElementById('rekitgo-tailscale');
+      const tokenEl  = document.getElementById('rekitgo-token');
+      const offline  = document.getElementById('rekitgo-offline-msg');
+      const qrWrap   = document.getElementById('rekitgo-qr-wrap');
+
+      dot.className = btnDot.className = '';
+      if (d.remote_ready) {
+        dot.classList.add('remote'); btnDot.classList.add('remote');
+        label.textContent = 'Remote access ready (Tailscale)';
+      } else if (d.local_ip && d.local_ip !== '127.0.0.1') {
+        dot.classList.add('lan'); btnDot.classList.add('lan');
+        label.textContent = 'LAN access only — Tailscale not connected';
+      } else {
+        dot.classList.add('offline');
+        label.textContent = 'Offline — local tools still work normally';
+      }
+
+      localEl.textContent  = d.local_ip  ? `${d.local_ip}:5001`     : '—';
+      tsEl.textContent     = d.tailscale_ip ? `${d.tailscale_ip}:5001` : 'not connected';
+      tokenEl.textContent  = d.token ? d.token.slice(0, 8) + '••••••••••••••••••••••••••' : '—';
+      tokenEl.title        = d.token || '';
+
+      if (d.qr_svg) {
+        qr.innerHTML = d.qr_svg;
+        qrWrap.style.display = 'flex';
+        offline.style.display = 'none';
+      } else {
+        qrWrap.style.display = 'none';
+        offline.style.display = 'block';
+      }
+    })
+    .catch(() => {
+      document.getElementById('rekitgo-status-label').textContent = 'Could not fetch connectivity info';
+    });
+}
+
+// Update button dot on page load (silent, no panel)
+fetch('/api/connectivity')
+  .then(r => r.json())
+  .then(d => {
+    const btnDot = document.getElementById('rekitgo-btn-dot');
+    if (!btnDot) return;
+    if (d.remote_ready)                              btnDot.classList.add('remote');
+    else if (d.local_ip && d.local_ip !== '127.0.0.1') btnDot.classList.add('lan');
+  })
+  .catch(() => {});
