@@ -18,7 +18,7 @@ env/
 .AppleDouble
 .LSOverride
 
-# Claude Code
+# Claude Code agent worktrees / scratch space
 .claude/
 
 # Secrets / config
@@ -33,3 +33,9 @@ settings.json
 *.bak
 *.tmp
 SuperBox.zip
+RekitBox.zip
+
+# The static folder holds CSS/JS/images only.
+# index.html lives ONLY in templates/ and is served by render_template().
+# Never commit a copy here — it causes confusion about which file is current.
+static/index.html
