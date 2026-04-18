@@ -1,0 +1,33 @@
+name: RekitGo
+options:
+  bundleIdPrefix: com.fabledharbinger
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "15"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: ""          # fill in your Apple dev team ID
+    PRODUCT_BUNDLE_IDENTIFIER: com.fabledharbinger.rekitgo
+
+targets:
+  RekitGo:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        INFOPLIST_FILE: Sources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleName: RekitGo
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        NSLocalNetworkUsageDescription: "RekitGo connects to your RekitBox server on your local network."
+        NSBonjourServices:
+          - _http._tcp

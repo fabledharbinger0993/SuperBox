@@ -97,7 +97,27 @@ def _folder_artist(path: Path) -> str | None:
     """
     try:
         from mutagen import File as MutagenFile
-        audio = MutagenFile(str(path), easy=False)
+        from mutagen.id3 import ID3
+        try:
+            audio = MutagenFile(str(path), easy=False)
+        except Exception:
+            # MPEG sync failure on MP3 — try reading just the ID3 header
+            if not str(path).lower().endswith('.mp3'):
+                return None
+            try:
+                tags = ID3(str(path))
+            except Exception:
+                return None
+            # fall through to tag extraction below using the ID3 object as tags
+            for frame_id in ("TPE2", "TPE1"):
+                frame = tags.get(frame_id)
+                if frame is not None:
+                    text = getattr(frame, "text", None)
+                    val = str(text[0]).strip() if text else str(frame).strip()
+                    if val:
+                        return _normalize_artist(val)
+            return None
+
         if audio is None or audio.tags is None:
             return None
         tags = audio.tags
