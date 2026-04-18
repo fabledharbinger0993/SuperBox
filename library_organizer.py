@@ -151,7 +151,15 @@ def _canonical_dest(
     raw_artist = _folder_artist(src) or track.artist
     artist = _normalize_artist(raw_artist) if raw_artist else None
 
-    # No artist — orphaned
+    # No artist from tags — try filename-based extraction as last resort.
+    # Handles "Artist - Title.mp3" and strips Pioneer _PN suffixes.
+    if not artist or not artist.strip():
+        stem = re.sub(r'_PN\s*\d*$', '', src.stem, flags=re.IGNORECASE).strip()
+        stem = re.sub(r'^\d+[\s.\-]+', '', stem).strip()
+        if ' - ' in stem:
+            candidate = stem.split(' - ', 1)[0].strip()
+            artist = _normalize_artist(candidate) if candidate else None
+
     if not artist or not artist.strip():
         return target / ORPHAN_FOLDER / year / fname
 

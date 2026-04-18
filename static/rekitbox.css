@@ -1343,7 +1343,7 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
 /* ── Lightbulb / Welcome button ─────────────────────────────────────────── */
 #lightbulb-btn {
   position: fixed;
-  bottom: calc(var(--scan-bar-h) + 28px); right: 84px;
+  bottom: calc(var(--scan-bar-h) + 84px); right: 28px;
   z-index: 9999;
   display: flex; align-items: center; justify-content: center;
   background: var(--surface-hi);
@@ -1361,16 +1361,19 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
   color: var(--accent);
 }
 /* Scan bar is always visible (--scan-bar-h), so base offset already includes it */
-body.log-open #lightbulb-btn               { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28px); }
 body.log-open #owl-btn                     { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28px); }
+body.log-open #lightbulb-btn               { bottom: calc(var(--log-h) + var(--scan-bar-h) + 84px); }
+body.log-open #pipeline-btn                { bottom: calc(var(--log-h) + var(--scan-bar-h) + 140px); }
+body.log-open #rekitgo-btn                 { bottom: calc(var(--log-h) + var(--scan-bar-h) + 196px); }
+body.log-open #fb-toggle-btn               { bottom: calc(var(--log-h) + var(--scan-bar-h) + 252px); }
 body.log-open #owl-hover-panel             { bottom: calc(var(--log-h) + var(--scan-bar-h) + 74px); }
-body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--scan-bar-h) + 76px); }
+body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--scan-bar-h) + 308px); }
 
 /* ── Session summary pills ──────────────────────────────────────────────── */
 #session-pills-container {
   position: fixed;
   right: 28px;
-  bottom: calc(var(--scan-bar-h) + 76px);
+  bottom: calc(var(--scan-bar-h) + 308px);
   z-index: 9998;
   display: flex;
   flex-direction: column-reverse;
@@ -1799,7 +1802,7 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
 /* ══ File Browser toggle button ═════════════════════════════════════════════ */
 #fb-toggle-btn {
   position: fixed;
-  bottom: calc(var(--scan-bar-h) + 28px); right: 196px;
+  bottom: calc(var(--scan-bar-h) + 252px); right: 28px;
   z-index: 9999;
   display: flex; align-items: center; justify-content: center;
   width: 44px; height: 44px; border-radius: 10px;
@@ -1812,7 +1815,7 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
 #fb-toggle-btn:hover, #fb-toggle-btn.active {
   background: var(--accent-dim); border-color: var(--accent);
 }
-body.log-open #fb-toggle-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28px); }
+/* log-open shift handled in the consolidated block above */
 
 /* ══ File Browser Panel ══════════════════════════════════════════════════════ */
 #fb-panel {
@@ -1902,7 +1905,7 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
 /* ══ RekitGo button + pairing panel ═════════════════════════════════════════ */
 #rekitgo-btn {
   position: fixed;
-  bottom: calc(var(--scan-bar-h) + 28px); right: 196px;
+  bottom: calc(var(--scan-bar-h) + 196px); right: 28px;
   z-index: 9999;
   display: flex; align-items: center; justify-content: center;
   background: var(--surface-hi);
@@ -1916,7 +1919,6 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
   box-shadow: 0 4px 20px rgba(0,0,0,.55);
 }
 #rekitgo-btn:hover { background: var(--accent-dim); border-color: var(--accent); }
-body.log-open #rekitgo-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28px); }
 
 #rekitgo-btn-dot {
   position: absolute;
@@ -2006,7 +2008,7 @@ body.log-open #rekitgo-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
 /* ══ Pipeline button ═════════════════════════════════════════════════════════ */
 #pipeline-btn {
   position: fixed;
-  bottom: calc(var(--scan-bar-h) + 28px); right: 140px;
+  bottom: calc(var(--scan-bar-h) + 140px); right: 28px;
   z-index: 9999;
   display: flex; align-items: center; justify-content: center;
   background: var(--surface-hi);
@@ -2022,7 +2024,7 @@ body.log-open #rekitgo-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
   background: var(--accent-dim);
   border-color: var(--accent);
 }
-body.log-open #pipeline-btn { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28px); }
+/* log-open shift handled in the consolidated block above */
 
 /* ══ Pipeline Wizard modal ═══════════════════════════════════════════════════ */
 #pipeline-wizard-backdrop {
