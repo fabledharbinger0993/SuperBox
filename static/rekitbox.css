@@ -1943,22 +1943,48 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
 #rekitgo-panel {
   display: none;
   position: fixed;
-  bottom: calc(var(--scan-bar-h) + 82px); right: 28px;
+  bottom: calc(var(--scan-bar-h) + 252px); right: 28px;
   z-index: 10001;
   width: 300px;
-  background: #0d0d1f;
+  background: var(--surface);
   border: 1px solid var(--border-hi);
   border-radius: 12px;
   padding: 18px;
   box-shadow: 0 8px 40px rgba(0,0,0,.7);
+  overflow: hidden;
 }
 #rekitgo-panel.open { display: block; }
+body.log-open #rekitgo-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 252px); }
+
+/* RekitGo icon watermark — floats centred behind panel content */
+#rekitgo-panel::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200px; height: 200px;
+  background: url('/static/icon-rekitgo.png') center / contain no-repeat;
+  opacity: 0.06;
+  pointer-events: none;
+  z-index: 0;
+}
 
 .rekitgo-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 14px;
+  position: relative; z-index: 1;
 }
-.rekitgo-title { font-size: .95rem; font-weight: 700; color: var(--text); }
+#rekitgo-status-row, #rekitgo-qr-wrap, #rekitgo-detail, .rekitgo-offline-msg {
+  position: relative; z-index: 1;
+}
+.rekitgo-title {
+  font-size: .95rem; font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 8px;
+  position: relative; z-index: 1;
+}
+.rekitgo-title-icon {
+  width: 22px; height: 22px; object-fit: contain; border-radius: 4px;
+}
 .rekitgo-close {
   background: none; border: none; color: var(--text-dim);
   font-size: 1rem; cursor: pointer; padding: 2px 4px;
