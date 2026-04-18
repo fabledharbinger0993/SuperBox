@@ -151,7 +151,14 @@ final class APIClient: ObservableObject {
 
     func connectWebSocket() {
         guard let cfg = config else { return }
-        let url = URL(string: "ws://\(cfg.host):\(cfg.port)/api/mobile/events")!
+
+        var components = URLComponents()
+        components.scheme = "ws"
+        components.host = cfg.host
+        components.port = cfg.port
+        components.path = "/api/mobile/events"
+
+        guard let url = components.url else { return }
         var req = URLRequest(url: url)
         req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
         wsTask = URLSession.shared.webSocketTask(with: req)
