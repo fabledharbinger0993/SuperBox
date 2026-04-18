@@ -25,11 +25,9 @@
 <!-- ══ Header ══════════════════════════════════════════════════════════════ -->
 <header>
   <div class="brand">
-    <div style="display:flex;flex-direction:column;gap:2px;">
-      <img src="/static/rekitbox-header.png" alt="RekitBox"
-           style="height:82px;object-fit:contain;object-position:left;mix-blend-mode:screen;">
-      <div class="brand-sub"><strong>Guthrie Entertainment LLC</strong>rekordbox-toolkit</div>
-    </div>
+    <img src="/static/rekitbox-header.png" alt="RekitBox"
+         style="height:72px;object-fit:contain;object-position:left;mix-blend-mode:screen;flex-shrink:0;">
+    <div class="brand-sub"><strong>Guthrie Entertainment LLC</strong>rekordbox-toolkit</div>
   </div>
   <div class="status-bar">
     <div class="status-pill">
@@ -1123,30 +1121,18 @@
 <div id="tools-panel">
   <!-- Rekordbox DB tools -->
   <button class="tool-btn db-tool-btn" id="rail-btn-audit" onclick="openDbPanel('audit')" title="Audit Library">
-    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-    </svg>
     <img src="/static/icon-audit.png" class="tool-icon" alt="Audit">
   </button>
 
   <button class="tool-btn db-tool-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths">
-    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-    </svg>
     <img src="/static/icon-move.png" class="tool-icon" alt="Relocate">
   </button>
 
   <button class="tool-btn db-tool-btn" id="rail-btn-import" onclick="openDbPanel('import')" title="Import Tracks">
-    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-    </svg>
     <img src="/static/icon-import.png" class="tool-icon" alt="Import">
   </button>
 
   <button class="tool-btn db-tool-btn" id="rail-btn-link" onclick="openDbPanel('link')" title="Link Playlists">
-    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-    </svg>
     <img src="/static/icon-link.png" class="tool-icon" alt="Link">
   </button>
 
@@ -1154,39 +1140,24 @@
 
   <!-- RekitBox utility + modal tools -->
   <button id="fb-toggle-btn" onclick="toggleFileBrowser()" class="tool-btn" title="Browse files (⌘B)">
-    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-    </svg>
     <img src="/static/icon-rb-folder.png" class="tool-icon" alt="Browse files">
   </button>
 
   <button id="rekitgo-btn" onclick="openRekitGo()" class="tool-btn" title="RekitGo — iOS companion app">
-    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-    </svg>
     <img src="/static/icon-rekitgo.png" class="tool-icon" alt="RekitGo">
     <span id="rekitgo-btn-dot" class="tool-dot"></span>
   </button>
 
   <button id="pipeline-btn" onclick="openPipelineWizard()" class="tool-btn" title="Pipeline Wizard">
-    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-    </svg>
     <img src="/static/icon-start-wizard.png" class="tool-icon" alt="Pipeline">
   </button>
 
   <button id="lightbulb-btn" onclick="openWelcome()" class="tool-btn" title="About RekitBox">
-    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-    </svg>
     <img src="/static/icon-welcome-info.png" class="tool-icon" alt="About">
   </button>
 
   <!-- Glossary -->
   <button id="owl-btn" onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()" onclick="owlClick()" class="tool-btn" title="Glossary &amp; Concepts">
-    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
-    </svg>
     <img src="/static/icon-site-key.png" class="tool-icon owl-icon" alt="Glossary">
   </button>
 </div>

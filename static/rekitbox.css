@@ -515,15 +515,13 @@ details[open] > summary { color: var(--text); }
 /* Neon variant — Convert & Relocate primary actions */
 .btn-neon {
   background: var(--accent);
-  border: 1px solid rgba(255,102,0,.6);
-  box-shadow: 0 0 8px rgba(255,102,0,.55), 0 0 18px rgba(255,102,0,.25);
-  text-shadow: 0 0 6px rgba(180,160,255,.45);
+  border: 1px solid rgba(255,102,0,.5);
+  box-shadow: 0 0 6px rgba(255,102,0,.25);
   transition: opacity .15s, transform .1s, box-shadow .2s;
 }
 .btn-neon:hover:not(:disabled) {
   opacity: 1;
-  box-shadow: 0 0 12px rgba(255,102,0,.75), 0 0 28px rgba(255,102,0,.35);
-  text-shadow: 0 0 8px rgba(180,160,255,.65);
+  box-shadow: 0 0 10px rgba(255,102,0,.35);
 }
 /* Keep prune danger buttons visually distinct — safety signal */
 .btn-prune-danger {
@@ -997,34 +995,26 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
 .tool-btn:hover {
   background: var(--accent-dim);
   border-color: var(--accent);
-  box-shadow: 0 6px 28px rgba(255,102,0,.35);
+  box-shadow: 0 4px 14px rgba(255,102,0,.18);
 }
 
 .tool-btn.active {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: 0 6px 28px rgba(255,102,0,.35);
+  box-shadow: 0 4px 14px rgba(255,102,0,.18);
 }
 
-.tool-folder {
-  position: absolute;
-  width: 48px; height: 48px;
-  color: var(--text-dim);
-  opacity: 0.4;
-  pointer-events: none;
-}
+.tool-folder { display: none; }
 
 .tool-icon {
-  position: relative;
-  z-index: 1;
-  width: 28px; height: 28px;
+  width: 40px; height: 40px;
   object-fit: contain;
   border-radius: 4px;
 }
 
 #tools-panel .db-tool-btn .tool-icon {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   opacity: 1;
   filter: none;
 }
