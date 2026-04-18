@@ -111,7 +111,11 @@ def ensure_archive_structure() -> None:
         # Also brand the Archive root itself (created via parents=True above).
         set_folder_icon(ARCHIVE_ROOT)
     except OSError:
-        pass
+        import logging as _log  # noqa: PLC0415
+        _log.getLogger(__name__).warning(
+            "ensure_archive_structure: could not create archive directories — %s",
+            __import__("traceback").format_exc().splitlines()[-1],
+        )
 
 # ─── Audio normalisation ──────────────────────────────────────────────────────
 #

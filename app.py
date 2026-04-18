@@ -21,6 +21,7 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 import uuid
 import datetime
 from pathlib import Path
@@ -422,6 +423,13 @@ def api_pipeline():
     if not raw_steps:
         return jsonify({"error": "steps list is required"}), 400
 
+    # Pre-flight: refuse if Rekordbox is open and any step writes to the DB.
+    _WRITE_STEP_TYPES = {"import", "link", "relocate", "prune"}
+    if not dry_run and any(s.get("type") in _WRITE_STEP_TYPES for s in raw_steps):
+        err = _require_rb_closed()
+        if err:
+            return err
+
     built: list[dict] = []
 
     for s in raw_steps:
@@ -692,7 +700,8 @@ def api_relocate():
                     text=True, bufsize=1, cwd=str(REPO_ROOT), env=_subprocess_env(),
                 )
                 with _proc_lock:
-                    globals()['_active_proc'] = proc
+                    global _active_proc
+                    _active_proc = proc
                 try:
                     for line in iter(proc.stdout.readline, ""):
                         yield f"data: {json.dumps({'line': line.rstrip()})}\n\n"
@@ -701,10 +710,10 @@ def api_relocate():
                         overall = proc.returncode
                 finally:
                     with _proc_lock:
-                        globals()['_active_proc'] = None
+                        _active_proc = None
             except Exception as exc:
                 with _proc_lock:
-                    globals()['_active_proc'] = None
+                    _active_proc = None
                 yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}'})}\n\n"
                 overall = 1
         if library_root:
@@ -818,10 +827,12 @@ def api_prune_stage():
                             keeper_map[e["file_path"]] = keep_entry["file_path"]
 
         token = str(uuid.uuid4())
+        _evict_old_jobs(_prune_token_store, _MAX_PRUNE_TOKENS)
         _prune_token_store[token] = {
             "paths":      paths,
             "permanent":  bool(data.get("permanent", False)),
             "keeper_map": keeper_map,
+            "_issued_at": time.time(),
         }
         return jsonify({"token": token, "keeper_map_size": len(keeper_map)})
     except Exception as exc:
@@ -859,7 +870,10 @@ def api_duplicates_load():
     cache_key = str(csv_path.resolve())
 
     try:
-        if cache_key not in _report_cache:
+        csv_mtime = csv_path.stat().st_mtime
+        cached = _report_cache.get(cache_key)
+        if cached is None or cached.get("_mtime") != csv_mtime:
+            # Cache is cold or the CSV file has been updated — (re)load it.
             from pruner import load_report          # noqa: PLC0415
             from db_connection import read_db       # noqa: PLC0415
             from config import DJMT_DB as _DB      # noqa: PLC0415
@@ -896,6 +910,7 @@ def api_duplicates_load():
                 if e["action"] == "REVIEW_REMOVE"
             ]
             _report_cache[cache_key] = {
+                "_mtime":           csv_mtime,
                 "groups":           all_groups,
                 "remove_paths":     [e["file_path"] for e in remove_entries],
                 "keep_paths": [
@@ -985,7 +1000,10 @@ def api_run_prune():
     confuse EventSource and surface only as a silent "Connection error".
     """
     token     = request.args.get("token", "")
-    staged    = _prune_token_store.pop(token, {})
+    staged = _prune_token_store.pop(token, {})
+    _PRUNE_TOKEN_TTL = 1800  # 30 minutes
+    if staged and (time.time() - staged.get("_issued_at", 0)) > _PRUNE_TOKEN_TTL:
+        staged = {}           # treat expired token same as unknown
     paths: list[str]      = staged.get("paths", [])
     permanent: bool       = staged.get("permanent", False)
     keeper_map: dict      = staged.get("keeper_map", {})
@@ -1312,6 +1330,7 @@ def api_normalize_preview():
 
     job_id = uuid.uuid4().hex[:8]
     with _PREVIEW_LOCK:
+        _evict_old_jobs(_PREVIEW_JOBS, _MAX_PREVIEW_JOBS)
         _PREVIEW_JOBS[job_id] = {"status": "queued", "msg": "", "progress": 0,
                                  "total": 0, "clips": []}
 
@@ -1381,6 +1400,20 @@ def api_update_apply():
 
     # Do the pull.
     try:
+        # Refuse if the working tree has local modifications — pull would fail or clobber changes.
+        status_check = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=str(_REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if status_check.returncode == 0 and status_check.stdout.strip():
+            return jsonify({
+                "ok": False,
+                "error": "Working tree has uncommitted changes — commit or stash them before updating.",
+            }), 409
+
         pull = subprocess.run(
             ["git", "pull", "origin", "main", "--ff-only"],
             cwd=str(_REPO_ROOT),
@@ -1489,17 +1522,18 @@ end tell"""
             ["osascript", "-e", _finder_script],
             capture_output=True, text=True, timeout=60,
         )
-        print(f"[finder-selection] rc={r.returncode} stdout={repr(r.stdout)} stderr={repr(r.stderr)}", flush=True)
+        app.logger.debug("[finder-selection] rc=%d stdout=%r stderr=%r",
+                         r.returncode, r.stdout, r.stderr)
         if r.returncode == 0 and r.stdout.strip():
             return jsonify({"path": r.stdout.strip().rstrip("/")})
     except Exception as exc:
-        print(f"[finder-selection] exception: {exc}", flush=True)
+        app.logger.debug("[finder-selection] exception: %s", exc)
 
     # When called from a drag-drop event, pywebview may focus before osascript
     # runs and Finder clears its selection — return null silently rather than
     # opening a picker dialog the user didn't ask for.
     if source == "drop":
-        print(f"[finder-selection] source=drop, returning null", flush=True)
+        app.logger.debug("[finder-selection] source=drop, returning null")
         return jsonify({"path": None})
 
     # Nothing selected in Finder — open the native picker as fallback
@@ -1542,7 +1576,14 @@ def api_fs_list():
 
     Returns folders first (sorted), then audio files, then everything else.
     Hidden files (dot-prefixed) are always omitted.
+
+    Security: intentionally unauthenticated because Waitress binds exclusively
+    to 127.0.0.1 — this endpoint is unreachable from the network.  The
+    localhost guard below is a defense-in-depth check in case the bind address
+    changes in the future.
     """
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        return jsonify({"error": "Forbidden"}), 403
     AUDIO_EXTS = {'.aiff', '.aif', '.wav', '.flac', '.mp3', '.m4a', '.alac', '.ogg', '.opus', '.mp4'}
     path_str = request.args.get("path", "/Volumes")
     p = Path(path_str)
@@ -1629,13 +1670,14 @@ def api_set_music_root():
 
 
 @app.route("/api/migrate-pioneer-db")
+@app.route("/api/migrate-pioneer-db", methods=["POST"])
 def api_migrate_pioneer_db():
     """Stream progress of migrating ~/Library/Pioneer/rekordbox/ to the target drive."""
-    from flask import request as _req
-    target = _req.args.get("target", "").strip()
+    data = request.get_json(silent=True) or {}
+    target = str(data.get("target", "")).strip()
     if not target:
-        return jsonify({"error": "target parameter required"}), 400
-    from db_migrator import migrate
+        return jsonify({"error": "target is required"}), 400
+    from db_migrator import migrate  # noqa: PLC0415
     return Response(migrate(target), mimetype="text/event-stream")
 
 
@@ -1663,6 +1705,22 @@ _ANALYSIS_LOCK: threading.Lock = threading.Lock()
 
 _EXPORT_JOBS: dict[str, dict] = {}
 _EXPORT_LOCK: threading.Lock = threading.Lock()
+
+
+_MAX_ANALYSIS_JOBS = 100
+_MAX_EXPORT_JOBS   = 50
+_MAX_PREVIEW_JOBS  = 100
+_MAX_PRUNE_TOKENS  = 200
+
+
+def _evict_old_jobs(store: dict, max_size: int) -> None:
+    """Trim a job dict to *max_size* by removing the oldest entries.
+    Must be called while holding the relevant lock (or on stores that are
+    only written from a single thread)."""
+    if len(store) > max_size:
+        excess = len(store) - max_size
+        for key in list(store.keys())[:excess]:
+            del store[key]
 
 
 
@@ -1699,6 +1757,24 @@ def _get_mobile_token() -> str:
 MOBILE_TOKEN: str = _get_mobile_token()
 
 
+def _read_mobile_token() -> str:
+    """
+    Read (but never generate) the current mobile token from config.
+
+    Called on every authenticated mobile request so that a token set up
+    after the server starts is accepted without a restart.
+    Falls back to the module-level MOBILE_TOKEN if config can't be read.
+    """
+    try:
+        from user_config import load_user_config, config_exists  # noqa: PLC0415
+        if not config_exists():
+            return ""
+        cfg = load_user_config()
+        return cfg.get("mobile_token", "") or ""
+    except Exception:
+        return MOBILE_TOKEN  # safe fallback — the startup value
+
+
 @app.before_request
 def _check_mobile_auth():
     """
@@ -1710,13 +1786,14 @@ def _check_mobile_auth():
         return
     if request.path == "/api/mobile/ping":
         return
-    if not MOBILE_TOKEN:
+    current_token = _read_mobile_token()
+    if not current_token:
         return jsonify({
             "error": "server_not_configured",
             "message": "Run: python3 cli.py setup",
         }), 503
     auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer ") or auth[7:] != MOBILE_TOKEN:
+    if not auth.startswith("Bearer ") or auth[7:] != current_token:
         return jsonify({"error": "unauthorized"}), 401
 
 # ── Mobile API routes ────────────────────────────────────────────────────────
@@ -1728,7 +1805,13 @@ def mobile_ping():
     Used by the app on startup to confirm network reachability before attempting
     authenticated calls.
     """
-    return jsonify({"status": "ok", "version": "1.0.0", "rekitbox_version": "1.0.9"})
+    try:
+        from update_checker import _local_version  # noqa: PLC0415
+        _ver, _ = _local_version()
+    except Exception:
+        _ver = None
+    ver = _ver or "unknown"
+    return jsonify({"status": "ok", "version": ver, "rekitbox_version": ver})
 
 
 @app.route("/api/connectivity")
@@ -1954,8 +2037,11 @@ def mobile_rekordbox_tracks():
 
     search = request.args.get("search", "").strip().lower()
     sort   = request.args.get("sort", "date_added")
-    limit  = int(request.args.get("limit", 200))
-    offset = int(request.args.get("offset", 0))
+    try:
+        limit  = int(request.args.get("limit",  200))
+        offset = int(request.args.get("offset", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "limit and offset must be integers"}), 400
 
     try:
         with read_db(_DB) as db:
@@ -2074,11 +2160,6 @@ def mobile_rekordbox_add_track():
 
 
 # ── Export job state ─────────────────────────────────────────────────────────
-# In-memory export jobs. Each entry:
-# { job_id, status, tracks_total, tracks_done, current_track, errors: [] }
-_EXPORT_JOBS: dict[str, dict] = {}
-_EXPORT_LOCK: threading.Lock = threading.Lock()
-
 # ── Track analysis ────────────────────────────────────────────────────────────
 
 def _push_analysis_event(
@@ -2170,7 +2251,7 @@ def _run_analysis(job_id: str, track_ids: list) -> None:
                 # Rekordbox is running — tags were written to file, DB update deferred
                 db_note = "DB not updated (Rekordbox is open); file tags written."
 
-            status = "complete"
+            status = "complete_partial" if db_note else "complete"
 
         except Exception as exc:
             status = "failed"
@@ -2188,7 +2269,9 @@ def _run_analysis(job_id: str, track_ids: list) -> None:
 
     # Job complete
     with _ANALYSIS_LOCK:
-        _ANALYSIS_JOBS[job_id]["status"] = "complete"
+        job_results = _ANALYSIS_JOBS[job_id].get("results", {})
+        had_partial = any(r.get("status") == "complete_partial" for r in job_results.values())
+        _ANALYSIS_JOBS[job_id]["status"] = "complete_partial" if had_partial else "complete"
 
 
 @app.route("/api/mobile/rekordbox/analyze", methods=["POST"])
@@ -2214,6 +2297,7 @@ def mobile_rekordbox_analyze():
     job_id = str(uuid.uuid4())
 
     with _ANALYSIS_LOCK:
+        _evict_old_jobs(_ANALYSIS_JOBS, _MAX_ANALYSIS_JOBS)
         _ANALYSIS_JOBS[job_id] = {
             "job_id":    job_id,
             "track_ids": track_ids,
@@ -2542,7 +2626,7 @@ def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
     """
     import shutil as _shutil  # noqa: PLC0415
     from pathlib import Path as _Path  # noqa: PLC0415
-    from db_connection import read_db  # noqa: PLC0415
+    from db_connection import read_db, rekordbox_is_running  # noqa: PLC0415
     from config import DJMT_DB as _DB  # noqa: PLC0415
     from pyrekordbox import Rekordbox6Database  # noqa: PLC0415
     import ws_bus as _ws  # noqa: PLC0415
@@ -2564,6 +2648,12 @@ def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
         # ── 1. Validate USB DB ─────────────────────────────────────────────────
         if not usb_db_path.exists():
             _update({"status": "failed", "errors": ["PIONEER/Master/master.db not found on drive"]})
+            return
+
+        # ── 1b. Refuse if Rekordbox is running ───────────────────────────────
+        if rekordbox_is_running():
+            _update({"status": "failed",
+                      "errors": ["Rekordbox is running — close it before exporting to USB"]})
             return
 
         # ── 2. Backup USB DB ──────────────────────────────────────────────────
@@ -2702,6 +2792,7 @@ def mobile_export_start():
     job_id = str(uuid.uuid4())
 
     with _EXPORT_LOCK:
+        _evict_old_jobs(_EXPORT_JOBS, _MAX_EXPORT_JOBS)
         _EXPORT_JOBS[job_id] = {
             "job_id":        job_id,
             "status":        "running",

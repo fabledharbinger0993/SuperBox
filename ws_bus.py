@@ -34,14 +34,19 @@ def broadcast(message: str) -> None:
 
     Each send is attempted individually so a stale or closed connection
     cannot block delivery to healthy ones.  Any exception on a particular
-    socket is silently ignored — the client's receive loop will notice the
-    broken connection and call unregister() itself.
+    socket causes the socket to be removed from the registry immediately,
+    rather than waiting for the receive loop to notice.
     """
     with _lock:
         targets = set(_clients)          # snapshot so we don't hold the lock during sends
 
+    dead: set = set()
     for ws in targets:
         try:
             ws.send(message)
         except Exception:
-            pass                         # stale socket — receive loop will unregister
+            dead.add(ws)
+
+    if dead:
+        with _lock:
+            _clients.difference_update(dead)

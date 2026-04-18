@@ -31,8 +31,14 @@ final class APIClient: ObservableObject {
         didSet { saveConfig() }
     }
 
-    private let session = URLSession.shared
+    private let session: URLSession = {
+        let cfg = URLSessionConfiguration.default
+        cfg.timeoutIntervalForRequest  = 30
+        cfg.timeoutIntervalForResource = 30
+        return URLSession(configuration: cfg)
+    }()
     private var wsTask: URLSessionWebSocketTask?
+    private var wsRetryCount = 0
     var onEvent: ((String) -> Void)?   // raw JSON string → Store parses it
 
     init() { config = loadConfig() }
@@ -151,11 +157,16 @@ final class APIClient: ObservableObject {
 
     func connectWebSocket() {
         guard let cfg = config else { return }
-        let url = URL(string: "ws://\(cfg.host):\(cfg.port)/api/mobile/events")!
+        guard let url = URL(string: "ws://\(cfg.host):\(cfg.port)/api/mobile/events") else {
+            print("[RekitGo] connectWebSocket: invalid URL for host \(cfg.host)")
+            return
+        }
+        disconnectWebSocket()
         var req = URLRequest(url: url)
         req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
         wsTask = URLSession.shared.webSocketTask(with: req)
         wsTask?.resume()
+        wsRetryCount = 0
         receiveNextMessage()
     }
 
@@ -164,22 +175,34 @@ final class APIClient: ObservableObject {
         wsTask = nil
     }
 
+    private func scheduleReconnect() {
+        let delay = min(pow(2.0, Double(wsRetryCount)), 60.0)
+        wsRetryCount = min(wsRetryCount + 1, 6)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.connectWebSocket()
+        }
+    }
+
     private func receiveNextMessage() {
         wsTask?.receive { [weak self] result in
+            guard let self else { return }
             switch result {
             case .success(.string(let text)):
-                DispatchQueue.main.async { self?.onEvent?(text) }
-                self?.receiveNextMessage()
+                DispatchQueue.main.async {
+                    self.wsRetryCount = 0   // reset backoff on successful receive
+                    self.onEvent?(text)
+                }
+                self.receiveNextMessage()
             case .success(.data(let d)):
                 if let text = String(data: d, encoding: .utf8) {
-                    DispatchQueue.main.async { self?.onEvent?(text) }
+                    DispatchQueue.main.async {
+                        self.wsRetryCount = 0
+                        self.onEvent?(text)
+                    }
                 }
-                self?.receiveNextMessage()
+                self.receiveNextMessage()
             case .failure:
-                // Reconnect after a short delay on error
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    self?.connectWebSocket()
-                }
+                DispatchQueue.main.async { self.scheduleReconnect() }
             @unknown default: break
             }
         }
@@ -189,7 +212,8 @@ final class APIClient: ObservableObject {
 
     private func request(_ method: String, _ path: String, body: Data? = nil) async throws -> Data {
         guard let cfg = config else { throw APIError.notConfigured }
-        var req = URLRequest(url: cfg.baseURL.appendingPathComponent(path))
+        guard let base = cfg.baseURL else { throw APIError.notConfigured }
+        var req = URLRequest(url: base.appendingPathComponent(path))
         req.httpMethod = method
         req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
         if let b = body {
@@ -230,15 +254,23 @@ final class APIClient: ObservableObject {
     // MARK: Config persistence
 
     private func saveConfig() {
-        guard let cfg = config,
-              let data = try? JSONEncoder().encode(cfg) else { return }
-        UserDefaults.standard.set(data, forKey: "serverConfig")
+        guard let cfg = config else { return }
+        do {
+            let data = try JSONEncoder().encode(cfg)
+            UserDefaults.standard.set(data, forKey: "serverConfig")
+        } catch {
+            print("[RekitGo] saveConfig failed: \(error)")
+        }
     }
 
     private func loadConfig() -> ServerConfig? {
-        guard let data = UserDefaults.standard.data(forKey: "serverConfig"),
-              let cfg  = try? JSONDecoder().decode(ServerConfig.self, from: data) else { return nil }
-        return cfg
+        guard let data = UserDefaults.standard.data(forKey: "serverConfig") else { return nil }
+        do {
+            return try JSONDecoder().decode(ServerConfig.self, from: data)
+        } catch {
+            print("[RekitGo] loadConfig failed: \(error)")
+            return nil
+        }
     }
 }
 

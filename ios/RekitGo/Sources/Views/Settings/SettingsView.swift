@@ -79,7 +79,17 @@ struct SettingsView: View {
         status  = nil
         let h = host.trimmingCharacters(in: .whitespaces)
         let t = token.trimmingCharacters(in: .whitespaces)
-        let p = Int(port) ?? 5001
+        guard let p = Int(port.trimmingCharacters(in: .whitespaces)),
+              (1...65535).contains(p) else {
+            status  = "✗ Port must be a number between 1 and 65535"
+            testing = false
+            return
+        }
+        guard !h.isEmpty else {
+            status  = "✗ Host address is required"
+            testing = false
+            return
+        }
         store.configure(host: h, port: p, token: t)
         Task {
             do {
