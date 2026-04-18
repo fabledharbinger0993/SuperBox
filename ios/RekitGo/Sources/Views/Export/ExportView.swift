@@ -93,6 +93,7 @@ struct ExportView: View {
                 }
             }
             .task { await store.loadDrives(); await store.loadPlaylists() }
+            .onDisappear { cancelPolling() }
         }
     }
 
@@ -115,7 +116,7 @@ struct ExportView: View {
     }
 
     private func pollExport(jobId: String) {
-        pollTask?.cancel()
+        cancelPolling()
         pollTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
@@ -123,10 +124,16 @@ struct ExportView: View {
                     exportJob = job
                     if job.status == "done" || job.status == "failed" {
                         exporting = false
+                        pollTask = nil
                         return
                     }
                 }
             }
         }
+    }
+
+    private func cancelPolling() {
+        pollTask?.cancel()
+        pollTask = nil
     }
 }
