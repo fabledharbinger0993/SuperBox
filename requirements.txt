@@ -11,6 +11,7 @@
 # any pyrekordbox upgrade before distributing a new release.
 
 flask>=3.0
+flask-sock>=0.7
 # Web framework — routes, SSE streaming, JSON responses
 
 waitress>=3.0
