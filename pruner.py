@@ -439,6 +439,23 @@ def prune_files(
             errors.append(msg)
             emit(f"    DB ✗  {msg}")
 
+    # Commit all session.delete() calls — session.close() does NOT commit.
+    try:
+        db.commit()
+        emit(f"  Database commit OK ({db_removed} row(s) removed)")
+    except Exception as exc:
+        msg = f"Database commit failed — no files will be moved: {exc}"
+        errors.append(msg)
+        emit(f"  ✗ {msg}")
+        return {
+            "db_removed":           0,
+            "files_moved":          0,
+            "skipped":              skipped,
+            "errors":               errors,
+            "trash_dir":            str(trash_dir) if trash_dir is not None else None,
+            "playlists_rethreaded": playlists_rethreaded,
+        }
+
     emit("")
 
     # ── Step 2: Move/delete files ──────────────────────────────────────────
@@ -488,6 +505,6 @@ def prune_files(
         "files_moved":          files_moved,
         "skipped":              skipped,
         "errors":               errors,
-        "trash_dir":            str(trash_dir),
+        "trash_dir":            str(trash_dir) if trash_dir is not None else None,
         "playlists_rethreaded": playlists_rethreaded,
     }

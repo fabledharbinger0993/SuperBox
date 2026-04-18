@@ -2469,9 +2469,7 @@ function _syncCheckboxes() {
 }
 
 function _rowPath(row) {
-  // extract path from the title attribute of .prune-fname
-  const fname = row.querySelector('.prune-fname');
-  return fname ? fname.title : null;
+  return row.dataset.filePath || null;
 }
 
 function _updateSaButtons() {
