@@ -1862,28 +1862,54 @@ def api_connectivity():
     best_ip = tailscale_ip or local_ip
     remote_ready = tailscale_ip is not None
 
-    # QR code — encode rekitgo://ip:5001?token=... as inline SVG
-    qr_svg: str | None = None
-    if token and best_ip:
+    # ── QR generation helper ─────────────────────────────────────────────────
+    def _make_styled_qr(payload: str, fill: str = "#ff6600") -> "str | None":
+        """Transparent-background SVG QR with a custom fill colour."""
         try:
-            import qrcode, qrcode.image.svg, io  # noqa: E401
-            payload = f"rekitgo://{best_ip}:5001?token={token}"
+            import qrcode, qrcode.image.svg, io, re  # noqa: E401
             qr = qrcode.make(payload,
                              image_factory=qrcode.image.svg.SvgPathImage,
                              box_size=6, border=2)
             buf = io.BytesIO()
             qr.save(buf)
-            qr_svg = buf.getvalue().decode("utf-8")
+            svg = buf.getvalue().decode("utf-8")
+            # Strip white background rect (various quote / colour spellings)
+            svg = re.sub(r'<rect[^>]+fill=["\']#fff(?:fff)?["\'][^/]*/>', '', svg)
+            svg = re.sub(r'<rect[^>]+fill=["\']white["\'][^/]*/>', '', svg)
+            # Recolour the data path
+            svg = re.sub(r"fill=['\"]#000(?:000)?['\"]", f'fill="{fill}"', svg)
+            return svg
         except Exception:
-            qr_svg = None
+            return None
+
+    # Pairing QR — orange (primary action)
+    qr_svg: str | None = None
+    if token and best_ip:
+        qr_svg = _make_styled_qr(
+            f"rekitgo://{best_ip}:5001?token={token}",
+            fill="#ff6600",
+        )
+
+    # Setup QRs — green (safe / informational)
+    _green = "#34d399"
+    qr_tailscale_mac = _make_styled_qr("https://tailscale.com/download/macos", fill=_green)
+    qr_tailscale_ios = _make_styled_qr(
+        "https://apps.apple.com/app/tailscale/id1470499037", fill=_green
+    )
+    qr_rekitgo_ios   = _make_styled_qr(
+        "https://github.com/fabledharbinger0993/RekitBox", fill=_green
+    )
 
     return jsonify({
-        "local_ip":     local_ip,
-        "tailscale_ip": tailscale_ip,
-        "port":         5001,
-        "remote_ready": remote_ready,
-        "token":        token,
-        "qr_svg":       qr_svg,
+        "local_ip":          local_ip,
+        "tailscale_ip":      tailscale_ip,
+        "port":              5001,
+        "remote_ready":      remote_ready,
+        "token":             token,
+        "qr_svg":            qr_svg,
+        "qr_tailscale_mac":  qr_tailscale_mac,
+        "qr_tailscale_ios":  qr_tailscale_ios,
+        "qr_rekitgo_ios":    qr_rekitgo_ios,
     })
 
 

@@ -1733,43 +1733,139 @@
 <!-- backdrop -->
 <div id="db-panel-backdrop" onclick="closeDbPanel()"></div>
 
-<!-- ══ RekitGo pairing panel ════════════════════════════════════════════════ -->
+<!-- ══ RekitGo walkthrough modal ════════════════════════════════════════════ -->
 <div id="rekitgo-backdrop" onclick="closeRekitGo()"></div>
 <div id="rekitgo-panel">
+
+  <!-- Header -->
   <div class="rekitgo-header">
-    <span class="rekitgo-title"><img src="/static/icon-rekitgo.png" class="rekitgo-title-icon"> RekitGo</span>
+    <span class="rekitgo-title">
+      <img src="/static/icon-rekitgo.png" class="rekitgo-title-icon" alt="RekitGo"> RekitGo
+    </span>
     <button class="rekitgo-close" onclick="closeRekitGo()">✕</button>
   </div>
 
-  <div id="rekitgo-status-row">
-    <span id="rekitgo-status-dot"></span>
-    <span id="rekitgo-status-label">Checking…</span>
-  </div>
-
-  <div id="rekitgo-qr-wrap">
-    <div id="rekitgo-qr"></div>
-    <p class="rekitgo-hint">Scan with the RekitGo app to connect</p>
-  </div>
-
-  <div id="rekitgo-detail">
-    <div class="rekitgo-row">
-      <span class="rekitgo-key">Local</span>
-      <span class="rekitgo-val" id="rekitgo-local">—</span>
+  <!-- Step indicator -->
+  <div class="rkg-steps">
+    <div class="rkg-step active" id="rkg-step-1" onclick="rkgGoTo(1)">
+      <div class="rkg-step-num">1</div>
+      <div class="rkg-step-label">Overview</div>
     </div>
-    <div class="rekitgo-row" id="rekitgo-ts-row">
-      <span class="rekitgo-key">Remote</span>
-      <span class="rekitgo-val" id="rekitgo-tailscale">—</span>
+    <div class="rkg-step-line"></div>
+    <div class="rkg-step" id="rkg-step-2" onclick="rkgGoTo(2)">
+      <div class="rkg-step-num">2</div>
+      <div class="rkg-step-label">Mac Setup</div>
     </div>
-    <div class="rekitgo-row">
-      <span class="rekitgo-key">Token</span>
-      <span class="rekitgo-val rekitgo-mono" id="rekitgo-token">—</span>
+    <div class="rkg-step-line"></div>
+    <div class="rkg-step" id="rkg-step-3" onclick="rkgGoTo(3)">
+      <div class="rkg-step-num">3</div>
+      <div class="rkg-step-label">iPhone</div>
+    </div>
+    <div class="rkg-step-line"></div>
+    <div class="rkg-step" id="rkg-step-4" onclick="rkgGoTo(4)">
+      <div class="rkg-step-num">4</div>
+      <div class="rkg-step-label">Connect</div>
     </div>
   </div>
 
-  <p class="rekitgo-offline-msg" id="rekitgo-offline-msg" style="display:none">
-    RekitBox is running offline — local tools work normally.<br>
-    Install <strong>Tailscale</strong> on this Mac and your iPhone for remote access.
-  </p>
+  <!-- ── Page 1: Overview ─────────────────────────────────────────────────── -->
+  <div class="rkg-page" id="rkg-page-1">
+    <p class="rkg-section-body">
+      <strong>RekitGo</strong> is the iPhone companion to RekitBox. Queue downloads, browse your library, manage playlists, and export to Pioneer drives — all from your phone.
+    </p>
+    <div class="rkg-section-title">What you need</div>
+    <ul class="rkg-checklist">
+      <li><strong>Tailscale</strong> installed on this Mac — routes your iPhone through your home network remotely</li>
+      <li><strong>Tailscale</strong> on your iPhone — same account, connects automatically</li>
+      <li><strong>RekitGo</strong> app installed on your iPhone</li>
+      <li>Both devices <strong>signed in</strong> to the same Tailscale account</li>
+    </ul>
+    <div class="rkg-notice">
+      <strong>LAN only?</strong> If both devices are on the same Wi-Fi, Tailscale is optional — LAN access works out of the box. Tailscale gives you remote access from anywhere.
+    </div>
+  </div>
+
+  <!-- ── Page 2: Mac Tailscale ────────────────────────────────────────────── -->
+  <div class="rkg-page hidden" id="rkg-page-2">
+    <p class="rkg-section-body">
+      Install <strong>Tailscale</strong> on this Mac so your iPhone can reach RekitBox remotely.
+    </p>
+    <div id="rkg-qr-ts-mac" class="rkg-qr-box">
+      <p class="rkg-qr-caption">tailscale.com/download/macos</p>
+    </div>
+    <ul class="rkg-checklist">
+      <li>Download and install Tailscale using the QR code above</li>
+      <li>Sign in with Google, Microsoft, or GitHub</li>
+      <li>Click <strong>Connect</strong> in the Tailscale menu bar icon</li>
+    </ul>
+    <div class="rkg-notice">
+      Already installed? Make sure the menu bar icon shows <strong>Connected</strong> before moving on.
+    </div>
+  </div>
+
+  <!-- ── Page 3: iPhone apps ──────────────────────────────────────────────── -->
+  <div class="rkg-page hidden" id="rkg-page-3">
+    <p class="rkg-section-body">
+      Install both apps on your iPhone, then sign in to Tailscale with the <strong>same account</strong> as your Mac.
+    </p>
+    <div class="rkg-qr-pair">
+      <div>
+        <div class="rkg-qr-label">Tailscale</div>
+        <div id="rkg-qr-ts-ios" class="rkg-qr-box">
+          <p class="rkg-qr-caption">App Store</p>
+        </div>
+      </div>
+      <div>
+        <div class="rkg-qr-label">RekitGo</div>
+        <div id="rkg-qr-rekitgo-ios" class="rkg-qr-box">
+          <p class="rkg-qr-caption">Install app</p>
+        </div>
+      </div>
+    </div>
+    <ul class="rkg-checklist">
+      <li>Install <strong>Tailscale</strong> and sign in with the same account as this Mac</li>
+      <li>Tap <strong>Connect</strong> in Tailscale — it should show this Mac as a device</li>
+      <li>Install <strong>RekitGo</strong> on your iPhone</li>
+    </ul>
+  </div>
+
+  <!-- ── Page 4: Pair & Connect ────────────────────────────────────────────── -->
+  <div class="rkg-page hidden" id="rkg-page-4">
+    <div id="rekitgo-status-row">
+      <span id="rekitgo-status-dot"></span>
+      <span id="rekitgo-status-label">Checking…</span>
+    </div>
+    <div id="rekitgo-qr-wrap" class="rkg-qr-box">
+      <div id="rekitgo-qr"></div>
+      <p class="rkg-qr-caption">Open RekitGo → tap ⊕ → scan this code</p>
+    </div>
+    <div id="rekitgo-detail">
+      <div class="rekitgo-row">
+        <span class="rekitgo-key">Local</span>
+        <span class="rekitgo-val" id="rekitgo-local">—</span>
+      </div>
+      <div class="rekitgo-row" id="rekitgo-ts-row">
+        <span class="rekitgo-key">Remote (Tailscale)</span>
+        <span class="rekitgo-val" id="rekitgo-tailscale">—</span>
+      </div>
+      <div class="rekitgo-row">
+        <span class="rekitgo-key">Token</span>
+        <span class="rekitgo-val rekitgo-mono" id="rekitgo-token">—</span>
+      </div>
+    </div>
+    <p class="rekitgo-offline-msg" id="rekitgo-offline-msg" style="display:none">
+      RekitBox is running offline — local tools work normally.<br>
+      Install <strong>Tailscale</strong> on this Mac and your iPhone for remote access.
+    </p>
+  </div>
+
+  <!-- Footer nav -->
+  <div class="rkg-footer">
+    <button class="btn btn-ghost btn-xs" id="rkg-prev" onclick="rkgPrev()" style="visibility:hidden">← Back</button>
+    <span style="font-size:.72rem;color:var(--text-dim);" id="rkg-counter">1 / 4</span>
+    <button class="btn btn-primary btn-xs" id="rkg-next" onclick="rkgNext()">Next →</button>
+  </div>
+
 </div>
 
 </body>

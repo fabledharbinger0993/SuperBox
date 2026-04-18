@@ -3702,11 +3702,15 @@ _initStateOverlay();
   if (el) el.addEventListener('change', () => { if (el.value.trim()) loadState(el.value.trim()); });
 });
 
-// ── RekitGo pairing panel ───────────────────────────────────────────────────
+// ── RekitGo walkthrough ──────────────────────────────────────────────────────
+let _rkgStep = 1;
+const _rkgTotal = 4;
+
 function openRekitGo() {
   document.getElementById('rekitgo-panel').classList.add('open');
   document.getElementById('rekitgo-backdrop').classList.add('open');
-  _loadConnectivity();
+  rkgGoTo(1);        // always start at overview
+  _loadConnectivity(); // pre-fetch data so step 4 is ready
 }
 
 function closeRekitGo() {
@@ -3714,49 +3718,99 @@ function closeRekitGo() {
   document.getElementById('rekitgo-backdrop').classList.remove('open');
 }
 
+function rkgGoTo(step) {
+  step = Math.max(1, Math.min(_rkgTotal, step));
+  _rkgStep = step;
+  for (let i = 1; i <= _rkgTotal; i++) {
+    const page = document.getElementById(`rkg-page-${i}`);
+    if (page) page.classList.toggle('hidden', i !== step);
+    const ind = document.getElementById(`rkg-step-${i}`);
+    if (!ind) continue;
+    ind.classList.remove('active', 'done');
+    if (i < step) ind.classList.add('done');
+    else if (i === step) ind.classList.add('active');
+  }
+  const prev = document.getElementById('rkg-prev');
+  const next = document.getElementById('rkg-next');
+  const ctr  = document.getElementById('rkg-counter');
+  if (prev) prev.style.visibility = step === 1 ? 'hidden' : 'visible';
+  if (next) next.textContent = step === _rkgTotal ? 'Done' : 'Next →';
+  if (ctr)  ctr.textContent  = `${step} / ${_rkgTotal}`;
+}
+
+function rkgNext() {
+  if (_rkgStep === _rkgTotal) { closeRekitGo(); return; }
+  rkgGoTo(_rkgStep + 1);
+}
+
+function rkgPrev() { rkgGoTo(_rkgStep - 1); }
+
 function _loadConnectivity() {
   fetch('/api/connectivity')
     .then(r => r.json())
     .then(d => {
-      const dot      = document.getElementById('rekitgo-status-dot');
-      const btnDot   = document.getElementById('rekitgo-btn-dot');
-      const label    = document.getElementById('rekitgo-status-label');
-      const qr       = document.getElementById('rekitgo-qr');
-      const localEl  = document.getElementById('rekitgo-local');
-      const tsEl     = document.getElementById('rekitgo-tailscale');
-      const tokenEl  = document.getElementById('rekitgo-token');
-      const offline  = document.getElementById('rekitgo-offline-msg');
-      const qrWrap   = document.getElementById('rekitgo-qr-wrap');
+      const dot     = document.getElementById('rekitgo-status-dot');
+      const btnDot  = document.getElementById('rekitgo-btn-dot');
+      const label   = document.getElementById('rekitgo-status-label');
+      const qr      = document.getElementById('rekitgo-qr');
+      const localEl = document.getElementById('rekitgo-local');
+      const tsEl    = document.getElementById('rekitgo-tailscale');
+      const tokenEl = document.getElementById('rekitgo-token');
+      const offline = document.getElementById('rekitgo-offline-msg');
+      const qrWrap  = document.getElementById('rekitgo-qr-wrap');
 
-      dot.className = btnDot.className = '';
+      // Status dot
+      if (dot) dot.className = '';
+      if (btnDot) btnDot.className = 'tool-dot';
       if (d.remote_ready) {
-        dot.classList.add('remote'); btnDot.classList.add('remote');
-        label.textContent = 'Remote access ready (Tailscale)';
+        dot  && dot.classList.add('remote');
+        btnDot && btnDot.classList.add('remote');
+        if (label) label.textContent = 'Remote access ready (Tailscale)';
       } else if (d.local_ip && d.local_ip !== '127.0.0.1') {
-        dot.classList.add('lan'); btnDot.classList.add('lan');
-        label.textContent = 'LAN access only — Tailscale not connected';
+        dot  && dot.classList.add('lan');
+        btnDot && btnDot.classList.add('lan');
+        if (label) label.textContent = 'LAN access only — Tailscale not connected';
       } else {
-        dot.classList.add('offline');
-        label.textContent = 'Offline — local tools still work normally';
+        dot && dot.classList.add('offline');
+        if (label) label.textContent = 'Offline — local tools still work normally';
       }
 
-      localEl.textContent  = d.local_ip  ? `${d.local_ip}:5001`     : '—';
-      tsEl.textContent     = d.tailscale_ip ? `${d.tailscale_ip}:5001` : 'not connected';
-      tokenEl.textContent  = d.token ? d.token.slice(0, 8) + '••••••••••••••••••••••••••' : '—';
-      tokenEl.title        = d.token || '';
+      if (localEl)  localEl.textContent  = d.local_ip    ? `${d.local_ip}:5001`      : '—';
+      if (tsEl)     tsEl.textContent     = d.tailscale_ip ? `${d.tailscale_ip}:5001`  : 'not connected';
+      if (tokenEl) {
+        tokenEl.textContent = d.token ? d.token.slice(0, 8) + '••••••••••••••••••••••••••' : '—';
+        tokenEl.title = d.token || '';
+      }
 
-      if (d.qr_svg) {
+      // Pairing QR (orange) — step 4
+      if (d.qr_svg && qr) {
         qr.innerHTML = d.qr_svg;
-        qrWrap.style.display = 'flex';
-        offline.style.display = 'none';
+        if (qrWrap) qrWrap.style.display = 'flex';
+        if (offline) offline.style.display = 'none';
       } else {
-        qrWrap.style.display = 'none';
-        offline.style.display = 'block';
+        if (qrWrap) qrWrap.style.display = 'none';
+        if (offline) offline.style.display = 'block';
       }
+
+      // Setup QRs (green) — steps 2 & 3
+      _injectSetupQr('rkg-qr-ts-mac',       d.qr_tailscale_mac);
+      _injectSetupQr('rkg-qr-ts-ios',       d.qr_tailscale_ios);
+      _injectSetupQr('rkg-qr-rekitgo-ios',  d.qr_rekitgo_ios);
     })
     .catch(() => {
-      document.getElementById('rekitgo-status-label').textContent = 'Could not fetch connectivity info';
+      const label = document.getElementById('rekitgo-status-label');
+      if (label) label.textContent = 'Could not fetch connectivity info';
     });
+}
+
+function _injectSetupQr(elId, svg) {
+  if (!svg) return;
+  const box = document.getElementById(elId);
+  if (!box || box.querySelector('svg')) return; // already injected
+  const wrap = document.createElement('div');
+  wrap.innerHTML = svg;
+  const svgEl = wrap.querySelector('svg');
+  if (svgEl) box.insertBefore(svgEl, box.firstChild);
 }
 
 // Update button dot on page load (silent, no panel)
