@@ -3442,7 +3442,7 @@ let _dbPanelActive = null;
 function openDbPanel(tool) {
   // Deactivate all sections + rail buttons
   document.querySelectorAll('.db-panel-section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.db-rail-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.db-tool-btn').forEach(b => b.classList.remove('active'));
 
   const section = document.getElementById('db-panel-' + tool);
   const btn     = document.getElementById('rail-btn-' + tool);
@@ -3460,7 +3460,7 @@ function openDbPanel(tool) {
 function closeDbPanel() {
   document.getElementById('db-panel').classList.remove('open');
   document.getElementById('db-panel-backdrop').classList.remove('open');
-  document.querySelectorAll('.db-rail-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.db-tool-btn').forEach(b => b.classList.remove('active'));
   _dbPanelActive = null;
 }
 

@@ -997,6 +997,12 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
   box-shadow: 0 6px 28px rgba(129,140,248,.35);
 }
 
+.tool-btn.active {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  box-shadow: 0 6px 28px rgba(129,140,248,.35);
+}
+
 .tool-folder {
   position: absolute;
   width: 48px; height: 48px;
@@ -1011,6 +1017,13 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
   width: 28px; height: 28px;
   object-fit: contain;
   border-radius: 4px;
+}
+
+#tools-panel .db-tool-btn .tool-icon {
+  width: 28px;
+  height: 28px;
+  opacity: 1;
+  filter: none;
 }
 
 .tool-dot {
@@ -1390,7 +1403,6 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
 
 /* ── Lightbulb / Welcome button (in tools panel) ────────────────────────── */
 /* Scan bar is always visible (--scan-bar-h), so base offset already includes it */
-body.log-open #fb-toggle-btn               { bottom: calc(var(--log-h) + var(--scan-bar-h) + 252px); }
 body.log-open #owl-hover-panel             { bottom: calc(var(--log-h) + var(--scan-bar-h) + 74px); }
 body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--scan-bar-h) + 308px); }
 
@@ -1826,16 +1838,10 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
 
 /* ══ File Browser toggle button ═════════════════════════════════════════════ */
 #fb-toggle-btn {
-  position: fixed;
-  bottom: calc(var(--scan-bar-h) + 252px); right: 28px;
-  z-index: 9999;
-  display: flex; align-items: center; justify-content: center;
-  width: 44px; height: 44px; border-radius: 10px;
-  background: var(--surface-hi); border: 1px solid var(--border);
-  cursor: pointer;
-  transition: background .2s, border-color .2s, bottom .25s;
-  user-select: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,.55);
+  position: relative;
+  bottom: auto;
+  right: auto;
+  z-index: auto;
 }
 #fb-toggle-btn:hover, #fb-toggle-btn.active {
   background: var(--accent-dim); border-color: var(--accent);
@@ -2504,22 +2510,10 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 }
 
 /* ══ DB Rail ══════════════════════════════════════════════════════════════ */
-:root { --db-rail-w: 64px; --db-panel-w: 400px; }
+:root { --db-rail-w: 0px; --db-panel-w: 400px; }
 
 #db-rail {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: var(--db-rail-w);
-  height: 100vh;
-  background: var(--surface);
-  border-left: 1px solid var(--border);
-  z-index: 500;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 104px; /* clear header */
-  gap: 4px;
+  display: none;
 }
 
 .db-rail-inner {
@@ -2593,7 +2587,8 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   transform: translateY(0);
 }
 
-.db-rail-btn.active {
+.db-rail-btn.active,
+.db-tool-btn.active {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
@@ -2601,7 +2596,8 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 .db-rail-btn.active .db-rail-label { opacity: 1; transform: translateY(0); color: var(--accent); }
 
 /* step-complete marker on rail button */
-.db-rail-btn.step-complete::after {
+.db-rail-btn.step-complete::after,
+.db-tool-btn.step-complete::after {
   content: '';
   position: absolute;
   top: 6px;
@@ -2616,7 +2612,7 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 #db-panel {
   position: fixed;
   top: 0;
-  right: var(--db-rail-w);
+  right: 0;
   width: var(--db-panel-w);
   height: 100vh;
   background: var(--surface);
@@ -2624,7 +2620,7 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   z-index: 498;
   display: flex;
   flex-direction: column;
-  transform: translateX(calc(var(--db-panel-w) + var(--db-rail-w)));
+  transform: translateX(var(--db-panel-w));
   transition: transform .25s cubic-bezier(.22,.68,0,1.2);
   overflow: hidden;
 }
@@ -2727,15 +2723,18 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 .dead-roots-banner strong { color: var(--danger); display: block; margin-bottom: 4px; }
 
 /* Locked state for rail buttons */
-.db-rail-btn.permission-locked {
+.db-rail-btn.permission-locked,
+.db-tool-btn.permission-locked {
   opacity: .3;
   cursor: not-allowed;
 }
-.db-rail-btn.permission-locked:hover {
+.db-rail-btn.permission-locked:hover,
+.db-tool-btn.permission-locked:hover {
   background: transparent;
   border-color: transparent;
 }
-.db-rail-btn.permission-locked:hover img { opacity: .65; filter: grayscale(30%); }
+.db-rail-btn.permission-locked:hover img,
+.db-tool-btn.permission-locked:hover img { opacity: .65; filter: grayscale(30%); }
 .db-rail-btn.permission-locked:hover .db-rail-label { opacity: 0; }
 
 /* Backdrop */

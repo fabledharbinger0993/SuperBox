@@ -1105,10 +1105,6 @@
 </footer>
 
 <!-- ══ Floating action buttons ══════════════════════════════════════════════ -->
-<!-- ── File Browser toggle ─────────────────────────────────────────────────── -->
-<div id="fb-toggle-btn" onclick="toggleFileBrowser()" title="Browse files (⌘B)">
-  <img src="/static/icon-rb-folder.png" style="width:26px;height:26px;object-fit:contain">
-</div>
 
 <!-- ══ File Browser Panel ═══════════════════════════════════════════════════ -->
 <div id="fb-panel">
@@ -1125,7 +1121,45 @@
 
 <!-- ══ Tools Panel (RekitBox modals + Rekordbox tools) ══════════════════════ -->
 <div id="tools-panel">
-  <!-- Rekordbox Tools -->
+  <!-- Rekordbox DB tools -->
+  <button class="tool-btn db-tool-btn" id="rail-btn-audit" onclick="openDbPanel('audit')" title="Audit Library">
+    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <img src="/static/icon-audit.png" class="tool-icon" alt="Audit">
+  </button>
+
+  <button class="tool-btn db-tool-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths">
+    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <img src="/static/icon-move.png" class="tool-icon" alt="Relocate">
+  </button>
+
+  <button class="tool-btn db-tool-btn" id="rail-btn-import" onclick="openDbPanel('import')" title="Import Tracks">
+    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <img src="/static/icon-import.png" class="tool-icon" alt="Import">
+  </button>
+
+  <button class="tool-btn db-tool-btn" id="rail-btn-link" onclick="openDbPanel('link')" title="Link Playlists">
+    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <img src="/static/icon-link.png" class="tool-icon" alt="Link">
+  </button>
+
+  <div class="tools-divider"></div>
+
+  <!-- RekitBox utility + modal tools -->
+  <button id="fb-toggle-btn" onclick="toggleFileBrowser()" class="tool-btn" title="Browse files (⌘B)">
+    <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
+    </svg>
+    <img src="/static/icon-rb-folder.png" class="tool-icon" alt="Browse files">
+  </button>
+
   <button id="rekitgo-btn" onclick="openRekitGo()" class="tool-btn" title="RekitGo — iOS companion app">
     <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M3 7a2 2 0 012-2h3l2-2h6a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/>
@@ -1133,9 +1167,6 @@
     <img src="/static/icon-rekitgo.png" class="tool-icon" alt="RekitGo">
     <span id="rekitgo-btn-dot" class="tool-dot"></span>
   </button>
-
-  <!-- RekitBox Modals -->
-  <div class="tools-divider"></div>
 
   <button id="pipeline-btn" onclick="openPipelineWizard()" class="tool-btn" title="Pipeline Wizard">
     <svg class="tool-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -1566,31 +1597,6 @@
 </div>
 
 <script src="/static/rekitbox.js"></script>
-
-<!-- ══ DB Rail ═══════════════════════════════════════════════════════════════
-     Fixed 64px strip on the right edge — icon buttons for RekordBox DB tools.
-     Hover shows label; click opens the slide-in panel.                       -->
-<div id="db-rail">
-  <div class="db-rail-inner">
-    <button class="db-rail-btn" id="rail-btn-audit"    onclick="openDbPanel('audit')"    title="Audit Library">
-      <img src="/static/icon-audit.png"  alt="Audit">
-      <span class="db-rail-label">Audit</span>
-    </button>
-    <button class="db-rail-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths">
-      <img src="/static/icon-move.png"   alt="Relocate">
-      <span class="db-rail-label">Relocate</span>
-    </button>
-    <button class="db-rail-btn" id="rail-btn-import"   onclick="openDbPanel('import')"   title="Import Tracks">
-      <img src="/static/icon-import.png" alt="Import">
-      <span class="db-rail-label">Import</span>
-    </button>
-    <button class="db-rail-btn" id="rail-btn-link"     onclick="openDbPanel('link')"     title="Link Playlists">
-      <img src="/static/icon-link.png"   alt="Link">
-      <span class="db-rail-label">Link</span>
-    </button>
-  </div>
-  <div class="db-rail-label-fixed">DB Tools</div>
-</div>
 
 <!-- ══ DB Panel ══════════════════════════════════════════════════════════════
      Slide-in 400px panel. Only the active section is visible.               -->
