@@ -1,0 +1,410 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1BD409462CB1647F95B058B8 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31724244ED9ABCF268FB4D3 /* AppStore.swift */; };
+		4CD9CF31A7A58EAD4309FE04 /* RekitGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4304452ECAA75AFE3A8C38D5 /* RekitGoApp.swift */; };
+		72D7FE83673B097939AAA665 /* ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DFF772EC87D65B7F9B9AB2D /* ExportView.swift */; };
+		8C6B6BF6A40563A6D44D7BB2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4E3B82617C58FC2AE046E931 /* Assets.xcassets */; };
+		98B9384FBB9CEF2CDD89C31D /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8752864BB2BCDC464E6288D /* Models.swift */; };
+		A77F9D168CD6E273CEF199D5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40E515D8FE4BC20DD3C6C13 /* ContentView.swift */; };
+		A8A10EDC672A6BE00DBCEDB0 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5655DCB1040F04F0F783ED38 /* LibraryView.swift */; };
+		AD8B45DAD5DDAE4990C7F45E /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCAAD09E4C6822662F0999A9 /* APIClient.swift */; };
+		C4078FEBDCB7FD79BD8BBF72 /* PlaylistsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CDF123094B1CFF53CED3177 /* PlaylistsView.swift */; };
+		D429D62A84EA82A9C53DA039 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2259A92DD669733E2052E3B8 /* SettingsView.swift */; };
+		E26B34B2B05A344D75870861 /* DownloadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FFF551373DFF8C9103C5FED /* DownloadsView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2259A92DD669733E2052E3B8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		3025E47887EFA368F403C2CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		4304452ECAA75AFE3A8C38D5 /* RekitGoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RekitGoApp.swift; sourceTree = "<group>"; };
+		4CDF123094B1CFF53CED3177 /* PlaylistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
+		4E3B82617C58FC2AE046E931 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4FFF551373DFF8C9103C5FED /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsView.swift; sourceTree = "<group>"; };
+		5655DCB1040F04F0F783ED38 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		5DFF772EC87D65B7F9B9AB2D /* ExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportView.swift; sourceTree = "<group>"; };
+		A31724244ED9ABCF268FB4D3 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
+		B8752864BB2BCDC464E6288D /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		CCAAD09E4C6822662F0999A9 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		DED407D5C99982AD9714353D /* RekitGo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RekitGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E40E515D8FE4BC20DD3C6C13 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		3884559AD78781046EEC7901 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				CCAAD09E4C6822662F0999A9 /* APIClient.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		6DDAA02D61E3852905A9C678 /* Downloads */ = {
+			isa = PBXGroup;
+			children = (
+				4FFF551373DFF8C9103C5FED /* DownloadsView.swift */,
+			);
+			path = Downloads;
+			sourceTree = "<group>";
+		};
+		75064708FC57B29D635E06F9 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				4E3B82617C58FC2AE046E931 /* Assets.xcassets */,
+				E40E515D8FE4BC20DD3C6C13 /* ContentView.swift */,
+				3025E47887EFA368F403C2CE /* Info.plist */,
+				4304452ECAA75AFE3A8C38D5 /* RekitGoApp.swift */,
+				F204CEE094A361B679410B9A /* Models */,
+				3884559AD78781046EEC7901 /* Network */,
+				CE4840DA5C01F452CAEED5C1 /* Store */,
+				8AC286B5D0A21D4C4EDC2585 /* Views */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		77E7389804CE333BD8E1FEEB /* Playlists */ = {
+			isa = PBXGroup;
+			children = (
+				4CDF123094B1CFF53CED3177 /* PlaylistsView.swift */,
+			);
+			path = Playlists;
+			sourceTree = "<group>";
+		};
+		7E560EA03CA1BF4BE5AF2C06 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				2259A92DD669733E2052E3B8 /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		8AC286B5D0A21D4C4EDC2585 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				6DDAA02D61E3852905A9C678 /* Downloads */,
+				A617F73B585B74066D082DE7 /* Export */,
+				A4F8EF50E6BAE92461EE80E5 /* Library */,
+				77E7389804CE333BD8E1FEEB /* Playlists */,
+				7E560EA03CA1BF4BE5AF2C06 /* Settings */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A4F8EF50E6BAE92461EE80E5 /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				5655DCB1040F04F0F783ED38 /* LibraryView.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		A617F73B585B74066D082DE7 /* Export */ = {
+			isa = PBXGroup;
+			children = (
+				5DFF772EC87D65B7F9B9AB2D /* ExportView.swift */,
+			);
+			path = Export;
+			sourceTree = "<group>";
+		};
+		B132C25F742EA6C152598539 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DED407D5C99982AD9714353D /* RekitGo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CE4840DA5C01F452CAEED5C1 /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				A31724244ED9ABCF268FB4D3 /* AppStore.swift */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
+		F204CEE094A361B679410B9A /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B8752864BB2BCDC464E6288D /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		F86A5D8FE405C45B02F9E86E = {
+			isa = PBXGroup;
+			children = (
+				75064708FC57B29D635E06F9 /* Sources */,
+				B132C25F742EA6C152598539 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C32344EC17BAE2B28DB8864D /* RekitGo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FA95CF22CE20BDD7165B56EC /* Build configuration list for PBXNativeTarget "RekitGo" */;
+			buildPhases = (
+				F1EDB12CF320EB7757672D7D /* Sources */,
+				B4452E483632C80A7A86F46C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RekitGo;
+			packageProductDependencies = (
+			);
+			productName = RekitGo;
+			productReference = DED407D5C99982AD9714353D /* RekitGo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F4A0A2D8B7BB6D273E857F63 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					C32344EC17BAE2B28DB8864D = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 8F4C586353395D9E00D34378 /* Build configuration list for PBXProject "RekitGo" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = F86A5D8FE405C45B02F9E86E;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = B132C25F742EA6C152598539 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C32344EC17BAE2B28DB8864D /* RekitGo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		B4452E483632C80A7A86F46C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8C6B6BF6A40563A6D44D7BB2 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F1EDB12CF320EB7757672D7D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AD8B45DAD5DDAE4990C7F45E /* APIClient.swift in Sources */,
+				1BD409462CB1647F95B058B8 /* AppStore.swift in Sources */,
+				A77F9D168CD6E273CEF199D5 /* ContentView.swift in Sources */,
+				E26B34B2B05A344D75870861 /* DownloadsView.swift in Sources */,
+				72D7FE83673B097939AAA665 /* ExportView.swift in Sources */,
+				A8A10EDC672A6BE00DBCEDB0 /* LibraryView.swift in Sources */,
+				98B9384FBB9CEF2CDD89C31D /* Models.swift in Sources */,
+				C4078FEBDCB7FD79BD8BBF72 /* PlaylistsView.swift in Sources */,
+				4CD9CF31A7A58EAD4309FE04 /* RekitGoApp.swift in Sources */,
+				D429D62A84EA82A9C53DA039 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4DCB818ACD4317319E52ABC4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fabledharbinger.rekitgo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		7086FA778AFE83FDCA9DCFB1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fabledharbinger.rekitgo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		9115CD5A3D9E0FDB06ED7600 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Sources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FC29A944B2B9F97E0E82A4A3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Sources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8F4C586353395D9E00D34378 /* Build configuration list for PBXProject "RekitGo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4DCB818ACD4317319E52ABC4 /* Debug */,
+				7086FA778AFE83FDCA9DCFB1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FA95CF22CE20BDD7165B56EC /* Build configuration list for PBXNativeTarget "RekitGo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9115CD5A3D9E0FDB06ED7600 /* Debug */,
+				FC29A944B2B9F97E0E82A4A3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F4A0A2D8B7BB6D273E857F63 /* Project object */;
+}

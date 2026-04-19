@@ -21,6 +21,7 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 import uuid
 import datetime
 from pathlib import Path
@@ -400,6 +401,46 @@ def api_process():
     return _sse_response(cmd, library_root=library_root, step_name="process")
 
 
+@app.route("/api/run/process-retry", methods=["POST"])
+def api_process_retry():
+    """
+    Re-run Tag Tracks with --force on a specific list of file paths only.
+    Body: {"paths": ["/abs/path/to/file.mp3", ...], "no_bpm": bool, "no_key": bool}
+    Uses a temp file so the CLI path-list can be arbitrarily long.
+    """
+    import tempfile
+    body = request.get_json(force=True, silent=True) or {}
+    paths = [p.strip() for p in (body.get("paths") or []) if p.strip()]
+    if not paths:
+        return jsonify({"error": "paths list is required"}), 400
+
+    # Write paths to a temp file; CLI reads it with --paths-file
+    tf = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".txt", prefix="rekitbox_retry_",
+        delete=False, encoding="utf-8",
+    )
+    tf.write("\n".join(paths))
+    tf.close()
+
+    # PATH positional arg is required by argparse but unused in --paths-file mode;
+    # pass the directory of the first file as a harmless placeholder.
+    placeholder_root = str(Path(paths[0]).parent)
+    cmd = [
+        sys.executable, str(CLI_PATH),
+        "process", placeholder_root,
+        "--no-normalize",
+        "--force",
+        "--paths-file", tf.name,
+    ]
+    if body.get("no_bpm"):
+        cmd.append("--no-bpm")
+    if body.get("no_key"):
+        cmd.append("--no-key")
+
+    library_root = str(Path(paths[0]).parent)
+    return _sse_response(cmd, library_root=library_root, step_name="process")
+
+
 @app.route("/api/run/pipeline", methods=["POST"])
 def api_pipeline():
     """
@@ -421,6 +462,13 @@ def api_pipeline():
 
     if not raw_steps:
         return jsonify({"error": "steps list is required"}), 400
+
+    # Pre-flight: refuse if Rekordbox is open and any step writes to the DB.
+    _WRITE_STEP_TYPES = {"import", "link", "relocate", "prune"}
+    if not dry_run and any(s.get("type") in _WRITE_STEP_TYPES for s in raw_steps):
+        err = _require_rb_closed()
+        if err:
+            return err
 
     built: list[dict] = []
 
@@ -692,7 +740,8 @@ def api_relocate():
                     text=True, bufsize=1, cwd=str(REPO_ROOT), env=_subprocess_env(),
                 )
                 with _proc_lock:
-                    globals()['_active_proc'] = proc
+                    global _active_proc
+                    _active_proc = proc
                 try:
                     for line in iter(proc.stdout.readline, ""):
                         yield f"data: {json.dumps({'line': line.rstrip()})}\n\n"
@@ -701,10 +750,10 @@ def api_relocate():
                         overall = proc.returncode
                 finally:
                     with _proc_lock:
-                        globals()['_active_proc'] = None
+                        _active_proc = None
             except Exception as exc:
                 with _proc_lock:
-                    globals()['_active_proc'] = None
+                    _active_proc = None
                 yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}'})}\n\n"
                 overall = 1
         if library_root:
@@ -738,6 +787,25 @@ def api_novelty():
 
     library_root = _get_library_root(request, "dest")
     return _sse_response(cmd, library_root=library_root, step_name="novelty")
+
+
+@app.route("/api/run/rename")
+def api_rename():
+    path = request.args.get("path", "").strip()
+    if not path:
+        return jsonify({"error": "path is required"}), 400
+
+    cmd = [sys.executable, str(CLI_PATH), "rename", path]
+
+    if request.args.get("no_dry_run") == "1":
+        cmd.append("--no-dry-run")
+
+    workers = request.args.get("workers", "1").strip()
+    if workers.isdigit() and int(workers) > 1:
+        cmd += ["--workers", workers]
+
+    library_root = path
+    return _sse_response(cmd, library_root=library_root, step_name="rename")
 
 
 @app.route("/api/run/duplicates")
@@ -818,10 +886,12 @@ def api_prune_stage():
                             keeper_map[e["file_path"]] = keep_entry["file_path"]
 
         token = str(uuid.uuid4())
+        _evict_old_jobs(_prune_token_store, _MAX_PRUNE_TOKENS)
         _prune_token_store[token] = {
             "paths":      paths,
             "permanent":  bool(data.get("permanent", False)),
             "keeper_map": keeper_map,
+            "_issued_at": time.time(),
         }
         return jsonify({"token": token, "keeper_map_size": len(keeper_map)})
     except Exception as exc:
@@ -859,7 +929,10 @@ def api_duplicates_load():
     cache_key = str(csv_path.resolve())
 
     try:
-        if cache_key not in _report_cache:
+        csv_mtime = csv_path.stat().st_mtime
+        cached = _report_cache.get(cache_key)
+        if cached is None or cached.get("_mtime") != csv_mtime:
+            # Cache is cold or the CSV file has been updated — (re)load it.
             from pruner import load_report          # noqa: PLC0415
             from db_connection import read_db       # noqa: PLC0415
             from config import DJMT_DB as _DB      # noqa: PLC0415
@@ -896,6 +969,7 @@ def api_duplicates_load():
                 if e["action"] == "REVIEW_REMOVE"
             ]
             _report_cache[cache_key] = {
+                "_mtime":           csv_mtime,
                 "groups":           all_groups,
                 "remove_paths":     [e["file_path"] for e in remove_entries],
                 "keep_paths": [
@@ -985,7 +1059,10 @@ def api_run_prune():
     confuse EventSource and surface only as a silent "Connection error".
     """
     token     = request.args.get("token", "")
-    staged    = _prune_token_store.pop(token, {})
+    staged = _prune_token_store.pop(token, {})
+    _PRUNE_TOKEN_TTL = 1800  # 30 minutes
+    if staged and (time.time() - staged.get("_issued_at", 0)) > _PRUNE_TOKEN_TTL:
+        staged = {}           # treat expired token same as unknown
     paths: list[str]      = staged.get("paths", [])
     permanent: bool       = staged.get("permanent", False)
     keeper_map: dict      = staged.get("keeper_map", {})
@@ -1312,6 +1389,7 @@ def api_normalize_preview():
 
     job_id = uuid.uuid4().hex[:8]
     with _PREVIEW_LOCK:
+        _evict_old_jobs(_PREVIEW_JOBS, _MAX_PREVIEW_JOBS)
         _PREVIEW_JOBS[job_id] = {"status": "queued", "msg": "", "progress": 0,
                                  "total": 0, "clips": []}
 
@@ -1381,6 +1459,20 @@ def api_update_apply():
 
     # Do the pull.
     try:
+        # Refuse if the working tree has local modifications — pull would fail or clobber changes.
+        status_check = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=str(_REPO_ROOT),
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if status_check.returncode == 0 and status_check.stdout.strip():
+            return jsonify({
+                "ok": False,
+                "error": "Working tree has uncommitted changes — commit or stash them before updating.",
+            }), 409
+
         pull = subprocess.run(
             ["git", "pull", "origin", "main", "--ff-only"],
             cwd=str(_REPO_ROOT),
@@ -1489,17 +1581,18 @@ end tell"""
             ["osascript", "-e", _finder_script],
             capture_output=True, text=True, timeout=60,
         )
-        print(f"[finder-selection] rc={r.returncode} stdout={repr(r.stdout)} stderr={repr(r.stderr)}", flush=True)
+        app.logger.debug("[finder-selection] rc=%d stdout=%r stderr=%r",
+                         r.returncode, r.stdout, r.stderr)
         if r.returncode == 0 and r.stdout.strip():
             return jsonify({"path": r.stdout.strip().rstrip("/")})
     except Exception as exc:
-        print(f"[finder-selection] exception: {exc}", flush=True)
+        app.logger.debug("[finder-selection] exception: %s", exc)
 
     # When called from a drag-drop event, pywebview may focus before osascript
     # runs and Finder clears its selection — return null silently rather than
     # opening a picker dialog the user didn't ask for.
     if source == "drop":
-        print(f"[finder-selection] source=drop, returning null", flush=True)
+        app.logger.debug("[finder-selection] source=drop, returning null")
         return jsonify({"path": None})
 
     # Nothing selected in Finder — open the native picker as fallback
@@ -1542,7 +1635,14 @@ def api_fs_list():
 
     Returns folders first (sorted), then audio files, then everything else.
     Hidden files (dot-prefixed) are always omitted.
+
+    Security: intentionally unauthenticated because Waitress binds exclusively
+    to 127.0.0.1 — this endpoint is unreachable from the network.  The
+    localhost guard below is a defense-in-depth check in case the bind address
+    changes in the future.
     """
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        return jsonify({"error": "Forbidden"}), 403
     AUDIO_EXTS = {'.aiff', '.aif', '.wav', '.flac', '.mp3', '.m4a', '.alac', '.ogg', '.opus', '.mp4'}
     path_str = request.args.get("path", "/Volumes")
     p = Path(path_str)
@@ -1628,14 +1728,14 @@ def api_set_music_root():
         return jsonify({"error": str(exc)}), 500
 
 
-@app.route("/api/migrate-pioneer-db")
+@app.route("/api/migrate-pioneer-db", methods=["POST"])
 def api_migrate_pioneer_db():
     """Stream progress of migrating ~/Library/Pioneer/rekordbox/ to the target drive."""
-    from flask import request as _req
-    target = _req.args.get("target", "").strip()
+    data = request.get_json(silent=True) or {}
+    target = str(data.get("target", "")).strip()
     if not target:
-        return jsonify({"error": "target parameter required"}), 400
-    from db_migrator import migrate
+        return jsonify({"error": "target is required"}), 400
+    from db_migrator import migrate  # noqa: PLC0415
     return Response(migrate(target), mimetype="text/event-stream")
 
 
@@ -1663,6 +1763,22 @@ _ANALYSIS_LOCK: threading.Lock = threading.Lock()
 
 _EXPORT_JOBS: dict[str, dict] = {}
 _EXPORT_LOCK: threading.Lock = threading.Lock()
+
+
+_MAX_ANALYSIS_JOBS = 100
+_MAX_EXPORT_JOBS   = 50
+_MAX_PREVIEW_JOBS  = 100
+_MAX_PRUNE_TOKENS  = 200
+
+
+def _evict_old_jobs(store: dict, max_size: int) -> None:
+    """Trim a job dict to *max_size* by removing the oldest entries.
+    Must be called while holding the relevant lock (or on stores that are
+    only written from a single thread)."""
+    if len(store) > max_size:
+        excess = len(store) - max_size
+        for key in list(store.keys())[:excess]:
+            del store[key]
 
 
 
@@ -1699,6 +1815,24 @@ def _get_mobile_token() -> str:
 MOBILE_TOKEN: str = _get_mobile_token()
 
 
+def _read_mobile_token() -> str:
+    """
+    Read (but never generate) the current mobile token from config.
+
+    Called on every authenticated mobile request so that a token set up
+    after the server starts is accepted without a restart.
+    Falls back to the module-level MOBILE_TOKEN if config can't be read.
+    """
+    try:
+        from user_config import load_user_config, config_exists  # noqa: PLC0415
+        if not config_exists():
+            return ""
+        cfg = load_user_config()
+        return cfg.get("mobile_token", "") or ""
+    except Exception:
+        return MOBILE_TOKEN  # safe fallback — the startup value
+
+
 @app.before_request
 def _check_mobile_auth():
     """
@@ -1710,13 +1844,14 @@ def _check_mobile_auth():
         return
     if request.path == "/api/mobile/ping":
         return
-    if not MOBILE_TOKEN:
+    current_token = _read_mobile_token()
+    if not current_token:
         return jsonify({
             "error": "server_not_configured",
             "message": "Run: python3 cli.py setup",
         }), 503
     auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer ") or auth[7:] != MOBILE_TOKEN:
+    if not auth.startswith("Bearer ") or auth[7:] != current_token:
         return jsonify({"error": "unauthorized"}), 401
 
 # ── Mobile API routes ────────────────────────────────────────────────────────
@@ -1728,7 +1863,123 @@ def mobile_ping():
     Used by the app on startup to confirm network reachability before attempting
     authenticated calls.
     """
-    return jsonify({"status": "ok", "version": "1.0.0", "rekitbox_version": "1.0.9"})
+    try:
+        from update_checker import _local_version  # noqa: PLC0415
+        _ver, _ = _local_version()
+    except Exception:
+        _ver = None
+    ver = _ver or "unknown"
+    return jsonify({"status": "ok", "version": ver, "rekitbox_version": ver})
+
+
+@app.route("/api/connectivity")
+def api_connectivity():
+    """
+    Connection info for the RekitGo pairing panel in the RekitBox UI.
+    No auth required — this is served to the local desktop page only.
+
+    Returns:
+      local_ip      — LAN IP (reachable on same WiFi)
+      tailscale_ip  — Tailscale IP if connected, else null
+      port          — always 5001
+      remote_ready  — true when Tailscale is up
+      token         — mobile_token from config (for QR pairing)
+      qr_svg        — SVG QR code encoding rekitgo://<best_ip>:5001?token=<token>
+    """
+    import socket, subprocess as _sp  # noqa: E401
+
+    # Best local IP (non-loopback)
+    local_ip: str | None = None
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        local_ip = "127.0.0.1"
+
+    # Tailscale IP — fast check, 2 s timeout
+    tailscale_ip: str | None = None
+    try:
+        ts = _sp.run(["tailscale", "ip", "-4"],
+                     capture_output=True, text=True, timeout=2)
+        if ts.returncode == 0:
+            tailscale_ip = ts.stdout.strip() or None
+    except Exception:
+        pass
+
+    # Mobile auth token
+    token: str | None = None
+    try:
+        import json as _json, pathlib as _pl  # noqa: E401
+        cfg_path = _pl.Path.home() / ".rekordbox-toolkit" / "config.json"
+        if cfg_path.exists():
+            token = _json.loads(cfg_path.read_text()).get("mobile_token")
+    except Exception:
+        pass
+
+    best_ip = tailscale_ip or local_ip
+    remote_ready = tailscale_ip is not None
+
+    # ── QR generation helper ─────────────────────────────────────────────────
+    def _make_styled_qr(payload: str, fill: str = "#ff6600") -> "str | None":
+        """Transparent-background SVG QR with a custom fill colour."""
+        try:
+            import qrcode, qrcode.image.svg, io, re  # noqa: E401
+            qr = qrcode.make(payload,
+                             image_factory=qrcode.image.svg.SvgPathImage,
+                             box_size=6, border=2)
+            buf = io.BytesIO()
+            qr.save(buf)
+            svg = buf.getvalue().decode("utf-8")
+            # Strip white background rect (various quote / colour spellings)
+            svg = re.sub(r'<rect[^>]+fill=["\']#fff(?:fff)?["\'][^/]*/>', '', svg)
+            svg = re.sub(r'<rect[^>]+fill=["\']white["\'][^/]*/>', '', svg)
+            # Recolour the data path
+            svg = re.sub(r"fill=['\"]#000(?:000)?['\"]", f'fill="{fill}"', svg)
+            return svg
+        except Exception:
+            return None
+
+    # Pairing QR — orange (primary action)
+    qr_svg: str | None = None
+    if token and best_ip:
+        qr_svg = _make_styled_qr(
+            f"rekitgo://{best_ip}:5001?token={token}",
+            fill="#ff6600",
+        )
+
+    # PWA install QR — orange, encodes the web-app URL so iPhone Safari can
+    # open it directly and the user can Add to Home Screen
+    qr_pwa_url: str | None = None
+    if best_ip:
+        qr_pwa_url = _make_styled_qr(
+            f"http://{best_ip}:5001",
+            fill="#ff6600",
+        )
+
+    # Setup QRs — green (safe / informational)
+    _green = "#34d399"
+    qr_tailscale_mac = _make_styled_qr("https://tailscale.com/download/macos", fill=_green)
+    qr_tailscale_ios = _make_styled_qr(
+        "https://apps.apple.com/app/tailscale/id1470499037", fill=_green
+    )
+    qr_rekitgo_ios   = _make_styled_qr(
+        "https://github.com/fabledharbinger0993/RekitBox", fill=_green
+    )
+
+    return jsonify({
+        "local_ip":          local_ip,
+        "tailscale_ip":      tailscale_ip,
+        "port":              5001,
+        "remote_ready":      remote_ready,
+        "token":             token,
+        "qr_svg":            qr_svg,
+        "qr_pwa_url":        qr_pwa_url,
+        "qr_tailscale_mac":  qr_tailscale_mac,
+        "qr_tailscale_ios":  qr_tailscale_ios,
+        "qr_rekitgo_ios":    qr_rekitgo_ios,
+    })
 
 
 @app.route("/api/mobile/folders")
@@ -1814,24 +2065,33 @@ def mobile_download():
     """
     Enqueue a download job.
 
-    Body: { "url": "...", "destination": "/Music/New Drops/", "filename": "optional" }
+    Body: {
+      "url":         "https://bandcamp.com/...",
+      "destination": "/Volumes/DJMT/New Drops/",
+      "format":      "aiff" | "flac" | "wav" | "mp3"  (optional, default "aiff")
+      "filename":    "Artist - Title"                  (optional, derived from tags)
+    }
     Response: { "job_id": "uuid" }
 
     The download runs asynchronously. Progress and completion are pushed to all
-    connected WebSocket clients via /api/mobile/events.
+    connected WebSocket clients via /api/mobile/events as download_update events.
+    Supported sources: Bandcamp, Beatport, Soundcloud, and any URL yt-dlp handles.
     """
     import downloader  # noqa: PLC0415
     body = request.get_json(force=True, silent=True) or {}
-    url = (body.get("url") or "").strip()
+    url         = (body.get("url")         or "").strip()
     destination = (body.get("destination") or "").strip()
-    filename = (body.get("filename") or "").strip() or None
+    filename    = (body.get("filename")    or "").strip() or None
+    fmt         = (body.get("format")      or downloader.DEFAULT_FORMAT).strip().lower()
 
     if not url:
         return jsonify({"error": "url is required"}), 400
     if not destination:
         return jsonify({"error": "destination is required"}), 400
+    if fmt not in downloader.FORMATS:
+        return jsonify({"error": f"format must be one of: {', '.join(sorted(downloader.FORMATS))}"}), 400
 
-    job_id = downloader.enqueue(url, destination, filename)
+    job_id = downloader.enqueue(url, destination, filename, fmt)
     return jsonify({"job_id": job_id}), 202
 
 
@@ -1871,8 +2131,11 @@ def mobile_rekordbox_tracks():
 
     search = request.args.get("search", "").strip().lower()
     sort   = request.args.get("sort", "date_added")
-    limit  = int(request.args.get("limit", 200))
-    offset = int(request.args.get("offset", 0))
+    try:
+        limit  = int(request.args.get("limit",  200))
+        offset = int(request.args.get("offset", 0))
+    except (TypeError, ValueError):
+        return jsonify({"error": "limit and offset must be integers"}), 400
 
     try:
         with read_db(_DB) as db:
@@ -1991,11 +2254,6 @@ def mobile_rekordbox_add_track():
 
 
 # ── Export job state ─────────────────────────────────────────────────────────
-# In-memory export jobs. Each entry:
-# { job_id, status, tracks_total, tracks_done, current_track, errors: [] }
-_EXPORT_JOBS: dict[str, dict] = {}
-_EXPORT_LOCK: threading.Lock = threading.Lock()
-
 # ── Track analysis ────────────────────────────────────────────────────────────
 
 def _push_analysis_event(
@@ -2087,7 +2345,7 @@ def _run_analysis(job_id: str, track_ids: list) -> None:
                 # Rekordbox is running — tags were written to file, DB update deferred
                 db_note = "DB not updated (Rekordbox is open); file tags written."
 
-            status = "complete"
+            status = "complete_partial" if db_note else "complete"
 
         except Exception as exc:
             status = "failed"
@@ -2105,7 +2363,9 @@ def _run_analysis(job_id: str, track_ids: list) -> None:
 
     # Job complete
     with _ANALYSIS_LOCK:
-        _ANALYSIS_JOBS[job_id]["status"] = "complete"
+        job_results = _ANALYSIS_JOBS[job_id].get("results", {})
+        had_partial = any(r.get("status") == "complete_partial" for r in job_results.values())
+        _ANALYSIS_JOBS[job_id]["status"] = "complete_partial" if had_partial else "complete"
 
 
 @app.route("/api/mobile/rekordbox/analyze", methods=["POST"])
@@ -2131,6 +2391,7 @@ def mobile_rekordbox_analyze():
     job_id = str(uuid.uuid4())
 
     with _ANALYSIS_LOCK:
+        _evict_old_jobs(_ANALYSIS_JOBS, _MAX_ANALYSIS_JOBS)
         _ANALYSIS_JOBS[job_id] = {
             "job_id":    job_id,
             "track_ids": track_ids,
@@ -2459,7 +2720,7 @@ def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
     """
     import shutil as _shutil  # noqa: PLC0415
     from pathlib import Path as _Path  # noqa: PLC0415
-    from db_connection import read_db  # noqa: PLC0415
+    from db_connection import read_db, rekordbox_is_running  # noqa: PLC0415
     from config import DJMT_DB as _DB  # noqa: PLC0415
     from pyrekordbox import Rekordbox6Database  # noqa: PLC0415
     import ws_bus as _ws  # noqa: PLC0415
@@ -2481,6 +2742,12 @@ def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
         # ── 1. Validate USB DB ─────────────────────────────────────────────────
         if not usb_db_path.exists():
             _update({"status": "failed", "errors": ["PIONEER/Master/master.db not found on drive"]})
+            return
+
+        # ── 1b. Refuse if Rekordbox is running ───────────────────────────────
+        if rekordbox_is_running():
+            _update({"status": "failed",
+                      "errors": ["Rekordbox is running — close it before exporting to USB"]})
             return
 
         # ── 2. Backup USB DB ──────────────────────────────────────────────────
@@ -2619,6 +2886,7 @@ def mobile_export_start():
     job_id = str(uuid.uuid4())
 
     with _EXPORT_LOCK:
+        _evict_old_jobs(_EXPORT_JOBS, _MAX_EXPORT_JOBS)
         _EXPORT_JOBS[job_id] = {
             "job_id":        job_id,
             "status":        "running",
@@ -2674,6 +2942,20 @@ def mobile_events(ws):
         pass
     finally:
         ws_bus.unregister(ws)
+
+
+@app.after_request
+def disable_cache_on_static_files(response):
+    """Disable caching for static files to ensure fresh assets are always served.
+    
+    This is critical for icon files and CSS/JS updates to be reflected immediately
+    in the embedded webview without requiring a full app restart.
+    """
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
 
 
 if __name__ == "__main__":

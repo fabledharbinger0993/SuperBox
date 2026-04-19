@@ -15,6 +15,11 @@ final class AppStore: ObservableObject {
     @Published var jobs:      [DownloadJob] = []
     @Published var drives:    [Drive]       = []
 
+    /// Live-updated analysis job progress, keyed by job_id.
+    @Published var analysisJobs: [String: AnalysisJob] = [:]
+    /// Live-updated export job progress, keyed by job_id.
+    @Published var exportJobs:   [String: ExportJob]   = [:]
+
     @Published var isLoadingTracks:    Bool = false
     @Published var isLoadingPlaylists: Bool = false
     @Published var isLoadingJobs:      Bool = false
@@ -37,13 +42,14 @@ final class AppStore: ObservableObject {
     func loadJobs() async {
         isLoadingJobs = true
         defer { isLoadingJobs = false }
-        do { jobs = try await api.fetchJobs() }
+        do { jobs = try await api.fetchJobs(); error = nil }
         catch { self.error = error.localizedDescription }
     }
 
     func enqueueDownload(url: String, destination: String, format: String) async {
         do {
             let jobId = try await api.enqueueDownload(url: url, destination: destination, format: format)
+            // Optimistically add a placeholder job
             let placeholder = DownloadJob(
                 jobId: jobId, url: url, destination: destination, format: format,
                 status: .queued, progress: 0, title: nil, artist: nil, filePath: nil, error: nil
@@ -59,7 +65,7 @@ final class AppStore: ObservableObject {
     func loadTracks(search: String? = nil) async {
         isLoadingTracks = true
         defer { isLoadingTracks = false }
-        do { tracks = try await api.fetchTracks(search: search) }
+        do { tracks = try await api.fetchTracks(search: search); error = nil }
         catch { self.error = error.localizedDescription }
     }
 
@@ -68,7 +74,7 @@ final class AppStore: ObservableObject {
     func loadPlaylists() async {
         isLoadingPlaylists = true
         defer { isLoadingPlaylists = false }
-        do { playlists = try await api.fetchPlaylists() }
+        do { playlists = try await api.fetchPlaylists(); error = nil }
         catch { self.error = error.localizedDescription }
     }
 
@@ -89,15 +95,17 @@ final class AppStore: ObservableObject {
     // MARK: Drives
 
     func loadDrives() async {
-        do { drives = try await api.fetchDrives() }
+        do { drives = try await api.fetchDrives(); error = nil }
         catch { self.error = error.localizedDescription }
     }
 
     // MARK: WebSocket events
 
     private func handleWSEvent(_ json: String) {
-        guard let data = json.data(using: .utf8),
-              let obj  = try? JSONDecoder().decode(RawEvent.self, from: data) else { return }
+          guard let data = json.data(using: .utf8) else { return }
+          let decoder = JSONDecoder()
+          decoder.userInfo[.rawEventData] = data
+          guard let obj = try? decoder.decode(RawEvent.self, from: data) else { return }
 
         switch obj.type {
         case "download_update":
@@ -110,7 +118,30 @@ final class AppStore: ObservableObject {
                 }
             }
         case "analysis_update", "export_update":
-            break   // handled by polling in the relevant views
+            // Flat payload — parse using JSONSerialization (rawDict stored on RawEvent)
+            guard let raw = obj.rawDict, let jobId = raw["job_id"] as? String else { break }
+            if obj.type == "analysis_update" {
+                var job = analysisJobs[jobId] ?? AnalysisJob(
+                    jobId: jobId, trackIds: [], status: "running", results: [:])
+                if let status = raw["status"] as? String { job.status = status }
+                if let trackId = raw["track_id"] as? Int {
+                    let bpm = raw["bpm"]   as? Double
+                    let key = raw["key"]   as? String
+                    let err = raw["error"] as? String
+                    job.results[String(trackId)] = AnalysisResult(bpm: bpm, key: key, error: err)
+                }
+                analysisJobs[jobId] = job
+            } else {
+                var job = exportJobs[jobId] ?? ExportJob(
+                    jobId: jobId, status: "running",
+                    tracksTotal: 0, tracksDone: 0, currentTrack: nil, errors: nil)
+                if let status = raw["status"] as? String { job.status = status }
+                if let total  = raw["tracks_total"] as? Int { job.tracksTotal = total }
+                if let done   = raw["tracks_done"]  as? Int { job.tracksDone  = done  }
+                job.currentTrack = raw["current_track"] as? String
+                job.errors = raw["errors"] as? [String]
+                exportJobs[jobId] = job
+            }
         default:
             break
         }
@@ -119,6 +150,7 @@ final class AppStore: ObservableObject {
     // MARK: Config
 
     func configure(host: String, port: Int = 5001, token: String) {
+        api.disconnectWebSocket()
         api.config = ServerConfig(host: host, port: port, token: token)
         api.connectWebSocket()
     }
@@ -128,10 +160,18 @@ final class AppStore: ObservableObject {
 private struct RawEvent: Decodable {
     let type: String
     let jobData: Data?
+    let rawDict: [String: Any]?
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         type = try c.decode(String.self, forKey: .type)
+        // Store top-level dict for flat-event handlers (analysis_update, export_update)
+        if let d = decoder.userInfo[.rawEventData] as? Data {
+            rawDict = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any]
+        } else {
+            rawDict = nil
+        }
+        // For download_update: extract nested "job" object
         if let jobAny = try? c.decodeIfPresent(RawJSON.self, forKey: .job) {
             jobData = jobAny.rawData
         } else {
@@ -175,4 +215,8 @@ extension AnyDecodable: Encodable {
         default: try c.encodeNil()
         }
     }
+}
+
+private extension CodingUserInfoKey {
+    static let rawEventData = CodingUserInfoKey(rawValue: "rawEventData")!
 }

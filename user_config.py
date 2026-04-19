@@ -35,10 +35,12 @@ Public interface
 
 import importlib
 import json
+import os
 import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
@@ -148,11 +150,22 @@ def save_user_config(cfg: dict) -> None:
     """
     Write cfg to the config file as formatted JSON.
     Creates ~/.rekordbox-toolkit/ if it doesn't exist.
+    Uses an atomic write (temp file + rename) so a crash mid-write cannot
+    corrupt the existing config.
     """
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2)
-        f.write("\n")  # POSIX convention: newline at end of file
+    content = json.dumps(cfg, indent=2) + "\n"  # POSIX: trailing newline
+    fd, tmp_path = tempfile.mkstemp(dir=CONFIG_DIR, prefix=".config_tmp_", suffix=".json")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        Path(tmp_path).replace(CONFIG_FILE)   # atomic on POSIX; near-atomic on Windows
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 # ─── Dependency validation ────────────────────────────────────────────────────
@@ -173,17 +186,28 @@ _SYS = platform.system()  # "Darwin", "Windows", "Linux"
 
 
 def _ffmpeg_ok() -> bool:
-    """ffmpeg must exist AND be able to decode audio (not just be present)."""
-    if not _has_binary("ffmpeg"):
-        return False
-    try:
-        result = subprocess.run(
-            ["ffmpeg", "-version"],
-            capture_output=True, text=True, timeout=5,
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
+    """ffmpeg must exist AND be able to decode audio (not just be present).
+
+    Result is cached after the first call so repeated dependency checks
+    don't spawn a new subprocess each time.
+    """
+    global _ffmpeg_ok_cache  # noqa: PLW0603
+    if _ffmpeg_ok_cache is None:
+        if not _has_binary("ffmpeg"):
+            _ffmpeg_ok_cache = False
+        else:
+            try:
+                result = subprocess.run(
+                    ["ffmpeg", "-version"],
+                    capture_output=True, text=True, timeout=5,
+                )
+                _ffmpeg_ok_cache = result.returncode == 0
+            except Exception:
+                _ffmpeg_ok_cache = False
+    return _ffmpeg_ok_cache
+
+
+_ffmpeg_ok_cache: "bool | None" = None
 
 def _fpcalc_ok() -> bool:
     if not _has_binary("fpcalc"):

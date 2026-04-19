@@ -7,6 +7,13 @@
 <title>RekitBox — rekordbox-toolkit</title>
 <link rel="stylesheet" href="/static/rekitbox.css">
 <link rel="icon" type="image/png" href="/static/RB_LOGO.png">
+<!-- PWA -->
+<link rel="manifest" href="/static/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RekitGo">
+<link rel="apple-touch-icon" href="/static/icon-rekitgo.png">
+<meta name="theme-color" content="#ff6600">
 <style>
 
  
@@ -25,11 +32,9 @@
 <!-- ══ Header ══════════════════════════════════════════════════════════════ -->
 <header>
   <div class="brand">
-    <div style="display:flex;flex-direction:column;gap:2px;">
-      <img src="/static/rekitbox-header.png" alt="RekitBox"
-           style="height:62px;object-fit:contain;object-position:left;mix-blend-mode:screen;">
-      <div class="brand-sub"><strong>Guthrie Entertainment LLC</strong>rekordbox-toolkit</div>
-    </div>
+    <img src="/static/rekitbox-header.png" alt="RekitBox"
+         style="height:72px;object-fit:contain;object-position:left;mix-blend-mode:screen;flex-shrink:0;">
+    <div class="brand-sub"><strong>Guthrie Entertainment LLC</strong>rekordbox-toolkit</div>
   </div>
   <div class="status-bar">
     <div class="status-pill">
@@ -91,17 +96,20 @@
   <button class="step-tab active" data-target="step-process">
     <span class="step-num">🏷</span> Tag Tracks
   </button>
-  <button class="step-tab" data-target="step-duplicates">
-    <span class="step-num">✂</span> Duplicates
-  </button>
-  <button class="step-tab" data-target="step-normalize">
-    <span class="step-num">📢</span> Normalize
+  <button class="step-tab" data-target="step-rename">
+    <span class="step-num">📝</span> Rename
   </button>
   <button class="step-tab" data-target="step-convert">
     <span class="step-num">🔄</span> Convert
   </button>
+  <button class="step-tab" data-target="step-normalize">
+    <span class="step-num">📢</span> Normalize
+  </button>
   <button class="step-tab" data-target="step-organize">
     <span class="step-num">🗂</span> Organize
+  </button>
+  <button class="step-tab" data-target="step-duplicates">
+    <span class="step-num">✂</span> Duplicates
   </button>
   <button class="step-tab" data-target="step-novelty">
     <span class="step-num">★</span> Novelty
@@ -180,8 +188,12 @@
           <label class="checkbox-label">
             <input type="checkbox" id="process-no-key"> Skip key detection
           </label>
+          <label class="checkbox-label" id="process-retry-errored-row" style="display:none">
+            <input type="checkbox" id="process-retry-errored">
+            <span>Retry errored tracks only <span class="field-badge caution" id="process-retry-count"></span></span>
+          </label>
           <label class="checkbox-label">
-            <input type="checkbox" id="process-force"> Force overwrite existing tags
+            <input type="checkbox" id="process-force"> Force overwrite <em>all</em> existing tags
           </label>
         </div>
       </div>
@@ -856,6 +868,61 @@
 
 
 
+  <!-- ── Rename ──────────────────────────────────────────────────────────── -->
+  <div class="card" id="step-rename" style="--card-watermark:url('/static/icon-filename.png?v=1.9.17')">
+    <div class="card-head">
+      <div class="card-icon caution"><img src="/static/icon-filename.png?v=1.9.17" alt="Rename Files"></div>
+      <div class="card-meta">
+        <div class="card-title">Rename Files</div>
+        <div class="card-blurb">Clean up file names using metadata tags. Generates "Artist: Title" format, removes underscores, numbers, processing markers (PN, IDs) — keeps all metadata searchable in Rekordbox.</div>
+      </div>
+    </div>
+    <details class="explain-block">
+      <summary>How it works</summary>
+      <div class="explain-body">
+        <p><strong>Input:</strong> Files like <code>918223_SomethingPN.mp3</code> or <code>Artist_Remix_12345.mp3</code> or <code>Track (2).mp3</code></p>
+        <p><strong>Artist priority:</strong> Vocal/lead artist → Album artist/band → Producer. So a Donna Summer remix by Felix da-Housecat becomes <code>Donna Summer: On the Radio (Felix da-Housecat remix)</code> — using Donna as the primary artist.</p>
+        <p><strong>Copy markers preserved:</strong> If a file is named <code>Track (2).mp3</code>, it becomes <code>Artist: Track (2).mp3</code>. Duplicates detected during rename get <code>(2)</code>, <code>(3)</code>, etc.</p>
+        <p><strong>Process:</strong> Reads title and artist from ID3 tags with smart priority, preserves copy markers (2), (copy), (v2), etc., strips processing markers and odd patterns.</p>
+        <p><strong>Output:</strong> Clean filenames like <code>Artist: Title.mp3</code> or <code>Artist: Title (2).mp3</code></p>
+        <p><strong>Metadata preserved:</strong> Artist, album, and all other tags stay intact — full searchability in Rekordbox.</p>
+      </div>
+    </details>
+    <div class="card-form">
+      <div class="field compact-drop-field">
+        <label>Source Folder</label>
+        <div class="folder-zone" id="rename-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folder here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="rename-zone-text" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('rename-pills')">Browse…</button>
+            <button class="folder-zone-add" type="button" onclick="renameZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="rename-pills"></div>
+      </div>
+      <div class="field">
+        <div class="checkbox-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="rename-dry-run" checked>
+            Dry Run (preview only — no files will be renamed)
+          </label>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-rename" onclick="runRename()">
+          <img src="/static/icon-filename.png?v=1.9.17" style="width:16px;height:16px;filter:brightness(0) invert(1)" alt="">
+          Clean File Names
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
   <!-- ── Pipeline step-confirm gate (standalone fixed overlay) ─────────────── -->
   <div id="pipe-confirm-gate" style="display:none;position:fixed;bottom:calc(var(--log-h) + var(--scan-bar-h) + 16px);left:50%;transform:translateX(-50%);width:min(600px,92vw);z-index:1100;padding:14px 16px;border-radius:8px;border:1px solid var(--pipe-gate-border, rgba(251,191,36,.35));background:var(--pipe-gate-bg, rgba(251,191,36,.06));backdrop-filter:blur(8px);box-shadow:0 8px 32px rgba(0,0,0,.6);">
     <div style="display:flex;align-items:flex-start;gap:12px;">
@@ -1084,6 +1151,10 @@
     <div class="rmod-body">
       <pre id="rmod-pre"></pre>
     </div>
+    <div id="rmod-error-actions" class="rmod-error-actions" style="display:none">
+      <div class="rmod-ea-title">Suggested next steps</div>
+      <div id="rmod-ea-btns" class="rmod-ea-btns"></div>
+    </div>
     <div class="rmod-footer">
       <button class="welcome-got-it" onclick="closeReportModal(true)">✓ Got it</button>
     </div>
@@ -1105,10 +1176,6 @@
 </footer>
 
 <!-- ══ Floating action buttons ══════════════════════════════════════════════ -->
-<!-- ── File Browser toggle ─────────────────────────────────────────────────── -->
-<div id="fb-toggle-btn" onclick="toggleFileBrowser()" title="Browse files (⌘B)">
-  <img src="/static/icon-rb-folder.png" style="width:26px;height:26px;object-fit:contain">
-</div>
 
 <!-- ══ File Browser Panel ═══════════════════════════════════════════════════ -->
 <div id="fb-panel">
@@ -1123,20 +1190,49 @@
   <div id="fb-drag-hint">Drag any item to a drop zone ↗</div>
 </div>
 
-<!-- ── Pipeline Wizard button ─────────────────────────────────────────────── -->
-<div id="pipeline-btn" onclick="openPipelineWizard()" title="Pipeline Wizard">
-  <img src="/static/icon-start-wizard.png" style="width:24px;height:24px;object-fit:contain">
-</div>
+<!-- ══ Tools Panel (RekitBox modals + Rekordbox tools) ══════════════════════ -->
+<div id="tools-panel">
+  <!-- Rekordbox DB tools -->
+  <button class="tool-btn db-tool-btn" id="rail-btn-audit" onclick="openDbPanel('audit')" title="Audit Library">
+    <img src="/static/icon-audit.png" class="tool-icon" alt="Audit">
+  </button>
 
-<div id="lightbulb-btn" onclick="openWelcome()" title="About RekitBox">
-  <img src="/static/icon-welcome-info.png" style="width:24px;height:24px;object-fit:contain">
-</div>
+  <button class="tool-btn db-tool-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths">
+    <img src="/static/icon-move.png" class="tool-icon" alt="Relocate">
+  </button>
 
-<!-- ══ Owl / Glossary ════════════════════════════════════════════════════════ -->
-<div id="owl-btn"
-     onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()"
-     onclick="owlClick()">
-  <img src="/static/icon-site-key.png" style="width:24px;height:24px;object-fit:contain" class="owl-icon">
+  <button class="tool-btn db-tool-btn" id="rail-btn-import" onclick="openDbPanel('import')" title="Import Tracks">
+    <img src="/static/icon-import.png" class="tool-icon" alt="Import">
+  </button>
+
+  <button class="tool-btn db-tool-btn" id="rail-btn-link" onclick="openDbPanel('link')" title="Link Playlists">
+    <img src="/static/icon-link.png" class="tool-icon" alt="Link">
+  </button>
+
+  <div class="tools-divider"></div>
+
+  <!-- RekitBox utility + modal tools -->
+  <button id="fb-toggle-btn" onclick="toggleFileBrowser()" class="tool-btn" title="Browse files (⌘B)">
+    <img src="/static/icon-rb-folder.png" class="tool-icon" alt="Browse files">
+  </button>
+
+  <button id="rekitgo-btn" onclick="openRekitGo()" class="tool-btn" title="RekitGo — iOS companion app">
+    <img src="/static/icon-rekitgo.png" class="tool-icon" alt="RekitGo">
+    <span id="rekitgo-btn-dot" class="tool-dot"></span>
+  </button>
+
+  <button id="pipeline-btn" onclick="openPipelineWizard()" class="tool-btn" title="Pipeline Wizard">
+    <img src="/static/icon-start-wizard.png" class="tool-icon" alt="Pipeline">
+  </button>
+
+  <button id="lightbulb-btn" onclick="openWelcome()" class="tool-btn" title="About RekitBox">
+    <img src="/static/icon-welcome-info.png" class="tool-icon" alt="About">
+  </button>
+
+  <!-- Glossary -->
+  <button id="owl-btn" onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()" onclick="owlClick()" class="tool-btn" title="Glossary &amp; Concepts">
+    <img src="/static/icon-site-key.png" class="tool-icon owl-icon" alt="Glossary">
+  </button>
 </div>
 
 <div id="owl-hover-panel"
@@ -1520,10 +1616,6 @@
       <span class="scan-bar-note">(see report)</span>
     </div>
   </div>
-  <div class="scan-bar-item">
-    <span class="scan-bar-label">Complete w/o Edits</span>
-    <span class="scan-bar-val safe" id="sb-clean">0</span>
-  </div>
   <div class="scan-bar-right">
     <span id="scan-bar-title"></span>
     <div id="scan-bar-spinner"></div>
@@ -1549,31 +1641,6 @@
 </div>
 
 <script src="/static/rekitbox.js"></script>
-
-<!-- ══ DB Rail ═══════════════════════════════════════════════════════════════
-     Fixed 64px strip on the right edge — icon buttons for RekordBox DB tools.
-     Hover shows label; click opens the slide-in panel.                       -->
-<div id="db-rail">
-  <div class="db-rail-inner">
-    <button class="db-rail-btn" id="rail-btn-audit"    onclick="openDbPanel('audit')"    title="Audit Library">
-      <img src="/static/icon-audit.png"  alt="Audit">
-      <span class="db-rail-label">Audit</span>
-    </button>
-    <button class="db-rail-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths">
-      <img src="/static/icon-move.png"   alt="Relocate">
-      <span class="db-rail-label">Relocate</span>
-    </button>
-    <button class="db-rail-btn" id="rail-btn-import"   onclick="openDbPanel('import')"   title="Import Tracks">
-      <img src="/static/icon-import.png" alt="Import">
-      <span class="db-rail-label">Import</span>
-    </button>
-    <button class="db-rail-btn" id="rail-btn-link"     onclick="openDbPanel('link')"     title="Link Playlists">
-      <img src="/static/icon-link.png"   alt="Link">
-      <span class="db-rail-label">Link</span>
-    </button>
-  </div>
-  <div class="db-rail-label-fixed">DB Tools</div>
-</div>
 
 <!-- ══ DB Panel ══════════════════════════════════════════════════════════════
      Slide-in 400px panel. Only the active section is visible.               -->
@@ -1738,6 +1805,143 @@
 
 <!-- backdrop -->
 <div id="db-panel-backdrop" onclick="closeDbPanel()"></div>
+
+<!-- ══ RekitGo walkthrough modal ════════════════════════════════════════════ -->
+<div id="rekitgo-backdrop" onclick="closeRekitGo()"></div>
+<div id="rekitgo-panel">
+
+  <!-- Header -->
+  <div class="rekitgo-header">
+    <span class="rekitgo-title">
+      <img src="/static/icon-rekitgo.png" class="rekitgo-title-icon" alt="RekitGo"> RekitGo
+    </span>
+    <button class="rekitgo-close" onclick="closeRekitGo()">✕</button>
+  </div>
+
+  <!-- Step indicator -->
+  <div class="rkg-steps">
+    <div class="rkg-step active" id="rkg-step-1" onclick="rkgGoTo(1)">
+      <div class="rkg-step-num">1</div>
+      <div class="rkg-step-label">Overview</div>
+    </div>
+    <div class="rkg-step-line"></div>
+    <div class="rkg-step" id="rkg-step-2" onclick="rkgGoTo(2)">
+      <div class="rkg-step-num">2</div>
+      <div class="rkg-step-label">Mac Setup</div>
+    </div>
+    <div class="rkg-step-line"></div>
+    <div class="rkg-step" id="rkg-step-3" onclick="rkgGoTo(3)">
+      <div class="rkg-step-num">3</div>
+      <div class="rkg-step-label">iPhone</div>
+    </div>
+    <div class="rkg-step-line"></div>
+    <div class="rkg-step" id="rkg-step-4" onclick="rkgGoTo(4)">
+      <div class="rkg-step-num">4</div>
+      <div class="rkg-step-label">Connect</div>
+    </div>
+  </div>
+
+  <!-- ── Page 1: Overview ─────────────────────────────────────────────────── -->
+  <div class="rkg-page" id="rkg-page-1">
+    <p class="rkg-section-body">
+      <strong>RekitGo</strong> is the iPhone companion to RekitBox. Queue downloads, browse your library, manage playlists, and export to Pioneer drives — all from your phone.
+    </p>
+    <p class="rkg-section-body">
+      It installs as a <strong>web app (PWA)</strong> — no App Store, no Xcode, no cost. Just open it in Safari and tap <em>Add to Home Screen</em>.
+    </p>
+    <div class="rkg-section-title">What you need</div>
+    <ul class="rkg-checklist">
+      <li>Your iPhone on the <strong>same Wi-Fi</strong> as this Mac — or Tailscale for remote access</li>
+      <li><strong>Safari</strong> on iPhone (required for Add to Home Screen)</li>
+      <li>Optionally: <strong>Tailscale</strong> on both devices for access from anywhere</li>
+    </ul>
+    <div class="rkg-notice">
+      <strong>LAN only?</strong> If both devices are on the same Wi-Fi, Tailscale is optional — LAN access works out of the box. Tailscale gives you remote access from anywhere.
+    </div>
+  </div>
+
+  <!-- ── Page 2: Mac Tailscale ────────────────────────────────────────────── -->
+  <div class="rkg-page hidden" id="rkg-page-2">
+    <p class="rkg-section-body">
+      Install <strong>Tailscale</strong> on this Mac so your iPhone can reach RekitBox remotely.
+    </p>
+    <div id="rkg-qr-ts-mac" class="rkg-qr-box">
+      <p class="rkg-qr-caption">tailscale.com/download/macos</p>
+    </div>
+    <ul class="rkg-checklist">
+      <li>Download and install Tailscale using the QR code above</li>
+      <li>Sign in with Google, Microsoft, or GitHub</li>
+      <li>Click <strong>Connect</strong> in the Tailscale menu bar icon</li>
+    </ul>
+    <div class="rkg-notice">
+      Already installed? Make sure the menu bar icon shows <strong>Connected</strong> before moving on.
+    </div>
+  </div>
+
+  <!-- ── Page 3: iPhone install ─────────────────────────────────────────── -->
+  <div class="rkg-page hidden" id="rkg-page-3">
+    <p class="rkg-section-body">
+      Scan the QR code below on your iPhone to open RekitGo in Safari, then install it to your home screen.
+    </p>
+    <div class="rkg-qr-pair">
+      <div>
+        <div class="rkg-qr-label">Tailscale <span style="font-weight:400;opacity:.6">(optional)</span></div>
+        <div id="rkg-qr-ts-ios" class="rkg-qr-box">
+          <p class="rkg-qr-caption">App Store</p>
+        </div>
+      </div>
+      <div>
+        <div class="rkg-qr-label">Open RekitGo</div>
+        <div id="rkg-qr-rekitgo-ios" class="rkg-qr-box">
+          <p class="rkg-qr-caption">Scan → opens in Safari</p>
+        </div>
+      </div>
+    </div>
+    <ul class="rkg-checklist">
+      <li>Scan the <strong>Open RekitGo</strong> QR with your iPhone camera</li>
+      <li>It opens in <strong>Safari</strong> — tap the <strong>Share</strong> button (□↑) at the bottom</li>
+      <li>Tap <strong>Add to Home Screen</strong> → tap <strong>Add</strong></li>
+      <li>RekitGo now lives on your home screen like a native app</li>
+    </ul>
+    <div class="rkg-notice">
+      <strong>Remote access?</strong> Install Tailscale on your iPhone and sign in with the same account as this Mac — then RekitGo works from anywhere, not just home Wi-Fi.
+    </div>
+  </div>
+
+  <!-- ── Page 4: Connect ────────────────────────────────────────────────────── -->
+  <div class="rkg-page hidden" id="rkg-page-4">
+    <div id="rekitgo-status-row">
+      <span id="rekitgo-status-dot"></span>
+      <span id="rekitgo-status-label">Checking…</span>
+    </div>
+    <div id="rekitgo-qr-wrap" class="rkg-qr-box">
+      <div id="rekitgo-qr"></div>
+      <p class="rkg-qr-caption">Scan on iPhone → opens in Safari → Add to Home Screen</p>
+    </div>
+    <div id="rekitgo-detail">
+      <div class="rekitgo-row">
+        <span class="rekitgo-key">Local URL</span>
+        <span class="rekitgo-val rekitgo-mono" id="rekitgo-local">—</span>
+      </div>
+      <div class="rekitgo-row" id="rekitgo-ts-row">
+        <span class="rekitgo-key">Remote URL</span>
+        <span class="rekitgo-val rekitgo-mono" id="rekitgo-tailscale">—</span>
+      </div>
+    </div>
+    <p class="rekitgo-offline-msg" id="rekitgo-offline-msg" style="display:none">
+      RekitBox is running offline — local tools work normally.<br>
+      Connect to Wi-Fi or install <strong>Tailscale</strong> for remote access.
+    </p>
+  </div>
+
+  <!-- Footer nav -->
+  <div class="rkg-footer">
+    <button class="btn btn-ghost btn-xs" id="rkg-prev" onclick="rkgPrev()" style="visibility:hidden">← Back</button>
+    <span style="font-size:.72rem;color:var(--text-dim);" id="rkg-counter">1 / 4</span>
+    <button class="btn btn-primary btn-xs" id="rkg-next" onclick="rkgNext()">Next →</button>
+  </div>
+
+</div>
 
 </body>
 </html>

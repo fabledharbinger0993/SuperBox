@@ -31,15 +31,17 @@ if str(_ROOT) not in sys.path:
 os.environ.setdefault('REKITBOX_ROOT', str(_ROOT))
 
 # ── Server config ─────────────────────────────────────────────────────────────
-_HOST = '127.0.0.1'
+# Bind to all interfaces so Tailscale (and LAN) can reach the mobile API.
+# The desktop UI still opens via localhost; the mobile API uses the Tailscale IP.
+_HOST = '0.0.0.0'
 _PORT = 5001
-_URL  = f'http://{_HOST}:{_PORT}/'
+_LOCAL_URL = f'http://127.0.0.1:{_PORT}/'   # used for health-check and browser
 
 
 def _server_running() -> bool:
     import urllib.request
     try:
-        urllib.request.urlopen(_URL, timeout=1)
+        urllib.request.urlopen(_LOCAL_URL, timeout=1)
         return True
     except Exception:
         return False
@@ -92,7 +94,7 @@ if __name__ == '__main__':
 
     window = webview.create_window(
         title='RekitBox',
-        url=_URL,
+        url=_LOCAL_URL,
         width=1400,
         height=900,
         min_size=(900, 600),

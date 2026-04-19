@@ -174,11 +174,73 @@ function openReportModal(title, text, reportPath) {
     pathEl.style.display = '';
   }
   document.getElementById('rmod-pre').textContent = text;
+  _populateErrorActions(title);
   sessionReports[title] = { text, reportPath, ts: Date.now() };
   _sbFadeBd('report-modal-backdrop', true);
   const box = document.getElementById('report-modal');
   void box.offsetWidth;
   _sbAnim(box, 'sb-modal-in', '.28s');
+}
+
+function _populateErrorActions(scanTitle) {
+  const s = _lastErrorSummary;
+  const wrap = document.getElementById('rmod-error-actions');
+  const btns = document.getElementById('rmod-ea-btns');
+  if (!wrap || !btns) return;
+  btns.innerHTML = '';
+  let hasAny = false;
+
+  // Open Quarantine folder
+  if (s && s.corrupt && s.corrupt.length > 0 && s.quarantine_dir) {
+    hasAny = true;
+    const b = document.createElement('button');
+    b.className = 'rmod-ea-btn quarantine';
+    b.textContent = `Open Quarantine (${s.corrupt.length} file${s.corrupt.length === 1 ? '' : 's'})`;
+    b.onclick = () => fetch(`/api/open-file?path=${encodeURIComponent(s.quarantine_dir)}`);
+    btns.appendChild(b);
+  }
+
+  // Retry with force — only tag-write and other failures (not decode failures, those need conversion)
+  const retryable = [
+    ...((s && s.tag_failed) || []),
+    ...((s && s.other)      || []),
+  ];
+  if (retryable.length > 0) {
+    hasAny = true;
+    const retryPaths = retryable.map(f => f.path).filter(Boolean);
+    const b = document.createElement('button');
+    b.className = 'rmod-ea-btn retry';
+    b.textContent = `Retry ${retryPaths.length} failed track${retryPaths.length === 1 ? '' : 's'} with Force`;
+    b.onclick = () => {
+      closeReportModal(false);
+      _runProcessRetry({
+        paths:  retryPaths,
+        no_bpm: document.getElementById('process-no-bpm')?.checked || false,
+        no_key: document.getElementById('process-no-key')?.checked  || false,
+      });
+    };
+    btns.appendChild(b);
+  }
+
+  // Convert hint — decode failures need to be converted first
+  if (s && s.decode_failed && s.decode_failed.length > 0) {
+    hasAny = true;
+    const b = document.createElement('button');
+    b.className = 'rmod-ea-btn convert';
+    b.textContent = `${s.decode_failed.length} need conversion first — open Convert tool`;
+    b.onclick = () => {
+      closeReportModal(false);
+      document.getElementById('step-convert')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const parents = [...new Set(s.decode_failed.map(f => {
+        const parts = (f.path || '').split('/'); parts.pop(); return parts.join('/');
+      }).filter(Boolean))];
+      parents.forEach(p => addFolderPill('convert-pills', p));
+    };
+    btns.appendChild(b);
+  }
+
+  wrap.style.display = hasAny ? 'flex' : 'none';
+  // Don't clear _lastErrorSummary here — still needed if user re-opens the card
 }
 
 function closeReportModal(shrinkToPill) {
@@ -434,7 +496,6 @@ function showToast(message, type = 'neutral') {
 
 async function interruptScan() {
   if (!isRunning) return;
-  if (!confirm('Ask the scan to stop gracefully?\n\nThe process will receive a stop signal and try to clean up. The server will remain running.')) return;
   const btn = document.getElementById('scan-bar-interrupt');
   btn.textContent = '⏸ Stopping…'; btn.disabled = true;
   try {
@@ -446,11 +507,27 @@ async function interruptScan() {
   }
 }
 
+let _emergencyArmed = false;
+let _emergencyArmTimer = null;
+
 async function emergencyStop() {
   if (!isRunning) return;
-  if (!confirm('Force-kill the scan immediately?\n\nThis will hard-terminate the process. Any in-progress writes may be incomplete.\n\nThe server will remain running.')) return;
   const btn = document.getElementById('scan-bar-emergency');
-  btn.textContent = '⚡ Killing…'; btn.disabled = true;
+  if (!_emergencyArmed) {
+    // First click — arm it for 3 seconds, require a second click to confirm
+    _emergencyArmed = true;
+    btn.textContent = '⚡ Click again to confirm';
+    btn.classList.add('armed');
+    _emergencyArmTimer = setTimeout(() => {
+      _emergencyArmed = false;
+      if (btn) { btn.textContent = '⚡ Emergency Stop'; btn.classList.remove('armed'); }
+    }, 3000);
+    return;
+  }
+  // Second click — fire
+  clearTimeout(_emergencyArmTimer);
+  _emergencyArmed = false;
+  btn.textContent = '⚡ Killing…'; btn.disabled = true; btn.classList.remove('armed');
   try {
     await fetch('/api/cancel/force', { method: 'POST' });
     appendLog('⚡ Emergency stop — process force-killed. Server is still running.', 'error');
@@ -498,7 +575,7 @@ function _brewRender(data) {
   const list = outdated.map(p =>
     `<strong>${p.name}</strong> ${p.installed} → ${p.current}`
   ).join(' &nbsp;·&nbsp; ');
-  msgEl.innerHTML = `Homebrew updates available for SuperBox packages: ${list}`;
+  msgEl.innerHTML = `Homebrew updates available for RekitBox packages: ${list}`;
   banner.style.display = 'flex';
 }
 
@@ -696,7 +773,7 @@ function rekitboxUpdateDismiss() {
 
 function runBrewUpgrade() {
   brewDismiss();
-  runCommand('/api/run/brew-upgrade', 'Homebrew — Upgrade SuperBox Packages');
+  runCommand('/api/run/brew-upgrade', 'Homebrew — Upgrade RekitBox Packages');
 }
 
 // Check on page load (non-blocking — banners appear only if updates found)
@@ -930,7 +1007,10 @@ function updateScanBar(p) {
 function finishScanBar() {
   document.getElementById('scan-bar-spinner').classList.remove('active');
   document.getElementById('scan-bar-interrupt').style.display = 'none';
-  document.getElementById('scan-bar-emergency').style.display = 'none';
+  const eb = document.getElementById('scan-bar-emergency');
+  eb.style.display = 'none'; eb.classList.remove('armed');
+  _emergencyArmed = false;
+  clearTimeout(_emergencyArmTimer);
   document.getElementById('scan-bar-dismiss').style.display = 'inline-block';
 }
 function dismissScanBar() {
@@ -1057,6 +1137,11 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
         }
         return;
       }
+      // Error summary — stash for report modal actions + retry option on card
+      if (line.startsWith('REKITBOX_ERROR_SUMMARY: ')) {
+        try { _lastErrorSummary = JSON.parse(line.slice(24)); _showRetryOption(); } catch(_) {}
+        return;
+      }
       // Pre-filter summary — show in log as info line
       if (line.startsWith('REKITBOX_PREFILTER: ')) {
         if (showPrefilter) {
@@ -1144,10 +1229,59 @@ function setAllButtons(disabled) {
   document.querySelectorAll('.btn').forEach(b => b.disabled = disabled);
 }
 
+// ── Error summary from last Tag Tracks / Normalize run ──────────────────────
+let _lastErrorSummary = null;   // populated by REKITBOX_ERROR_SUMMARY line
+
+function _retryErroredCount() {
+  if (!_lastErrorSummary) return 0;
+  return (
+    (_lastErrorSummary.decode_failed  || []).length +
+    (_lastErrorSummary.tag_failed     || []).length +
+    (_lastErrorSummary.other          || []).length
+  );
+}
+
+function _showRetryOption() {
+  const n = _retryErroredCount();
+  const row = document.getElementById('process-retry-errored-row');
+  const badge = document.getElementById('process-retry-count');
+  if (!row) return;
+  if (n > 0) {
+    row.style.display = '';
+    if (badge) badge.textContent = `${n} from last run`;
+  } else {
+    row.style.display = 'none';
+    const cb = document.getElementById('process-retry-errored');
+    if (cb) cb.checked = false;
+  }
+}
+
 /* ── Individual command runners ────────────────────────────────────────────── */
 function runProcess() {
   const paths = getFolderPaths('process-pills');
   if (!paths.length) { alert('Add at least one music folder first.'); return; }
+
+  // Retry-errored mode: POST the specific file list, force=true, no directory scan
+  const retryOnly = document.getElementById('process-retry-errored')?.checked;
+  if (retryOnly && _lastErrorSummary) {
+    const retryPaths = [
+      ...(_lastErrorSummary.decode_failed  || []).map(e => e.path),
+      ...(_lastErrorSummary.tag_failed     || []).map(e => e.path),
+      ...(_lastErrorSummary.other          || []).map(e => e.path),
+    ].filter(Boolean);
+    if (!retryPaths.length) {
+      alert('No retryable errored tracks found from the last run.');
+      return;
+    }
+    const body = {
+      paths:  retryPaths,
+      no_bpm: document.getElementById('process-no-bpm').checked,
+      no_key: document.getElementById('process-no-key').checked,
+    };
+    _runProcessRetry(body);
+    return;
+  }
+
   const p = new URLSearchParams();
   paths.forEach(path => p.append('path', path));
   if (document.getElementById('process-no-bpm').checked)  p.set('no_bpm', '1');
@@ -1157,26 +1291,107 @@ function runProcess() {
   p.set('no_normalize', '1');
   const el = document.getElementById('process-result');
   if (el) el.classList.add('hidden');
-  runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection', null, true, false);
+  _saveToolCkpt('process', {
+    paths,
+    no_bpm:      document.getElementById('process-no-bpm').checked,
+    no_key:      document.getElementById('process-no-key').checked,
+    force:       document.getElementById('process-force').checked,
+    enrich_tags: document.getElementById('process-enrich-tags')?.checked || false,
+  });
+  document.getElementById('step-process')?.querySelector('.tool-resume-banner')?.remove();
+  runCommand(`/api/run/process?${p}`, 'Tag Tracks — BPM & Key Detection',
+    ec => { if (ec === 0) _clearToolCkpt('process'); }, true, false);
 }
 
-function runNormalize() {
+function _runProcessRetry(body) {
+  const label = `Tag Tracks — Retry ${body.paths.length} errored track${body.paths.length === 1 ? '' : 's'}`;
+  if (isRunning) return;
+  initLog(label);
+  showScanBar(label);
+  isRunning = true;
+  setSpinner(true);
+  setAllButtons(true);
+  appendLog(`▸ ${label}`, 'dim');
+  appendLog('', 'dim');
+
+  let reportBuffer = [];
+  let inReport = false;
+  let capturedReportPath = null;
+
+  fetch('/api/run/process-retry', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).then(resp => {
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    function pump() {
+      return reader.read().then(({ done, value }) => {
+        if (value) buf += decoder.decode(value, { stream: true });
+        const events = buf.split('\n\n');
+        buf = events.pop();
+        for (const evt of events) {
+          const dataLine = evt.split('\n').find(l => l.startsWith('data: '));
+          if (!dataLine) continue;
+          let data;
+          try { data = JSON.parse(dataLine.slice(6)); } catch(_) { continue; }
+          if (data.line !== undefined) {
+            const line = data.line;
+            if (line === 'REKITBOX_REPORT_BEGIN') { inReport = true; reportBuffer = []; continue; }
+            if (line === 'REKITBOX_REPORT_END')   { inReport = false; continue; }
+            if (inReport) { reportBuffer.push(line); continue; }
+            if (line.startsWith('REKITBOX_REPORT_PATH: '))  { capturedReportPath = line.slice(22).trim(); continue; }
+            if (line.startsWith('REKITBOX_PROGRESS: '))     { try { updateScanBar(JSON.parse(line.slice(19))); } catch(_){} continue; }
+            if (line.startsWith('REKITBOX_ERROR_SUMMARY: ')) { try { _lastErrorSummary = JSON.parse(line.slice(24)); _showRetryOption(); } catch(_){} continue; }
+            appendLog(line, classifyLine(line));
+          }
+          if (data.done) {
+            isRunning = false; setSpinner(false); setAllButtons(false); finishScanBar();
+            appendLog('');
+            appendLog(data.exit_code === 0 ? '✓ Finished successfully' : `✗ Exited with code ${data.exit_code}`,
+                      data.exit_code === 0 ? 'log-exit-ok' : 'log-exit-fail');
+            if (reportBuffer.length > 0) {
+              const txt = reportBuffer.join('\n');
+              if (data.exit_code === 0) openReportModal(label, txt, capturedReportPath);
+              else sessionReports[label] = { text: txt, reportPath: capturedReportPath };
+            }
+          }
+        }
+        if (!done) return pump();
+      });
+    }
+    return pump();
+  }).catch(err => {
+    isRunning = false; setSpinner(false); setAllButtons(false); finishScanBar();
+    appendLog(`[Connection error] ${err.message}`, 'error');
+  });
+}
+
+function runNormalize(_skipConfirm = false) {
   const paths = getFolderPaths('normalize-pills');
   if (!paths.length) { alert('Add at least one music folder first.'); return; }
-  const confirmed = confirm(
-    'This will rewrite audio files.\n\n' +
-    'Originals are renamed .bak during the operation and deleted only after the new file is verified.\n\n' +
-    'Make sure you have an independent backup of your drive before proceeding.\n\n' +
-    'Continue?'
-  );
-  if (!confirmed) return;
+  if (!_skipConfirm) {
+    const confirmed = confirm(
+      'This will rewrite audio files.\n\n' +
+      'Originals are renamed .bak during the operation and deleted only after the new file is verified.\n\n' +
+      'Make sure you have an independent backup of your drive before proceeding.\n\n' +
+      'Continue?'
+    );
+    if (!confirmed) return;
+  }
   const workers = document.getElementById('normalize-workers')?.value || '4';
   const p = new URLSearchParams({ no_bpm: '1', no_key: '1' });
   paths.forEach(path => p.append('path', path));
   if (parseInt(workers) > 1) p.set('workers', workers);
   const el = document.getElementById('normalize-result');
   if (el) el.classList.add('hidden');
-  runCommand(`/api/run/process?${p}`, 'Normalize — Loudness to −8.0 LUFS', null, true, false);
+  _saveToolCkpt('normalize', { paths, workers });
+  document.getElementById('step-normalize')?.querySelector('.tool-resume-banner')?.remove();
+  runCommand(`/api/run/process?${p}`, 'Normalize — Loudness to −8.0 LUFS',
+    ec => { if (ec === 0) _clearToolCkpt('normalize'); }, true, false);
 }
 
 function runImportDry() {
@@ -1231,9 +1446,12 @@ function runDuplicates() {
     const thresholdPct = parseInt(document.getElementById('fuzzy-threshold')?.value || '85');
     p.set('fuzzy_threshold', (thresholdPct / 100).toFixed(2));
   }
+  _saveToolCkpt('duplicates', { paths, workers, matchMode });
+  document.getElementById('step-duplicates')?.querySelector('.tool-resume-banner')?.remove();
   const title = 'Find Duplicates — Acoustic Fingerprinting';
   runCommand(`/api/run/duplicates?${p}`, title, (exitCode) => {
     if (exitCode === 0) {
+      _clearToolCkpt('duplicates');
       const rp = sessionReports[title]?.reportPath;
       if (rp) {
         const el = document.getElementById('prune-csv-path');
@@ -1265,7 +1483,10 @@ function runConvert() {
   const p = new URLSearchParams({ format });
   paths.forEach(path => p.append('path', path));
   if (parseInt(workers) > 1) p.set('workers', workers);
-  runCommand(`/api/run/convert?${p}`, `Converting Audio Files to ${format.toUpperCase()}`);
+  _saveToolCkpt('convert', { paths, format, workers });
+  document.getElementById('step-convert')?.querySelector('.tool-resume-banner')?.remove();
+  runCommand(`/api/run/convert?${p}`, `Converting Audio Files to ${format.toUpperCase()}`,
+    ec => { if (ec === 0) _clearToolCkpt('convert'); });
 }
 
 /* ── Pipeline Builder ──────────────────────────────────────────────────────── */
@@ -1546,7 +1767,7 @@ function pipeWizBuildConfigs() {
   });
 
   pipelineSteps.forEach((step, i) => {
-    const def   = PIPE_STEPS[step.type] || { name: step.type, icon: '/static/SRB_LOGO.png', desc: '' };
+    const def   = PIPE_STEPS[step.type] || { name: step.type, icon: '/static/RB_LOGO.png', desc: '' };
     const label = _typeLabel(pipelineSteps, step, i);
     const ready = _stepIsReady(step);
 
@@ -1577,7 +1798,7 @@ function pipeWizSelectStep(i) {
 
   const step  = pipelineSteps[i];
   if (!step) return;
-  const def   = PIPE_STEPS[step.type] || { name: step.type, icon: '/static/SRB_LOGO.png', desc: '' };
+  const def   = PIPE_STEPS[step.type] || { name: step.type, icon: '/static/RB_LOGO.png', desc: '' };
   const label = _typeLabel(pipelineSteps, step, i);
   const panel = document.getElementById('pipe-wiz-active-cfg');
 
@@ -1774,6 +1995,151 @@ function _savePipeCfg(type, cfg) {
 
 function _loadPipeCfg(type) {
   try { return JSON.parse(localStorage.getItem(`sb_pipe_cfg_${type}`)) || {}; } catch(_) { return {}; }
+}
+
+/* ── Per-tool run checkpoint ───────────────────────────────────────────────
+   Each long-running tool saves its config to localStorage when it starts.
+   On page load, stale checkpoints become "Interrupted run" banners on the
+   card, offering Resume (re-run same config) or Dismiss (start fresh).      */
+
+const _TOOL_CKPT = key => `rb_ckpt_${key}`;
+
+function _saveToolCkpt(toolKey, cfg) {
+  try { localStorage.setItem(_TOOL_CKPT(toolKey), JSON.stringify({ ...cfg, ts: Date.now() })); }
+  catch(_) {}
+}
+function _loadToolCkpt(toolKey) {
+  try { return JSON.parse(localStorage.getItem(_TOOL_CKPT(toolKey))); }
+  catch(_) { return null; }
+}
+function _clearToolCkpt(toolKey) {
+  try { localStorage.removeItem(_TOOL_CKPT(toolKey)); } catch(_) {}
+}
+
+// Resume-function registry — populated by _showToolResumeBanner
+const _toolResumeFns = {};
+
+function _showToolResumeBanner(toolKey, cardId, resumeFn) {
+  const ckpt = _loadToolCkpt(toolKey);
+  const card = document.getElementById(cardId);
+  if (!card || card.style.display === 'none') return;
+  // Remove stale banner if checkpoint is gone
+  const existing = card.querySelector('.tool-resume-banner');
+  if (!ckpt) { existing?.remove(); return; }
+  if (existing) return; // already showing
+
+  const age      = Math.round((Date.now() - (ckpt.ts || 0)) / 60000);
+  const ageText  = age < 1 ? 'just now' : age < 60 ? `${age}m ago` : `${Math.round(age / 60)}h ago`;
+  const mainPaths = ckpt.paths || ckpt.sources || [];
+  const pathsText = mainPaths.length ? mainPaths.join(', ') : 'previous paths';
+
+  const banner = document.createElement('div');
+  banner.className = 'tool-resume-banner';
+  banner.innerHTML = `
+    <div class="trb-icon">⏸</div>
+    <div class="trb-text">
+      <div class="trb-title">Interrupted run — ${ageText}</div>
+      <div class="trb-paths">${pathsText}</div>
+    </div>
+    <button class="btn btn-neon trb-btn-resume" onclick="_resumeTool('${toolKey}')">Resume</button>
+    <button class="trb-btn-dismiss" title="Dismiss — start fresh" onclick="_dismissToolCkpt('${toolKey}', '${cardId}')">✕</button>`;
+
+  const form = card.querySelector('.card-form');
+  if (form) form.prepend(banner);
+  else card.appendChild(banner);
+  _toolResumeFns[toolKey] = resumeFn;
+}
+
+function _resumeTool(toolKey) {
+  const ckpt = _loadToolCkpt(toolKey);
+  if (ckpt && _toolResumeFns[toolKey]) _toolResumeFns[toolKey](ckpt);
+}
+
+function _dismissToolCkpt(toolKey, cardId) {
+  _clearToolCkpt(toolKey);
+  document.getElementById(cardId)?.querySelector('.tool-resume-banner')?.remove();
+}
+
+function _populatePills(pillsId, paths) {
+  const c = document.getElementById(pillsId);
+  if (c) c.innerHTML = '';
+  (paths || []).forEach(p => addFolderPill(pillsId, p));
+}
+
+// ── Resume functions — restore form state and re-run ─────────────────────────
+function _resumeProcess(ckpt) {
+  _populatePills('process-pills', ckpt.paths);
+  document.getElementById('process-no-bpm').checked  = !!ckpt.no_bpm;
+  document.getElementById('process-no-key').checked  = !!ckpt.no_key;
+  document.getElementById('process-force').checked   = false; // never force on resume
+  const enrich = document.getElementById('process-enrich-tags');
+  if (enrich) enrich.checked = !!ckpt.enrich_tags;
+  document.getElementById('step-process')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  runProcess();
+}
+
+function _resumeNormalize(ckpt) {
+  _populatePills('normalize-pills', ckpt.paths);
+  const w = document.getElementById('normalize-workers');
+  if (w && ckpt.workers) w.value = ckpt.workers;
+  document.getElementById('step-normalize')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  runNormalize(true); // _skipConfirm = true
+}
+
+function _resumeConvert(ckpt) {
+  _populatePills('convert-pills', ckpt.paths);
+  const fmt = document.getElementById('convert-format');
+  if (fmt && ckpt.format) fmt.value = ckpt.format;
+  const w = document.getElementById('convert-workers');
+  if (w && ckpt.workers) w.value = ckpt.workers;
+  document.getElementById('step-convert')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  runConvert();
+}
+
+function _resumeDuplicates(ckpt) {
+  _populatePills('dupes-pills', ckpt.paths);
+  const w = document.getElementById('dupes-workers');
+  if (w && ckpt.workers) w.value = ckpt.workers;
+  if (ckpt.matchMode) {
+    const radio = document.querySelector(`input[name="dupes-match-mode"][value="${ckpt.matchMode}"]`);
+    if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
+  }
+  document.getElementById('step-duplicates')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  runDuplicates();
+}
+
+function _resumeOrganize(ckpt) {
+  _populatePills('organize-source-pills', ckpt.sources);
+  const t = document.getElementById('organize-target');
+  if (t && ckpt.target) t.value = ckpt.target;
+  const mode = document.getElementById('organize-mode');
+  if (mode && ckpt.mode) mode.value = ckpt.mode;
+  const w = document.getElementById('organize-workers');
+  if (w && ckpt.workers) w.value = ckpt.workers;
+  const dr = document.getElementById('organize-dry-run');
+  if (dr) dr.checked = !!ckpt.dryRun;
+  document.getElementById('step-organize')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  runOrganize();
+}
+
+function _resumeNovelty(ckpt) {
+  _populatePills('novelty-pills', ckpt.sources);
+  const d = document.getElementById('novelty-dest');
+  if (d && ckpt.dest) d.value = ckpt.dest;
+  const dr = document.getElementById('novelty-dry-run');
+  if (dr) dr.checked = !!ckpt.dryRun;
+  document.getElementById('step-novelty')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  runNovelty();
+}
+
+// ── Init — show banners for any stale checkpoints on page load ───────────────
+function _initToolCheckpoints() {
+  _showToolResumeBanner('process',    'step-process',    _resumeProcess);
+  _showToolResumeBanner('normalize',  'step-normalize',  _resumeNormalize);
+  _showToolResumeBanner('convert',    'step-convert',    _resumeConvert);
+  _showToolResumeBanner('duplicates', 'step-duplicates', _resumeDuplicates);
+  _showToolResumeBanner('organize',   'step-organize',   _resumeOrganize);
+  _showToolResumeBanner('novelty',    'step-novelty',    _resumeNovelty);
 }
 
 /* ── Pipeline checkpoint: survive interruptions and resume ────────────────── */
@@ -2230,10 +2596,17 @@ function runOrganize() {
   if (threshold !== '15') p.set('mix_threshold', threshold);
   const modeLabel = mode === 'integrate' ? 'Integration (copies only, source untouched)' : 'Assimilation (move + clean source)';
   const label = dryRun ? `Organize — Dry Run · ${modeLabel}` : `Organize — ${modeLabel}`;
+  if (!dryRun) {
+    _saveToolCkpt('organize', { sources, target, mode, workers, dryRun: false });
+    document.getElementById('step-organize')?.querySelector('.tool-resume-banner')?.remove();
+  }
   const _orgTarget = target;
   const _orgDry    = dryRun;
   runCommand(`/api/run/organize?${p}`, label, (exitCode) => {
-    if (exitCode === 0 && !_orgDry) _promptSetLibraryRoot(_orgTarget);
+    if (exitCode === 0) {
+      _clearToolCkpt('organize');
+      if (!_orgDry) _promptSetLibraryRoot(_orgTarget);
+    }
   });
 }
 
@@ -2251,7 +2624,40 @@ function runNovelty() {
   const label = dryRun
     ? 'Novelty Scan — Dry Run (nothing will be copied)'
     : 'Novelty Scan — Copying novel tracks to destination';
-  runCommand(`/api/run/novelty?${p}`, label);
+  if (!dryRun) {
+    _saveToolCkpt('novelty', { sources, dest, dryRun: false });
+    document.getElementById('step-novelty')?.querySelector('.tool-resume-banner')?.remove();
+  }
+  runCommand(`/api/run/novelty?${p}`, label,
+    ec => { if (ec === 0) _clearToolCkpt('novelty'); });
+}
+
+/* ── Rename Files ──────────────────────────────────────────────────────────── */
+
+function renameZoneAdd() {
+  const input = document.getElementById('rename-zone-text');
+  const path = input.value.trim();
+  if (!path) { alert('Enter a folder path'); return; }
+  addFolderPill('rename-pills', path);
+  input.value = '';
+}
+
+function runRename() {
+  const paths = getFolderPaths('rename-pills');
+  const dryRun = document.getElementById('rename-dry-run').checked;
+  if (!paths.length) { alert('Add a folder to rename files in.'); return; }
+  const p = new URLSearchParams();
+  p.set('path', paths[0]);
+  if (!dryRun) p.set('no_dry_run', '1');
+  const label = dryRun
+    ? 'Rename Files — Dry Run (preview only)'
+    : 'Rename Files — Cleaning file names';
+  if (!dryRun) {
+    _saveToolCkpt('rename', { path: paths[0], dryRun: false });
+    document.getElementById('step-rename')?.querySelector('.tool-resume-banner')?.remove();
+  }
+  runCommand(`/api/run/rename?${p}`, label,
+    ec => { if (ec === 0) _clearToolCkpt('rename'); });
 }
 
 /* ── Prune Duplicates ──────────────────────────────────────────────────────── */
@@ -2469,9 +2875,7 @@ function _syncCheckboxes() {
 }
 
 function _rowPath(row) {
-  // extract path from the title attribute of .prune-fname
-  const fname = row.querySelector('.prune-fname');
-  return fname ? fname.title : null;
+  return row.dataset.filePath || null;
 }
 
 function _updateSaButtons() {
@@ -2629,22 +3033,22 @@ const GLOSSARY = [
     short:'Database — where RekordBox stores everything',
     body:`<p><strong>Database</strong> — a structured file that stores information in organized tables, like a very powerful spreadsheet that the computer reads and writes directly.</p>
 <p>RekordBox uses one file called <code>master.db</code> to remember your entire library: track names, BPM, key, playlists, cue points, loops — all of it lives in there.</p>
-<p>Every write operation in SuperBox creates a timestamped backup of this file before touching it.</p>`},
+<p>Every write operation in RekitBox creates a timestamped backup of this file before touching it.</p>`},
 
   { id:'cli', cat:'Tech', term:'CLI',
     short:'Command-Line Interface — terminal window',
     body:`<p><strong>Command-Line Interface</strong> — the text window (Terminal on Mac) where you type instructions directly to the computer instead of clicking buttons in an app.</p>
-<p>SuperBox's CLI is the actual engine doing the work. This web dashboard is just a control panel that talks to the engine so you never have to type commands yourself.</p>`},
+<p>RekitBox's CLI is the actual engine doing the work. This web dashboard is just a control panel that talks to the engine so you never have to type commands yourself.</p>`},
 
   { id:'py',  cat:'Tech', term:'.py / Python',
-    short:'The programming language SuperBox is built in',
-    body:`<p><strong>Python</strong> — the programming language SuperBox is written in. You don't need to know it or read it.</p>
+    short:'The programming language RekitBox is built in',
+    body:`<p><strong>Python</strong> — the programming language RekitBox is written in. You don't need to know it or read it.</p>
 <p>What you do need: <strong>Python 3.12 or later</strong> installed on your Mac. If something won't start, a wrong Python version is usually the reason. Check with <code>python3 --version</code> in Terminal.</p>`},
 
   { id:'csv', cat:'Tech', term:'CSV',
     short:'Spreadsheet file — opens in Excel or Numbers',
     body:`<p><strong>Comma-Separated Values</strong> — a plain text file that any spreadsheet app (Excel, Numbers, Google Sheets) can open as a table.</p>
-<p>The duplicate detector writes its results to a CSV so you can sort, filter, and decide what to remove at your own pace. SuperBox never deletes files — that decision is always yours.</p>`},
+<p>The duplicate detector writes its results to a CSV so you can sort, filter, and decide what to remove at your own pace. RekitBox never deletes files — that decision is always yours.</p>`},
 
   { id:'sha', cat:'Tech', term:'SHA-256',
     short:'Content fingerprint — proves two files are identical',
@@ -2667,12 +3071,12 @@ const GLOSSARY = [
     id: 'bpm', cat: 'Audio', term: 'BPM',
     short: 'Beats Per Minute — how fast a track is',
     body: `<p><strong>Beats Per Minute</strong> — the tempo of a track. A kick drum at 128 BPM fires 128 times per minute.</p>
-<p>RekordBox stores BPM internally as BPM × 100 (so 128.0 BPM is stored as 12800). SuperBox handles that conversion automatically so you never see raw database values.</p>
+<p>RekordBox stores BPM internally as BPM × 100 (so 128.0 BPM is stored as 12800). RekitBox handles that conversion automatically so you never see raw database values.</p>
 <p>Detection uses <strong>librosa</strong>, which analyzes the actual audio waveform for beat patterns — not guessing from the filename.</p>`},
   { id:'key', cat:'Audio', term:'Musical Key',
     short:'The harmonic "home base" of a track',
     body:`<p>The musical scale a track is built around — determines which other tracks it will sound harmonically compatible with when mixed.</p>
-<p>SuperBox detects key using the <strong>Krumhansl-Schmuckler algorithm</strong> on the audio's chroma features. It understands all three common notations and stores whichever format your database already uses:</p>
+<p>RekitBox detects key using the <strong>Krumhansl-Schmuckler algorithm</strong> on the audio's chroma features. It understands all three common notations and stores whichever format your database already uses:</p>
 <ul><li><strong>Standard</strong> — Am, C, F#m, Bb…</li>
 <li><strong>Camelot</strong> — 1A, 8B, 11A…</li>
 <li><strong>Open Key</strong> — 1m, 8d, 11m…</li></ul>`},
@@ -2686,28 +3090,28 @@ const GLOSSARY = [
   { id:'ebu', cat:'Audio', term:'EBU R128',
     short:'The international loudness measurement standard',
     body:`<p><strong>European Broadcasting Union Recommendation R128</strong> — the international standard defining how to measure integrated loudness correctly.</p>
-<p>The same standard Spotify, YouTube, Apple Music, and broadcast TV use for their loudness normalization. SuperBox uses R128 analysis to measure your tracks and target them to −8.0 LUFS.</p>`},
+<p>The same standard Spotify, YouTube, Apple Music, and broadcast TV use for their loudness normalization. RekitBox uses R128 analysis to measure your tracks and target them to −8.0 LUFS.</p>`},
 
   { id:'cbr', cat:'Audio', term:'CBR 320',
     short:'Highest-quality MP3 encoding setting',
     body:`<p><strong>Constant Bitrate at 320 kbps</strong> — the highest quality setting for MP3 encoding. Every second of audio uses the same amount of data.</p>
-<p>When SuperBox normalizes an MP3, it re-encodes at 320 kbps CBR. This is still a lossy process — any re-encode of a lossy file costs some quality — which is why normalization is optional and having a backup first is strongly recommended.</p>
+<p>When RekitBox normalizes an MP3, it re-encodes at 320 kbps CBR. This is still a lossy process — any re-encode of a lossy file costs some quality — which is why normalization is optional and having a backup first is strongly recommended.</p>
 <p>AIFF and WAV files are re-encoded losslessly, so no quality loss at all.</p>`},
 
   { id:'aiff', cat:'Audio', term:'AIFF / AIF',
     short:'Lossless audio format — full quality, larger file',
     body:`<p><strong>Audio Interchange File Format</strong> — Apple's lossless audio format. Common in professional DJ libraries because it preserves full recording quality and supports embedded cue points that survive a drive wipe.</p>
-<p>When SuperBox normalizes an AIFF it re-encodes losslessly at the same bit depth as your original — no generation loss whatsoever.</p>`},
+<p>When RekitBox normalizes an AIFF it re-encodes losslessly at the same bit depth as your original — no generation loss whatsoever.</p>`},
 
   { id:'id3', cat:'Audio', term:'ID3 Tags',
     short:'Metadata embedded inside the audio file itself',
     body:`<p>The format used to store metadata <em>inside</em> audio files — title, artist, album, BPM, key, year, track number, and more.</p>
-<p>When you see track info in RekordBox, Finder, or iTunes, you're reading ID3 tags. SuperBox writes BPM and key into these tags so the data <strong>travels with the file</strong>, not just in the database. If you ever re-import, the tags are already there.</p>`},
+<p>When you see track info in RekordBox, Finder, or iTunes, you're reading ID3 tags. RekitBox writes BPM and key into these tags so the data <strong>travels with the file</strong>, not just in the database. If you ever re-import, the tags are already there.</p>`},
 
   { id:'fp', cat:'Audio', term:'Chromaprint / fpcalc',
     short:'Acoustic fingerprinting — identifies songs by sound',
     body:`<p><strong>Chromaprint</strong> is the fingerprinting library (used by AcoustID and MusicBrainz) that identifies recordings by their acoustic content — not their metadata.</p>
-<p><code>fpcalc</code> is the command-line tool it ships with. SuperBox calls it to analyze the first 120 seconds of each file and generate a fingerprint. Two identical fingerprints = same recording, no matter what the files are named or what format they're in.</p>
+<p><code>fpcalc</code> is the command-line tool it ships with. RekitBox calls it to analyze the first 120 seconds of each file and generate a fingerprint. Two identical fingerprints = same recording, no matter what the files are named or what format they're in.</p>
 <p>Requires <code>fpcalc</code> installed on your system: <code>brew install chromaprint</code></p>`},
 
   // ── RekordBox ──────────────────────────────────────────────────────────────
@@ -2717,12 +3121,12 @@ const GLOSSARY = [
 <p>Locations:<br>
 <code>~/Library/Pioneer/rekordbox/master.db</code> — your Mac<br>
 <code>/Volumes/[drive]/PIONEER/Master/master.db</code> — your export drive</p>
-<p><strong>Every SuperBox write operation creates a timestamped copy of this file in <code>~/rekordbox-toolkit/backups/</code> before touching it.</strong> The backup header in this app shows you when the last one was made.</p>`},
+<p><strong>Every RekitBox write operation creates a timestamped copy of this file in <code>~/rekordbox-toolkit/backups/</code> before touching it.</strong> The backup header in this app shows you when the last one was made.</p>`},
 
   { id:'cont', cat:'RekordBox', term:'DjmdContent',
     short:'The track table inside master.db',
     body:`<p>The database table where each track gets one row. Every attribute RekordBox knows about a track — title, artist, BPM, key, file path, bit depth, sample rate, cue points — lives here.</p>
-<p>When you import, SuperBox writes rows to this table. When you relocate, it updates the <code>FolderPath</code> column. It's the heart of your library.</p>`},
+<p>When you import, RekitBox writes rows to this table. When you relocate, it updates the <code>FolderPath</code> column. It's the heart of your library.</p>`},
 
   { id:'fp2', cat:'RekordBox', term:'FolderPath',
     short:'The stored file path in the database',
@@ -2739,38 +3143,38 @@ const GLOSSARY = [
     body:`<p>Two notation systems for musical keys designed to make harmonic mixing easy by replacing key names with numbers and letters.</p>
 <p><strong>Camelot</strong> — 1A through 12B. Adjacent numbers are harmonically compatible.<br>
 <strong>Open Key</strong> — 1m through 12d. Same concept, different notation.</p>
-<p>SuperBox maps all notations — including standard (Am, C#, F#m, etc.) — to whichever format your database already uses.</p>`},
+<p>RekitBox maps all notations — including standard (Am, C#, F#m, etc.) — to whichever format your database already uses.</p>`},
 
-  // ── SuperBox ───────────────────────────────────────────────────────────────
-  { id:'dry', cat:'SuperBox', term:'Dry Run',
+  // ── RekitBox ───────────────────────────────────────────────────────────────
+  { id:'dry', cat:'RekitBox', term:'Dry Run',
     short:'Preview mode — shows what would happen, writes nothing',
     body:`<p>Running a command with dry run enabled shows you exactly what <em>would</em> happen — how many tracks would be imported, what paths would change — without writing a single byte to the database.</p>
 <p><strong>Always run the Preview Import step before the real import.</strong> If the track count looks wrong, you haven't broken anything yet. The dry run is free.</p>`},
 
-  { id:'bat', cat:'SuperBox', term:'Batch Commit',
+  { id:'bat', cat:'RekitBox', term:'Batch Commit',
     short:'Writing changes in chunks of 250',
-    body:`<p>Instead of writing one track at a time (slow) or all tracks at once (risky), SuperBox collects 250 changes and writes them as a single transaction.</p>
+    body:`<p>Instead of writing one track at a time (slow) or all tracks at once (risky), RekitBox collects 250 changes and writes them as a single transaction.</p>
 <p>If that transaction fails, the entire chunk rolls back — you never end up with 137 tracks written and 113 missing in a half-finished state.</p>`},
 
-  { id:'rol', cat:'SuperBox', term:'Rollback',
+  { id:'rol', cat:'RekitBox', term:'Rollback',
     short:'Auto-undo on failure — prevents partial writes',
     body:`<p>If any unhandled error occurs during a write operation, the database transaction is automatically cancelled — every pending change in that session is undone as if it never started.</p>
 <p>This is the mechanism that prevents partial imports. Either a full batch of 250 tracks lands cleanly, or none of them do. You will never have a half-imported library.</p>`},
 
-  { id:'orp', cat:'SuperBox', term:'Orphan File',
+  { id:'orp', cat:'RekitBox', term:'Orphan File',
     short:'File on disk that RekordBox doesn\'t know about',
     body:`<p>An audio file that exists in your music folder but has no matching row in the RekordBox database — RekordBox doesn't know it's there.</p>
 <p>Orphans appear in the Audit report. Common causes: files copied directly into the folder without going through an import, or leftovers from a failed previous import. The import step is how you bring them in.</p>`},
 
-  { id:'fuz', cat:'SuperBox', term:'Fuzzy Match',
+  { id:'fuz', cat:'RekitBox', term:'Fuzzy Match',
     short:'Approximate name matching — catches near-misses',
     body:`<p>Instead of requiring an exact string match, fuzzy matching scores text similarity and accepts anything above a threshold.</p>
-<p>SuperBox uses it in two places:</p>
+<p>RekitBox uses it in two places:</p>
 <ul><li><strong>Playlist linking</strong> — folder name vs. playlist name, 85% threshold</li>
 <li><strong>File relocation</strong> — filename stem similarity, 90% threshold</li></ul>
 <p>Higher threshold = stricter = fewer false positives, but more unmatched items. The defaults are tuned for DJ library naming conventions.</p>`},
 
-  { id:'rarp', cat:'SuperBox', term:'RARP',
+  { id:'rarp', cat:'RekitBox', term:'RARP',
     short:'Duplicate ranking: Pioneer Numbered → MIK → Raw',
     body:`<p>The hierarchy used to recommend which copy to keep when duplicate tracks are found:</p>
 <ul>
@@ -2778,15 +3182,15 @@ const GLOSSARY = [
 <li><strong>MIK (Mixed In Key tagged)</strong> — has a <code>TKEY</code>/<code>initialkey</code> tag already written by Mix In Key.</li>
 <li><strong>RAW</strong> — neither. Likely an unprocessed download.</li>
 </ul>
-<p>The CSV marks the top-ranked file in each group as KEEP. You review and make the final call — SuperBox never deletes anything.</p>`},
+<p>The CSV marks the top-ranked file in each group as KEEP. You review and make the final call — RekitBox never deletes anything.</p>`},
 
-  { id:'bak', cat:'SuperBox', term:'.bak File',
+  { id:'bak', cat:'RekitBox', term:'.bak File',
     short:'Temporary safety copy kept during audio processing',
     body:`<p>When normalizing loudness, the original file is renamed to <code>filename.mp3.bak</code> before the replacement is written.</p>
-<p>The <code>.bak</code> is only deleted after SuperBox confirms the new file is valid and readable using <code>soundfile</code>. If anything fails, your original is still there — just rename it to remove <code>.bak</code>.</p>
+<p>The <code>.bak</code> is only deleted after RekitBox confirms the new file is valid and readable using <code>soundfile</code>. If anything fails, your original is still there — just rename it to remove <code>.bak</code>.</p>
 <p>If you see leftover <code>.bak</code> files after an interrupted run, treat them as your originals. Verify the non-<code>.bak</code> version is intact before removing them.</p>`},
 
-  { id:'norm', cat:'SuperBox', term:'Normalization',
+  { id:'norm', cat:'RekitBox', term:'Normalization',
     short:'Matching loudness levels across your library',
     body:`<p>The process of analyzing each track's integrated loudness (LUFS) and re-encoding it so every track hits the same target level — <strong>−8.0 LUFS</strong>.</p>
 <p>Why it matters: without normalization, different tracks have different volumes. On CDJs you end up riding the channel gain between tracks during a mix. Normalized libraries let you keep gain at unity and focus on the mix.</p>
@@ -2802,7 +3206,7 @@ let cardZ          = 1000;
 function _buildOwlList() {
   const list = document.getElementById('owl-panel-list');
   if (list.children.length) return;
-  const groups = ['Tech','Audio','RekordBox','SuperBox'];
+  const groups = ['Tech','Audio','RekordBox','RekitBox'];
   groups.forEach(g => {
     const lbl = document.createElement('div');
     lbl.className = 'owl-group-label';
@@ -3444,7 +3848,7 @@ let _dbPanelActive = null;
 function openDbPanel(tool) {
   // Deactivate all sections + rail buttons
   document.querySelectorAll('.db-panel-section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.db-rail-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.db-tool-btn').forEach(b => b.classList.remove('active'));
 
   const section = document.getElementById('db-panel-' + tool);
   const btn     = document.getElementById('rail-btn-' + tool);
@@ -3462,7 +3866,7 @@ function openDbPanel(tool) {
 function closeDbPanel() {
   document.getElementById('db-panel').classList.remove('open');
   document.getElementById('db-panel-backdrop').classList.remove('open');
-  document.querySelectorAll('.db-rail-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.db-tool-btn').forEach(b => b.classList.remove('active'));
   _dbPanelActive = null;
 }
 
@@ -3481,6 +3885,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFolderZone('novelty-zone',   'novelty-pills',   'novelty-zone-text');
   setupFolderZone('import-zone',    'import-pills',    'import-zone-text');
   setupFolderZone('link-zone',      'link-pills',      'link-zone-text');
+  setupFolderZone('rename-zone',    'rename-pills',    'rename-zone-text');
   setupFolderZone('organize-zone',  'organize-source-pills', 'organize-zone-text');
   // Single-path zones (visual feedback + Browse/drop, no pills)
   setupFolderZone('relocate-old-zone', 'relocate-old-pills', 'relocate-old-zone-text');
@@ -3489,6 +3894,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSinglePathZone('novelty-dest-zone',    'novelty-dest');
   setupAllDropZones();
   normPreviewSetupObserver();
+  _initToolCheckpoints();
 });
 
 /* ── Normalize loudness preview player ──────────────────────────────────────
@@ -3703,3 +4109,121 @@ _initStateOverlay();
   const el = document.getElementById(id);
   if (el) el.addEventListener('change', () => { if (el.value.trim()) loadState(el.value.trim()); });
 });
+
+// ── RekitGo walkthrough ──────────────────────────────────────────────────────
+let _rkgStep = 1;
+const _rkgTotal = 4;
+
+function openRekitGo() {
+  document.getElementById('rekitgo-panel').classList.add('open');
+  document.getElementById('rekitgo-backdrop').classList.add('open');
+  rkgGoTo(1);        // always start at overview
+  _loadConnectivity(); // pre-fetch data so step 4 is ready
+}
+
+function closeRekitGo() {
+  document.getElementById('rekitgo-panel').classList.remove('open');
+  document.getElementById('rekitgo-backdrop').classList.remove('open');
+}
+
+function rkgGoTo(step) {
+  step = Math.max(1, Math.min(_rkgTotal, step));
+  _rkgStep = step;
+  for (let i = 1; i <= _rkgTotal; i++) {
+    const page = document.getElementById(`rkg-page-${i}`);
+    if (page) page.classList.toggle('hidden', i !== step);
+    const ind = document.getElementById(`rkg-step-${i}`);
+    if (!ind) continue;
+    ind.classList.remove('active', 'done');
+    if (i < step) ind.classList.add('done');
+    else if (i === step) ind.classList.add('active');
+  }
+  const prev = document.getElementById('rkg-prev');
+  const next = document.getElementById('rkg-next');
+  const ctr  = document.getElementById('rkg-counter');
+  if (prev) prev.style.visibility = step === 1 ? 'hidden' : 'visible';
+  if (next) next.textContent = step === _rkgTotal ? 'Done' : 'Next →';
+  if (ctr)  ctr.textContent  = `${step} / ${_rkgTotal}`;
+}
+
+function rkgNext() {
+  if (_rkgStep === _rkgTotal) { closeRekitGo(); return; }
+  rkgGoTo(_rkgStep + 1);
+}
+
+function rkgPrev() { rkgGoTo(_rkgStep - 1); }
+
+function _loadConnectivity() {
+  fetch('/api/connectivity')
+    .then(r => r.json())
+    .then(d => {
+      const dot     = document.getElementById('rekitgo-status-dot');
+      const btnDot  = document.getElementById('rekitgo-btn-dot');
+      const label   = document.getElementById('rekitgo-status-label');
+      const qr      = document.getElementById('rekitgo-qr');
+      const localEl = document.getElementById('rekitgo-local');
+      const tsEl    = document.getElementById('rekitgo-tailscale');
+      const offline = document.getElementById('rekitgo-offline-msg');
+      const qrWrap  = document.getElementById('rekitgo-qr-wrap');
+
+      // Status dot
+      if (dot) dot.className = '';
+      if (btnDot) btnDot.className = 'tool-dot';
+      if (d.remote_ready) {
+        dot  && dot.classList.add('remote');
+        btnDot && btnDot.classList.add('remote');
+        if (label) label.textContent = 'Remote access ready (Tailscale)';
+      } else if (d.local_ip && d.local_ip !== '127.0.0.1') {
+        dot  && dot.classList.add('lan');
+        btnDot && btnDot.classList.add('lan');
+        if (label) label.textContent = 'LAN access only — Tailscale not connected';
+      } else {
+        dot && dot.classList.add('offline');
+        if (label) label.textContent = 'Offline — local tools still work normally';
+      }
+
+      if (localEl)  localEl.textContent  = d.local_ip    ? `http://${d.local_ip}:5001`      : '—';
+      if (tsEl)     tsEl.textContent     = d.tailscale_ip ? `http://${d.tailscale_ip}:5001`  : 'not connected';
+
+      // Pairing QR (step 4) — now shows the PWA URL so iPhone can open in Safari
+      if ((d.qr_pwa_url || d.qr_svg) && qr) {
+        qr.innerHTML = d.qr_pwa_url || d.qr_svg;
+        if (qrWrap) qrWrap.style.display = 'flex';
+        if (offline) offline.style.display = 'none';
+      } else {
+        if (qrWrap) qrWrap.style.display = 'none';
+        if (offline) offline.style.display = 'block';
+      }
+
+      // Setup QRs (green) — steps 2 & 3
+      _injectSetupQr('rkg-qr-ts-mac',       d.qr_tailscale_mac);
+      _injectSetupQr('rkg-qr-ts-ios',       d.qr_tailscale_ios);
+      // Step 3 RekitGo slot: now shows the PWA URL QR (scan → Safari → Add to Home Screen)
+      _injectSetupQr('rkg-qr-rekitgo-ios',  d.qr_pwa_url || d.qr_rekitgo_ios);
+    })
+    .catch(() => {
+      const label = document.getElementById('rekitgo-status-label');
+      if (label) label.textContent = 'Could not fetch connectivity info';
+    });
+}
+
+function _injectSetupQr(elId, svg) {
+  if (!svg) return;
+  const box = document.getElementById(elId);
+  if (!box || box.querySelector('svg')) return; // already injected
+  const wrap = document.createElement('div');
+  wrap.innerHTML = svg;
+  const svgEl = wrap.querySelector('svg');
+  if (svgEl) box.insertBefore(svgEl, box.firstChild);
+}
+
+// Update button dot on page load (silent, no panel)
+fetch('/api/connectivity')
+  .then(r => r.json())
+  .then(d => {
+    const btnDot = document.getElementById('rekitgo-btn-dot');
+    if (!btnDot) return;
+    if (d.remote_ready)                              btnDot.classList.add('remote');
+    else if (d.local_ip && d.local_ip !== '127.0.0.1') btnDot.classList.add('lan');
+  })
+  .catch(() => {});

@@ -1,0 +1,25 @@
+{
+  "name": "RekitGo",
+  "short_name": "RekitGo",
+  "description": "iPhone companion to RekitBox — queue downloads, browse your library, manage playlists.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0d",
+  "theme_color": "#ff6600",
+  "icons": [
+    {
+      "src": "/static/icon-rekitgo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/RB_LOGO.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

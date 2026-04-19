@@ -16,12 +16,13 @@ BPM is returned as a float (e.g. 126.0) — the importer applies ×100.
 """
 
 import logging
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator
 
 from mutagen import File as MutagenFile
-from mutagen.id3 import ID3NoHeaderError
+from mutagen.id3 import ID3, ID3NoHeaderError
 
 from config import AUDIO_EXTENSIONS, BPM_MAX, BPM_MIN, MIN_FILE_BYTES, SKIP_DIRS, SKIP_PREFIXES
 
@@ -66,6 +67,28 @@ class TrackInfo:
     def is_valid(self) -> bool:
         """True if the file has at minimum a readable path and duration."""
         return self.duration_seconds is not None and self.duration_seconds > 0
+
+
+# ─── Filename-based fallback ─────────────────────────────────────────────────
+
+def _parse_filename_metadata(path: Path, info: "TrackInfo") -> None:
+    """
+    Last-resort metadata extraction from the filename when tags are absent.
+    Handles "Artist - Title.mp3" convention and strips Pioneer _PN suffixes.
+    """
+    stem = path.stem
+    # Strip Pioneer duplicate markers: _PN, _PN2, _PN 3, etc.
+    stem = re.sub(r'_PN\s*\d*$', '', stem, flags=re.IGNORECASE).strip()
+    # Strip leading track number: "02 ", "02. ", "02 - "
+    stem = re.sub(r'^\d+[\s.\-]+', '', stem).strip()
+    if ' - ' in stem:
+        artist_part, title_part = stem.split(' - ', 1)
+        if artist_part.strip():
+            info.artist = artist_part.strip()
+        if title_part.strip():
+            info.title = title_part.strip()
+    else:
+        info.title = info.title or stem.strip() or None
 
 
 # ─── Tag extraction helpers ───────────────────────────────────────────────────
@@ -174,11 +197,28 @@ def extract_metadata(path: Path) -> TrackInfo:
     try:
         audio = MutagenFile(path, easy=False)
     except Exception as e:
-        info.errors.append(f"mutagen open failed: {e}")
-        return info
+        if path.suffix.lower() == '.mp3':
+            # MPEG frame sync can fail while ID3 tags are still intact at the
+            # start of the file. Try reading just the ID3 block.
+            try:
+                _id3 = ID3(path)
+                class _ID3Only:
+                    tags = _id3
+                    info = None
+                audio = _ID3Only()
+                info.errors.append(f"MPEG sync warning (ID3 tags recovered): {e}")
+            except Exception:
+                info.errors.append(f"mutagen open failed: {e}")
+                _parse_filename_metadata(path, info)
+                return info
+        else:
+            info.errors.append(f"mutagen open failed: {e}")
+            _parse_filename_metadata(path, info)
+            return info
 
     if audio is None:
         info.errors.append("mutagen returned None (unrecognized format)")
+        _parse_filename_metadata(path, info)
         return info
 
     # ── Audio properties (from info object, always present if file opened) ──
@@ -195,6 +235,7 @@ def extract_metadata(path: Path) -> TrackInfo:
     tags = audio.tags
     if tags is None:
         info.errors.append("no tags found")
+        _parse_filename_metadata(path, info)
         return info
 
     # Detect tag format by type name — Vorbis comments and MP4 atoms have a

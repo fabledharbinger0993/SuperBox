@@ -117,6 +117,7 @@ struct ExportView: View {
 
     private func pollExport(jobId: String) {
         cancelPolling()
+        pollTask?.cancel()
         pollTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))

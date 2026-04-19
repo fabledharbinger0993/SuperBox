@@ -153,35 +153,51 @@ def quarantine_file(result: ProcessResult, quarantine_dir: Path) -> bool:
 
 # ─── BPM detection ────────────────────────────────────────────────────────────
 
-def _detect_bpm(path: Path) -> float | None:
+_ANALYSIS_SR: int = 22050  # sample rate used for BPM/key analysis
+
+
+def _load_audio_ffmpeg(path: Path, duration: float = ANALYSIS_DURATION) -> "tuple[np.ndarray, int] | None":
+    """
+    Decode audio to mono float32 PCM via ffmpeg subprocess.
+
+    Bypasses audioread / macOS Core Audio entirely — librosa.load() falls back
+    to audioread for MP3s which can segfault via AudioToolbox on certain files.
+    ffmpeg runs isolated; any crash or format error surfaces as a return of None.
+    """
+    cmd = [
+        _FFMPEG, "-hide_banner", "-y",
+        "-t", str(duration), "-i", str(path),
+        "-ac", "1", "-ar", str(_ANALYSIS_SR), "-f", "f32le", "-",
+    ]
     try:
-        y, sr = librosa.load(str(path), duration=ANALYSIS_DURATION, mono=True)
+        result = subprocess.run(cmd, capture_output=True, timeout=120)
+        if result.returncode != 0:
+            log.debug("ffmpeg decode failed for %s: %s", path.name, result.stderr[-200:])
+            return None
+        y = np.frombuffer(result.stdout, dtype=np.float32).copy()
+        return (y, _ANALYSIS_SR) if y.size > 0 else None
+    except Exception as exc:
+        log.debug("ffmpeg audio decode error for %s: %s", path.name, exc)
+        return None
+
+
+def _detect_bpm(y: np.ndarray, sr: int, name: str) -> float | None:
+    try:
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-
         bpm = float(np.squeeze(tempo))
-
         if BPM_MIN <= bpm <= BPM_MAX:
             return round(bpm, 2)
-
-        log.warning(
-            "BPM %s out of range (%s–%s) for %s",
-            bpm,
-            BPM_MIN,
-            BPM_MAX,
-            path.name,
-        )
+        log.warning("BPM %s out of range (%s–%s) for %s", bpm, BPM_MIN, BPM_MAX, name)
         return None
     except Exception as e:
-        log.error("BPM detection failed for %s: %s", path.name, e)
+        log.error("BPM detection failed for %s: %s", name, e)
         return None
-
 
 
 # ─── Key detection ────────────────────────────────────────────────────────────
 
-def _detect_key(path: Path) -> str | None:
+def _detect_key(y: np.ndarray, sr: int, name: str) -> str | None:
     try:
-        y, sr = librosa.load(str(path), duration=ANALYSIS_DURATION, mono=True)
         chroma = librosa.feature.chroma_cqt(y=y, sr=sr).mean(axis=1)
         scores: dict[str, float] = {}
         for i, note in enumerate(NOTES):
@@ -196,7 +212,7 @@ def _detect_key(path: Path) -> str | None:
         log.debug("Key detected: %s → %s  (score %.3f)", best, camelot, scores[best])
         return camelot
     except Exception as e:
-        log.error("Key detection failed for %s: %s", path.name, e)
+        log.error("Key detection failed for %s: %s", name, e)
         return None
 
 
@@ -221,8 +237,8 @@ def _measure_lufs(path: Path) -> float | None:
         if idx == -1:
             log.warning("No loudnorm JSON in ffmpeg output for %s", path.name)
             return None
-        end = result.stderr.find("}", idx)
-        if end == -1:
+        end = result.stderr.rfind("}")
+        if end == -1 or end < idx:
             return None
         data = json.loads(result.stderr[idx : end + 1])
         lufs = float(data["input_i"])
@@ -281,20 +297,23 @@ def _normalise_file(path: Path, gain_db: float) -> bool:
             "-id3v2_version", "3",
             str(tmp_path),
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         if result.returncode != 0:
             log.error("ffmpeg failed for %s:\n%s", path.name, result.stderr[-500:])
             return False
 
-        # Verify the output without loading audio into RAM — sf.info() reads
-        # only the file header, so large files don't cause a memory spike.
+        # Verify output. soundfile can't open MP3s, so use mutagen for those.
         try:
-            verify_info = sf.info(str(tmp_path))
+            if tmp_path.suffix.lower() == ".mp3":
+                mf = MutagenFile(str(tmp_path))
+                if mf is None or mf.info.length == 0:
+                    raise ValueError("empty or unreadable MP3")
+            else:
+                verify_info = sf.info(str(tmp_path))
+                if verify_info.frames == 0:
+                    raise ValueError("zero frames in output")
         except Exception as verify_err:
             log.error("Could not verify ffmpeg output for %s: %s", path.name, verify_err)
-            return False
-        if verify_info.frames == 0:
-            log.error("ffmpeg output is empty (zero frames) for %s", path.name)
             return False
 
         shutil.move(str(path), str(bak))
@@ -387,7 +406,7 @@ def _convert_file(path: Path, target_format: str) -> tuple[bool, str]:
             "-id3v2_version", "3",
             str(tmp_path),
         ]
-        result = subprocess.run(cmd, capture_output=True)
+        result = subprocess.run(cmd, capture_output=True, timeout=600)
         if result.returncode != 0:
             stderr_str = result.stderr.decode("utf-8", errors="replace")[-200:]
             return False, f"ffmpeg failed: {stderr_str}"
@@ -649,12 +668,21 @@ def process_file(
         frame = tags.get(id3_key)
         return frame is not None and str(frame).strip() not in ("", "0")
 
+    # ── Load audio once for BPM + key (shared decode) ──
+    needs_bpm = detect_bpm and not (_existing("TBPM", "bpm") and not force)
+    needs_key = detect_key and not (_existing("TKEY", "initialkey") and not force)
+    _audio: "tuple[np.ndarray, int] | None" = None
+    if needs_bpm or needs_key:
+        _audio = _load_audio_ffmpeg(path)
+        if _audio is None:
+            result.errors.append("audio decode failed — BPM/key analysis skipped")
+
     # ── BPM ──
     if detect_bpm:
-        if _existing("TBPM", "bpm") and not force:
+        if not needs_bpm:
             result.skipped_bpm = True
-        else:
-            bpm = _detect_bpm(path)
+        elif _audio is not None:
+            bpm = _detect_bpm(*_audio, path.name)
             result.bpm_detected = bpm
             if bpm is not None:
                 try:
@@ -666,10 +694,10 @@ def process_file(
 
     # ── Key ──
     if detect_key:
-        if _existing("TKEY", "initialkey") and not force:
+        if not needs_key:
             result.skipped_key = True
-        else:
-            key = _detect_key(path)
+        elif _audio is not None:
+            key = _detect_key(*_audio, path.name)
             result.key_detected = key
             if key is not None:
                 try:
@@ -908,6 +936,40 @@ def process_directory(
             log.info("Scan index written: %s (%d entries)", index_path, len(existing))
         except Exception as exc:
             log.warning("Could not write scan index: %s", exc)
+
+    # Emit structured error summary so the UI can build actionable next steps.
+    # Emitted as REKITBOX_ERROR_SUMMARY: {json} — parsed by the JS SSE handler.
+    errored_results = [r for r in results if r.errors]
+    if errored_results:
+        def _short_err(r: ProcessResult) -> str:
+            return r.errors[0] if r.errors else "unknown error"
+
+        corrupt_list:  list[dict] = []
+        decode_list:   list[dict] = []
+        tag_list:      list[dict] = []
+        other_list:    list[dict] = []
+
+        for r in errored_results:
+            entry = {"name": r.path.name, "path": str(r.path), "error": _short_err(r)}
+            if r.quarantined:
+                corrupt_list.append(entry)
+            elif any("audio decode failed" in e for e in r.errors):
+                decode_list.append(entry)
+            elif any("tag write failed" in e or "normalisation failed" in e for e in r.errors):
+                tag_list.append(entry)
+            else:
+                other_list.append(entry)
+
+        print(
+            "REKITBOX_ERROR_SUMMARY: " + json.dumps({
+                "corrupt":       corrupt_list,
+                "decode_failed": decode_list,
+                "tag_failed":    tag_list,
+                "other":         other_list,
+                "quarantine_dir": str(quarantine_dir) if quarantine_dir else None,
+            }),
+            flush=True,
+        )
 
     return results
 

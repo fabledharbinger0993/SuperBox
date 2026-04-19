@@ -36,8 +36,14 @@ final class APIClient: ObservableObject {
         didSet { saveConfig() }
     }
 
-    private let session = URLSession.shared
+    private let session: URLSession = {
+        let cfg = URLSessionConfiguration.default
+        cfg.timeoutIntervalForRequest  = 30
+        cfg.timeoutIntervalForResource = 30
+        return URLSession(configuration: cfg)
+    }()
     private var wsTask: URLSessionWebSocketTask?
+    private var wsRetryCount = 0
     var onEvent: ((String) -> Void)?   // raw JSON string → Store parses it
 
     init() { config = loadConfig() }
@@ -149,6 +155,10 @@ final class APIClient: ObservableObject {
     func fetchFolders() async throws -> [Folder] {
         let data = try await get("/api/mobile/folders")
         return try decode([Folder].self, from: data)
+    func fetchFolders() async throws -> [[String: Any]] {
+        let data = try await get("/api/mobile/folders")
+        guard let arr = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
+        return arr
     }
 
     // MARK: WebSocket
@@ -206,6 +216,53 @@ final class APIClient: ObservableObject {
                         self.connectWebSocket()
                     }
                 }
+        guard let cfg = config else { return }
+        guard let url = URL(string: "ws://\(cfg.host):\(cfg.port)/api/mobile/events") else {
+            print("[RekitGo] connectWebSocket: invalid URL for host \(cfg.host)")
+            return
+        }
+        disconnectWebSocket()
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(cfg.token)", forHTTPHeaderField: "Authorization")
+        wsTask = URLSession.shared.webSocketTask(with: req)
+        wsTask?.resume()
+        wsRetryCount = 0
+        receiveNextMessage()
+    }
+
+    func disconnectWebSocket() {
+        wsTask?.cancel(with: .normalClosure, reason: nil)
+        wsTask = nil
+    }
+
+    private func scheduleReconnect() {
+        let delay = min(pow(2.0, Double(wsRetryCount)), 60.0)
+        wsRetryCount = min(wsRetryCount + 1, 6)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.connectWebSocket()
+        }
+    }
+
+    private func receiveNextMessage() {
+        wsTask?.receive { [weak self] result in
+            guard let self else { return }
+            switch result {
+            case .success(.string(let text)):
+                DispatchQueue.main.async {
+                    self.wsRetryCount = 0   // reset backoff on successful receive
+                    self.onEvent?(text)
+                }
+                self.receiveNextMessage()
+            case .success(.data(let d)):
+                if let text = String(data: d, encoding: .utf8) {
+                    DispatchQueue.main.async {
+                        self.wsRetryCount = 0
+                        self.onEvent?(text)
+                    }
+                }
+                self.receiveNextMessage()
+            case .failure:
+                DispatchQueue.main.async { self.scheduleReconnect() }
             @unknown default: break
             }
         }

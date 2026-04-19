@@ -97,7 +97,27 @@ def _folder_artist(path: Path) -> str | None:
     """
     try:
         from mutagen import File as MutagenFile
-        audio = MutagenFile(str(path), easy=False)
+        from mutagen.id3 import ID3
+        try:
+            audio = MutagenFile(str(path), easy=False)
+        except Exception:
+            # MPEG sync failure on MP3 — try reading just the ID3 header
+            if not str(path).lower().endswith('.mp3'):
+                return None
+            try:
+                tags = ID3(str(path))
+            except Exception:
+                return None
+            # fall through to tag extraction below using the ID3 object as tags
+            for frame_id in ("TPE2", "TPE1"):
+                frame = tags.get(frame_id)
+                if frame is not None:
+                    text = getattr(frame, "text", None)
+                    val = str(text[0]).strip() if text else str(frame).strip()
+                    if val:
+                        return _normalize_artist(val)
+            return None
+
         if audio is None or audio.tags is None:
             return None
         tags = audio.tags
@@ -151,7 +171,15 @@ def _canonical_dest(
     raw_artist = _folder_artist(src) or track.artist
     artist = _normalize_artist(raw_artist) if raw_artist else None
 
-    # No artist — orphaned
+    # No artist from tags — try filename-based extraction as last resort.
+    # Handles "Artist - Title.mp3" and strips Pioneer _PN suffixes.
+    if not artist or not artist.strip():
+        stem = re.sub(r'_PN\s*\d*$', '', src.stem, flags=re.IGNORECASE).strip()
+        stem = re.sub(r'^\d+[\s.\-]+', '', stem).strip()
+        if ' - ' in stem:
+            candidate = stem.split(' - ', 1)[0].strip()
+            artist = _normalize_artist(candidate) if candidate else None
+
     if not artist or not artist.strip():
         return target / ORPHAN_FOLDER / year / fname
 

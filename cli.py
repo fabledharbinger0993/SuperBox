@@ -12,6 +12,8 @@ Commands:
     duplicates  Find acoustically identical files via Chromaprint
     process     Detect BPM/key and normalise loudness on audio files
     organize    Consolidate files into Artist / Album / Track hierarchy
+    rename      Rename files to clean titles based on metadata
+    convert     Convert audio files to a target format
 
 All write commands enforce:
   - Rekordbox not running (via write_db())
@@ -421,6 +423,137 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
             print(f"REKITBOX_REPORT_PATH: {output}", flush=True)
 
 
+def _run_shared_report(args, all_results, root_sections, _quarantine_dir) -> None:
+    """
+    Build and emit the Tag Tracks / Normalize completion report.
+    Called from both the directory-scan and --paths-file retry branches of cmd_process.
+    """
+    from audio_processor import ProcessResult  # noqa: PLC0415
+
+    detect_bpm = not args.no_bpm
+    detect_key = not args.no_key
+    normalise = not args.no_normalize and not getattr(args, "dry_run", False)
+
+    total = len(all_results)
+    bpm_written = sum(1 for r in all_results if r.bpm_written)
+    key_written = sum(1 for r in all_results if r.key_written)
+    normalised = sum(1 for r in all_results if r.normalised)
+    errored = sum(1 for r in all_results if not r.ok)
+    quarantined_results = [r for r in all_results if r.quarantined]
+    quarantined = len(quarantined_results)
+    skipped_bpm = sum(1 for r in all_results if r.skipped_bpm)
+    skipped_key = sum(1 for r in all_results if r.skipped_key)
+
+    if normalise and not detect_bpm and not detect_key:
+        report_lines = [
+            "\nDone.\n",
+            f"{normalised} tracks were re-encoded to match the loudness target.",
+            f"{total - normalised - errored} were already at the right level and skipped.",
+        ]
+    elif normalise:
+        report_lines = [
+            "\nDone.\n",
+            f"{total} files were analyzed.",
+            f"  BPM written: {bpm_written} files.{f'  {skipped_bpm} already had one.' if skipped_bpm else ''}",
+            f"  Key written: {key_written} files.{f'  {skipped_key} already had one.' if skipped_key else ''}",
+            f"  Loudness adjusted: {normalised} files.",
+        ]
+    else:
+        report_lines = [
+            "\nDone tagging.\n",
+            f"{total} files were analyzed.",
+            f"  BPM written: {bpm_written} files.{f'  {skipped_bpm} already had one.' if skipped_bpm else ''}",
+            f"  Key written: {key_written} files.{f'  {skipped_key} already had one.' if skipped_key else ''}",
+        ]
+        enrich_written = sum(1 for r in all_results if getattr(r, "enrich_written", False))
+        if getattr(args, "enrich_tags", False) and enrich_written:
+            report_lines.append(f"  MusicBrainz enriched: {enrich_written} files.")
+
+    # ── Error breakdown ──────────────────────────────────────────────────────
+    if errored:
+        corrupt_results  = [r for r in all_results if r.quarantined]
+        decode_results   = [r for r in all_results
+                            if not r.quarantined and not r.ok
+                            and any("audio decode failed" in e for e in r.errors)]
+        tag_fail_results = [r for r in all_results
+                            if not r.quarantined and not r.ok
+                            and not any("audio decode failed" in e for e in r.errors)
+                            and any("tag write failed" in e or "normalisation failed" in e
+                                    for e in r.errors)]
+        other_results    = [r for r in all_results
+                            if not r.quarantined and not r.ok
+                            and not any("audio decode failed" in e for e in r.errors)
+                            and not any("tag write failed" in e or "normalisation failed" in e
+                                        for e in r.errors)]
+
+        report_lines.append(f"\n{'─' * 60}")
+        report_lines.append(f"ERRORS  —  {errored} file(s) could not be fully processed\n")
+
+        if decode_results:
+            report_lines.append(f"  ⚠  Audio Decode Failures ({len(decode_results)})")
+            report_lines.append("     File opened, but audio couldn't be decoded — BPM/key were skipped.")
+            report_lines.append("     → Convert these files to MP3 or AIFF first, then re-run Tag Tracks.")
+            for r in decode_results[:12]:
+                report_lines.append(f"       • {r.path.name}")
+            if len(decode_results) > 12:
+                report_lines.append(f"       … and {len(decode_results) - 12} more — see log for full list")
+            report_lines.append("")
+
+        if tag_fail_results:
+            report_lines.append(f"  ⚠  Tag Write Failures ({len(tag_fail_results)})")
+            report_lines.append("     BPM/key detection succeeded, but writing the tag to the file failed.")
+            report_lines.append("     → Check file is not read-only, then re-run with Force tag-overwrite on.")
+            for r in tag_fail_results[:12]:
+                err_short = next(
+                    (e for e in r.errors if "tag write failed" in e or "normalisation failed" in e),
+                    r.errors[0] if r.errors else "unknown",
+                )
+                report_lines.append(f"       • {r.path.name}  [{err_short}]")
+            if len(tag_fail_results) > 12:
+                report_lines.append(f"       … and {len(tag_fail_results) - 12} more")
+            report_lines.append("")
+
+        if corrupt_results:
+            report_lines.append(f"  ✗  Corrupt / Unreadable — moved to Quarantine ({len(corrupt_results)})")
+            report_lines.append("     These files could not be opened at the audio-library level.")
+            report_lines.append(f"     Location: {_quarantine_dir}")
+            report_lines.append("     → Inspect in the Quarantine folder. Delete or restore manually.")
+            for r in corrupt_results[:12]:
+                report_lines.append(f"       • {r.path.name}")
+            if len(corrupt_results) > 12:
+                report_lines.append(f"       … and {len(corrupt_results) - 12} more")
+            report_lines.append("")
+
+        if other_results:
+            report_lines.append(f"  ⚠  Other Errors ({len(other_results)})")
+            for r in other_results[:12]:
+                err_short = r.errors[0] if r.errors else "unknown error"
+                report_lines.append(f"       • {r.path.name}  [{err_short}]")
+            if len(other_results) > 12:
+                report_lines.append(f"       … and {len(other_results) - 12} more")
+            report_lines.append("")
+
+    if quarantined and not errored:
+        report_lines.append(
+            f"\n{'─' * 60}\n"
+            f"QUARANTINED: {quarantined} corrupt file(s) moved to:\n"
+            f"  {_quarantine_dir}\n"
+        )
+        for r in quarantined_results:
+            report_lines.append(f"  {r.path.name}")
+        report_lines.append("")
+
+    report_text = _append_root_breakdown("\n".join(report_lines), root_sections)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if normalise:
+        _emit_report(report_text, "Normalize", f"normalize_{timestamp}.txt")
+    else:
+        _emit_report(report_text, "Tag Tracks", f"tag_tracks_{timestamp}.txt")
+
+    if errored > 0:
+        log.warning("%d files had errors — check log above", errored)
+
+
 def cmd_process(args: argparse.Namespace) -> None:
     """
     Detect BPM/key and normalise loudness for audio files under PATH.
@@ -429,9 +562,104 @@ def cmd_process(args: argparse.Namespace) -> None:
       --dry-run suppresses loudness normalisation (audio file modification).
       BPM and key detection still run and tag values are still written.
       To skip tag writes as well, combine: --no-bpm --no-key --no-normalize.
-    """
-    from audio_processor import process_directory
 
+    --paths-file mode:
+      When --paths-file is supplied, only the specific files listed in that
+      file are processed — no directory scan occurs. PATH arg is still required
+      by argparse but is not used as a scan root in this mode.
+    """
+    from audio_processor import process_directory, process_file, is_corrupt, quarantine_file
+    import json as _json
+
+    paths_file = getattr(args, "paths_file", None)
+
+    # ── Specific-file retry mode ────────────────────────────────────────────
+    if paths_file:
+        pf = Path(paths_file)
+        if not pf.exists():
+            log.error("--paths-file not found: %s", pf)
+            sys.exit(1)
+        specific_paths = [Path(ln.strip()) for ln in pf.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        if not specific_paths:
+            log.error("--paths-file is empty: %s", pf)
+            sys.exit(1)
+
+        detect_bpm = not args.no_bpm
+        detect_key = not args.no_key
+        normalise = not args.no_normalize and not args.dry_run
+
+        try:
+            from config import QUARANTINE_DIR as _cfg_quarantine
+            _quarantine_dir = _cfg_quarantine
+        except Exception:
+            _quarantine_dir = specific_paths[0].parent / "QUARANTINE"
+
+        log.info(
+            "Retry mode: processing %d specific file(s) — BPM:%s KEY:%s NORMALIZE:%s FORCE:%s",
+            len(specific_paths), detect_bpm, detect_key, normalise, args.force,
+        )
+
+        all_results = []
+        total = len(specific_paths)
+        done = clean = errors = edited = tags_written = bpm_key_written = quarantined = enriched = 0
+
+        for i, path in enumerate(specific_paths, start=1):
+            if not path.exists():
+                log.warning("[%d/%d] Not found — skipping: %s", i, total, path)
+                continue
+            r = process_file(
+                path,
+                detect_bpm=detect_bpm,
+                detect_key=detect_key,
+                normalise=normalise,
+                force=True,   # always force in retry mode
+                enrich_tags=getattr(args, "enrich_tags", False),
+            )
+            if r.errors:
+                errors += 1
+                log.info("[%d/%d] %s  ✗ %s", i, total, path.name, "; ".join(r.errors))
+            else:
+                log.info("[%d/%d] %s", i, total, path.name)
+
+            if is_corrupt(r):
+                quarantine_file(r, _quarantine_dir)
+                quarantined += 1
+
+            any_edit = r.bpm_written or r.key_written or r.normalised
+            if any_edit:
+                edited += 1
+                if r.bpm_written or r.key_written:
+                    bpm_key_written += 1
+                tags_written += 1
+            elif r.ok:
+                clean += 1
+            done += 1
+
+            print(
+                "REKITBOX_PROGRESS: " + _json.dumps({
+                    "done": done, "total": total, "remaining": total - done,
+                    "clean": clean, "errors": errors, "edited": edited,
+                    "tags_written": tags_written, "bpm_key_written": bpm_key_written,
+                    "quarantined": quarantined, "enriched": enriched,
+                }),
+                flush=True,
+            )
+            all_results.append(r)
+
+        # Re-use the normal report builder — fake root_sections
+        root_sections: list[tuple[Path, str]] = [
+            (specific_paths[0].parent,
+             f"{total} file(s) retried.  {total - errors} OK, {errors} still errored.")
+        ]
+        # Patch args so the shared report block below works unchanged
+        args._all_results_override = all_results
+        args._root_sections_override = root_sections
+        args._quarantine_dir_override = _quarantine_dir
+        # Fall through to shared report section below
+        _run_shared_report(args, all_results, root_sections, _quarantine_dir)
+        return
+
+    # ── Normal directory-scan mode ──────────────────────────────────────────
     # Build the list of roots: primary path + any --also-scan additions.
     roots: list[Path] = [Path(args.path)]
     for extra in (getattr(args, "also_scan", None) or []):
@@ -534,8 +762,6 @@ def cmd_process(args: argparse.Namespace) -> None:
             f"{normalised} tracks were re-encoded to match the loudness target.",
             f"{total - normalised - errored} were already at the right level and skipped.",
         ]
-        if errored:
-            report_lines.append(f"{errored} had errors — check the log above.")
     elif normalise:
         # Full process mode
         report_lines = [
@@ -545,8 +771,6 @@ def cmd_process(args: argparse.Namespace) -> None:
             f"  Key written: {key_written} files.{f'  {skipped_key} already had one.' if skipped_key else ''}",
             f"  Loudness adjusted: {normalised} files.",
         ]
-        if errored:
-            report_lines.append(f"\n{errored} files had errors — check the log above.")
     else:
         # Tag-only mode
         report_lines = [
@@ -558,23 +782,84 @@ def cmd_process(args: argparse.Namespace) -> None:
         enrich_written = sum(1 for r in all_results if getattr(r, 'enrich_written', False))
         if args.enrich_tags and enrich_written:
             report_lines.append(f"  MusicBrainz enriched: {enrich_written} files.")
-        if errored:
-            report_lines.append(f"\n{errored} files had errors — check the log above.")
 
-    # Quarantine section — always append if any files were quarantined
-    if quarantined:
+    # ── Error breakdown — shared across all modes ────────────────────────────
+    if errored:
+        # Categorise failures
+        corrupt_results  = [r for r in all_results if r.quarantined]
+        decode_results   = [r for r in all_results
+                            if not r.quarantined and not r.ok
+                            and any("audio decode failed" in e for e in r.errors)]
+        tag_fail_results = [r for r in all_results
+                            if not r.quarantined and not r.ok
+                            and not any("audio decode failed" in e for e in r.errors)
+                            and any("tag write failed" in e or "normalisation failed" in e
+                                    for e in r.errors)]
+        other_results    = [r for r in all_results
+                            if not r.quarantined and not r.ok
+                            and not any("audio decode failed" in e for e in r.errors)
+                            and not any("tag write failed" in e or "normalisation failed" in e
+                                        for e in r.errors)]
+
+        report_lines.append(f"\n{'─' * 60}")
+        report_lines.append(f"ERRORS  —  {errored} file(s) could not be fully processed\n")
+
+        if decode_results:
+            report_lines.append(f"  ⚠  Audio Decode Failures ({len(decode_results)})")
+            report_lines.append(f"     File opened, but audio couldn't be decoded — BPM/key were skipped.")
+            report_lines.append(f"     → Convert these files to MP3 or AIFF first, then re-run Tag Tracks.")
+            _MAX = 12
+            for r in decode_results[:_MAX]:
+                report_lines.append(f"       • {r.path.name}")
+            if len(decode_results) > _MAX:
+                report_lines.append(f"       … and {len(decode_results) - _MAX} more — see log for full list")
+            report_lines.append("")
+
+        if tag_fail_results:
+            report_lines.append(f"  ⚠  Tag Write Failures ({len(tag_fail_results)})")
+            report_lines.append(f"     BPM/key detection succeeded, but writing the tag to the file failed.")
+            report_lines.append(f"     → Check file is not read-only, then re-run with Force tag-overwrite on.")
+            for r in tag_fail_results[:12]:
+                err_short = next(
+                    (e for e in r.errors if "tag write failed" in e or "normalisation failed" in e),
+                    r.errors[0] if r.errors else "unknown",
+                )
+                report_lines.append(f"       • {r.path.name}  [{err_short}]")
+            if len(tag_fail_results) > 12:
+                report_lines.append(f"       … and {len(tag_fail_results) - 12} more")
+            report_lines.append("")
+
+        if corrupt_results:
+            report_lines.append(f"  ✗  Corrupt / Unreadable — moved to Quarantine ({len(corrupt_results)})")
+            report_lines.append(f"     These files could not be opened at the audio-library level.")
+            report_lines.append(f"     Location: {_quarantine_dir}")
+            report_lines.append(f"     → Inspect in the Quarantine folder. Delete or restore manually.")
+            for r in corrupt_results[:12]:
+                report_lines.append(f"       • {r.path.name}")
+            if len(corrupt_results) > 12:
+                report_lines.append(f"       … and {len(corrupt_results) - 12} more")
+            report_lines.append("")
+
+        if other_results:
+            report_lines.append(f"  ⚠  Other Errors ({len(other_results)})")
+            for r in other_results[:12]:
+                err_short = r.errors[0] if r.errors else "unknown error"
+                report_lines.append(f"       • {r.path.name}  [{err_short}]")
+            if len(other_results) > 12:
+                report_lines.append(f"       … and {len(other_results) - 12} more")
+            report_lines.append("")
+
+    # Quarantine section removed — now folded into the error breakdown above.
+    # Kept as a fallback for the case where quarantined files were already
+    # counted but no error records exist (should not happen, but defensive).
+    if quarantined and not errored:
         report_lines.append(
             f"\n{'─' * 60}\n"
             f"QUARANTINED: {quarantined} corrupt file(s) moved to:\n"
             f"  {_quarantine_dir}\n"
-            f"\nThese files could not be opened by the audio library at all.\n"
-            f"They are safe to inspect or restore manually from QUARANTINE.\n"
-            f"They will be skipped by all future RekitBox operations.\n"
-            f"\nQuarantined files:"
         )
         for r in quarantined_results:
-            error_summary = "; ".join(r.errors)
-            report_lines.append(f"  {r.path.name}  [{error_summary}]")
+            report_lines.append(f"  {r.path.name}")
         report_lines.append("")
 
     report_text = _append_root_breakdown("\n".join(report_lines), root_sections)
@@ -948,6 +1233,74 @@ def cmd_novelty(args: argparse.Namespace) -> None:
         log.warning("%d files had errors — check log above", errors)
 
 
+def cmd_rename(args: argparse.Namespace) -> None:
+    """Rename audio files based on their ID3/tag metadata to clean filenames."""
+    from renamer import rename_directory
+
+    root = Path(args.path)
+
+    if not root.is_dir():
+        log.error("PATH is not a directory: %s", root)
+        sys.exit(1)
+
+    dry_run     = not args.no_dry_run
+    max_workers = max(1, getattr(args, "workers", 1))
+
+    if dry_run:
+        log.info("DRY RUN — no files will be renamed. Pass --no-dry-run to execute.")
+
+    log.info(
+        "Renaming audio files under %s  dry_run=%s  workers=%d",
+        root, dry_run, max_workers,
+    )
+
+    try:
+        results = rename_directory(root, db=None, dry_run=dry_run, max_workers=max_workers)
+    except Exception:
+        log.exception("Rename failed")
+        sys.exit(1)
+
+    total = len(results)
+    renamed = sum(1 for r in results if r.action == "renamed")
+    skipped = sum(1 for r in results if r.action == "no_change")
+    collisions = sum(1 for r in results if r.action == "collision_numbered")
+    errors = sum(1 for r in results if r.action == "error")
+
+    if dry_run:
+        lines = [
+            "Here's what would change.",
+            "",
+            f"{total} audio files scanned.",
+        ]
+        if renamed:
+            lines.append(f"  {renamed} files would be renamed to clean titles.")
+        if skipped:
+            lines.append(f"  {skipped} already have clean names — would be left alone.")
+        if collisions:
+            lines.append(f"  {collisions} would get numbered suffixes to avoid clashes (e.g. title_1.mp3).")
+        if errors:
+            lines.append(f"  {errors} had errors — check the log above.")
+        lines += ["", "Nothing has been renamed. Uncheck \"Dry Run\" and run again to execute."]
+    else:
+        lines = ["Done renaming.", ""]
+        if renamed:
+            lines.append(f"{renamed} files were renamed to clean titles (artist kept in tags).")
+        if skipped:
+            lines.append(f"{skipped} already had clean names — left alone.")
+        if collisions:
+            lines.append(f"{collisions} name clashes were handled by numbering (e.g. title_1.mp3).")
+        if errors:
+            lines.append(f"{errors} files had errors — check the log above.")
+        else:
+            lines.append("No errors.")
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    _emit_report("\n".join(lines), "Rename", f"rename_{timestamp}.txt")
+
+    if errors > 0:
+        log.warning("%d files had errors — check log above", errors)
+
+
 # ─── Argument parser ──────────────────────────────────────────────────────────
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -967,6 +1320,8 @@ Examples:
   python3 cli.py process "/Volumes/DJMT/DJMT PRIMARY" --dry-run --no-bpm --no-key
   python3 cli.py convert "/Volumes/DJMT/DJMT PRIMARY" mp3
   python3 cli.py convert "/Volumes/DJMT/DJMT PRIMARY" flac
+  python3 cli.py rename "/Volumes/DJMT/DJMT PRIMARY" --dry-run
+  python3 cli.py rename "/Volumes/DJMT/DJMT PRIMARY"
         """,
     )
     parser.add_argument(
@@ -1141,6 +1496,13 @@ Examples:
         dest="enrich_tags",
         help="Enrich metadata from AcoustID/MusicBrainz after BPM/key detection (requires ACOUSTID_API_KEY in config)",
     )
+    p_process.add_argument(
+        "--paths-file",
+        metavar="FILE",
+        dest="paths_file",
+        default=None,
+        help="Text file containing one absolute file path per line. When supplied, only those specific files are processed (PATH arg is still required but ignored as a scan root).",
+    )
     p_process.set_defaults(func=cmd_process)
 
     # ── convert ──
@@ -1261,6 +1623,31 @@ Examples:
         help="Additional source directory (can be repeated)",
     )
     p_novelty.set_defaults(func=cmd_novelty)
+
+    # ── rename ──
+    p_rename = sub.add_parser(
+        "rename",
+        help="Rename audio files to clean titles based on ID3/tag metadata"
+    )
+    p_rename.add_argument(
+        "path",
+        metavar="PATH",
+        help="Directory to scan and rename files"
+    )
+    p_rename.add_argument(
+        "--no-dry-run",
+        action="store_true",
+        default=False,
+        help="Actually rename files. Default is dry-run (preview only).",
+    )
+    p_rename.add_argument(
+        "--workers", "-w",
+        metavar="N",
+        type=int,
+        default=1,
+        help="Parallel workers (default: 1)",
+    )
+    p_rename.set_defaults(func=cmd_rename)
 
     return parser
 

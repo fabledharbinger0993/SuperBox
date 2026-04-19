@@ -102,18 +102,20 @@ enum DownloadStatus: String, Codable {
 // MARK: - Analysis job
 
 struct AnalysisJob: Codable {
-    let jobId: String
+    let  jobId: String
+    var  trackIds: [Int]
     var status: String
     var results: [String: AnalysisResult]
 
     enum CodingKeys: String, CodingKey {
         case jobId = "job_id"
+        case trackIds = "track_ids"
         case status, results
     }
 }
 
 struct AnalysisResult: Codable {
-    var status: String
+    var status: String?
     var bpm: Double?
     var key: String?
     var error: String?
@@ -128,29 +130,63 @@ struct Drive: Identifiable, Codable {
     var id: String { path }
 }
 
-struct Folder: Identifiable, Codable, Hashable {
-    let name: String
-    let path: String
-    let fileCount: Int?
-
-    var id: String { path }
-
-    enum CodingKeys: String, CodingKey {
-        case name, path
-        case fileCount = "file_count"
-    }
-}
-
 // MARK: - Export job
 
 struct ExportJob: Codable {
     let jobId: String
     var status: String
-    var progress: Int
-    var message: String?
+    var tracksTotal: Int
+    var tracksDone:  Int
+    var currentTrack: String?
+    var errors: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case jobId = "job_id"
-        case status, progress, message
+        case jobId       = "job_id"
+        case status
+        case tracksTotal = "tracks_total"
+        case tracksDone  = "tracks_done"
+        case currentTrack = "current_track"
+        case errors
+    }
+
+    /// 0–100 progress derived from track counts.
+    var progress: Int {
+        guard tracksTotal > 0 else { return status == "complete" ? 100 : 0 }
+        return min(100, Int(Double(tracksDone) / Double(tracksTotal) * 100))
+    }
+}
+
+// MARK: - WebSocket event envelope
+
+struct WSEvent: Decodable {
+    let type: String
+    let job: AnyCodable?
+}
+
+// Simple type-erased Codable wrapper for heterogeneous WS payloads
+struct AnyCodable: Codable {
+    let value: Any
+    init(_ value: Any) { self.value = value }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let v = try? c.decode(Bool.self)              { value = v; return }
+        if let v = try? c.decode(Int.self)               { value = v; return }
+        if let v = try? c.decode(Double.self)            { value = v; return }
+        if let v = try? c.decode(String.self)            { value = v; return }
+        if let v = try? c.decode([AnyCodable].self)      { value = v; return }  // array support
+        if let v = try? c.decode([String: AnyCodable].self) { value = v; return }
+        value = NSNull()
+    }
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch value {
+        case let v as Bool:              try c.encode(v)
+        case let v as Int:               try c.encode(v)
+        case let v as Double:            try c.encode(v)
+        case let v as String:            try c.encode(v)
+        case let v as [AnyCodable]:      try c.encode(v)
+        case let v as [String: AnyCodable]: try c.encode(v)
+        default:                         try c.encodeNil()
+        }
     }
 }
