@@ -96,6 +96,51 @@ If RekitGo eventually needs an independent release cadence, separate contributor
 
 ---
 
+## Developer Auto-Sync (VS Code)
+
+This repo now supports optional local auto-sync to GitHub when opened in VS Code:
+
+- On folder open, VS Code runs a background watcher that auto-commits and auto-pushes local file changes.
+- Releases remain manual. Nothing in auto-sync creates tags or releases.
+- Published releases always get `RekitBox.zip` attached automatically via `.github/workflows/release-zip.yml`.
+
+### One-time setup
+
+```bash
+cd "/Users/cameronkelly/FabledHarbinger/Git Repos/RekitBox"
+chmod +x scripts/autosync.sh scripts/release.sh
+```
+
+### Manual controls
+
+Run a single autosync cycle immediately:
+
+```bash
+./scripts/autosync.sh once
+```
+
+Run autosync in terminal (same loop VS Code runs automatically on folder-open):
+
+```bash
+AUTOSYNC_INTERVAL=5 ./scripts/autosync.sh watch
+```
+
+### Release command (manual only)
+
+Create a release with generated notes:
+
+```bash
+./scripts/release.sh v2.0.13
+```
+
+Create a release with a notes file:
+
+```bash
+./scripts/release.sh v2.0.13 .github/release-notes.md
+```
+
+---
+
 ## Under the hood
 
 | Library | Purpose |
