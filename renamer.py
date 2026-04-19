@@ -74,6 +74,53 @@ _VERSION_MARKERS = re.compile(
 )                                                        # Version/remix markers to preserve
 
 
+def _is_key_token(token: str) -> bool:
+    return bool(re.fullmatch(r"\d{1,2}[ABab]", token.strip()))
+
+
+def _is_key_or_bpm_chunk(chunk: str) -> bool:
+    """True for segments like '8A 9A', '8A: 8A', or '124'."""
+    c = chunk.strip()
+    if not c:
+        return False
+    if re.fullmatch(r"\d{2,3}", c):
+        return True
+
+    # Remove punctuation separators and inspect tokens.
+    tokens = [t for t in re.split(r"[\s:._-]+", c) if t]
+    if not tokens:
+        return False
+
+    key_like = [t for t in tokens if _is_key_token(t)]
+    if key_like and len(key_like) == len(tokens):
+        return True
+
+    return False
+
+
+def _strip_leading_key_bpm_prefix(text: str) -> str:
+    """Drop leading key/BPM marker chunks separated by ' - '."""
+    chunks = [c.strip() for c in text.split(" - ")]
+    while chunks and _is_key_or_bpm_chunk(chunks[0]):
+        chunks.pop(0)
+    return " - ".join(chunks).strip() if chunks else text.strip()
+
+
+def _looks_like_junk_artist(text: str | None) -> bool:
+    if not text:
+        return True
+    s = text.strip()
+    if not s:
+        return True
+    if _is_key_or_bpm_chunk(s):
+        return True
+    if re.search(r"(?:^|\s)_?PN(?:\s|\d|$)", s, flags=re.IGNORECASE):
+        return True
+    if re.search(r"\b\d{2,3}\b", s) and re.search(r"\b\d{1,2}[ABab]\b", s):
+        return True
+    return False
+
+
 def _normalize_artist_text(raw: str | None) -> str | None:
     """Normalize and de-duplicate repeated artist strings."""
     if not raw:
@@ -240,8 +287,12 @@ def _extract_artist_title(path: Path, metadata) -> tuple[str | None, str | None,
     if not artist:
         artist = metadata.artist or None
     artist = _normalize_artist_text(artist)
-    
+    if _looks_like_junk_artist(artist):
+        artist = None
+
     title = metadata.title or None
+    if title:
+        title = _strip_leading_key_bpm_prefix(str(title))
     copy_suffix = None
     
     # Extract copy suffix from original filename first (before any cleaning)
@@ -258,29 +309,43 @@ def _extract_artist_title(path: Path, metadata) -> tuple[str | None, str | None,
     
     # Try filename-based fallback for title
     stem = stem_original
-    
+
     # Strip Pioneer/MiX markers: _PN, _PN2, _PN 3, or PN (no underscore)
     stem = _PN_SUFFIX.sub('', stem).strip()
-    
+
     # Strip numeric prefixes: "918223_Title" or "918223-Title"
     stem = _ID_PREFIX.sub('', stem).strip()
-    
+
     # Strip numeric suffixes: "Title_918223" or "Title-918223"
     stem = _ID_SUFFIX.sub('', stem).strip()
-    
-    # Replace underscores with spaces (they're filename separators, not part of title)
-    stem = _UNDERSCORE.sub(' ', stem).strip()
-    
-    # Parse "Artist - Title" from filename if it exists and we're missing either field
+
+    # Remove key/BPM leader chunks before artist-title parsing.
+    stem = _strip_leading_key_bpm_prefix(stem)
+
+    # Parse "Artist - Title" from filename before underscore replacement.
     if ' - ' in stem and (not artist or not title):
         parts = stem.split(' - ', 1)
         if len(parts) == 2:
-            if not artist:
-                artist = parts[0].strip()
+            left = parts[0].strip()
+            right = parts[1].strip()
+            if not artist and not _looks_like_junk_artist(left):
+                artist = _normalize_artist_text(left)
             if not title:
-                title = parts[1].strip()
-    
-    # Last resort: use stem as title if we still have nothing
+                title = right
+
+    # Underscore fallback: "artist_title_version".
+    if (not artist or not title) and '_' in stem:
+        u = [p for p in stem.split('_') if p]
+        if len(u) >= 2:
+            if not artist and not _looks_like_junk_artist(u[0]):
+                artist = _normalize_artist_text(u[0])
+            if not title:
+                title = " ".join(u[1:]).strip()
+
+    # Replace remaining underscores with spaces
+    stem = _UNDERSCORE.sub(' ', stem).strip()
+
+    # Last resort: use cleaned stem as title if we still have nothing
     if not title:
         title = stem if stem else None
     
