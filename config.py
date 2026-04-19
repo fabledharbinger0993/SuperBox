@@ -130,7 +130,7 @@ LUFS_TOLERANCE: float = float(_cfg["lufs_tolerance"])
 ACOUSTID_API_KEY: str = _cfg.get("acoustid_api_key", "")
 
 # Supported audio file extensions (lowercase)
-AUDIO_EXTENSIONS = {".mp3", ".aiff", ".aif", ".wav", ".flac", ".m4a", ".ogg", ".opus"}
+AUDIO_EXTENSIONS = {".mp3", ".aiff", ".aif", ".wav", ".flac", ".m4a", ".ogg", ".opus", ".wma"}
 
 # Files to skip when scanning.
 # "._"       — macOS resource fork sidecar files
