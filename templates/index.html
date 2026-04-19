@@ -108,6 +108,9 @@
   <button class="step-tab" data-target="step-organize">
     <span class="step-num">🗂</span> Organize
   </button>
+  <button class="step-tab" data-target="step-rename">
+    <span class="step-num">📝</span> Rename
+  </button>
   <button class="step-tab" data-target="step-novelty">
     <span class="step-num">★</span> Novelty
   </button>
@@ -859,6 +862,59 @@
       </div>
       <div class="rb-block-msg" id="novelty-rb-block">
         <span>⚠</span> Close Rekordbox before running a live scan.
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- ── Rename ──────────────────────────────────────────────────────────── -->
+  <div class="card" id="step-rename" style="--card-watermark:url('/static/icon-organizer.png')">
+    <div class="card-head">
+      <div class="card-icon caution"><img src="/static/icon-organizer.png" alt="Rename Files"></div>
+      <div class="card-meta">
+        <div class="card-title">Rename Files</div>
+        <div class="card-blurb">Clean up file names using metadata tags. Removes underscores, numbers, processing markers (PN, IDs) — keeps artist and album in the tags so tracks stay searchable in Rekordbox.</div>
+      </div>
+    </div>
+    <details class="explain-block">
+      <summary>How it works</summary>
+      <div class="explain-body">
+        <p><strong>Input:</strong> Files like <code>918223_SomethingPN.mp3</code> or <code>Artist_Remix_12345.mp3</code></p>
+        <p><strong>Process:</strong> Reads title from ID3 tags, strips processing markers and odd patterns.</p>
+        <p><strong>Output:</strong> Clean titles like <code>Something.mp3</code> or <code>Remix.mp3</code></p>
+        <p><strong>Metadata preserved:</strong> Artist, album, and all other tags stay intact — full searchability in Rekordbox.</p>
+      </div>
+    </details>
+    <div class="card-form">
+      <div class="field compact-drop-field">
+        <label>Source Folder</label>
+        <div class="folder-zone" id="rename-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folder here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="rename-zone-text" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('rename-pills')">Browse…</button>
+            <button class="folder-zone-add" type="button" onclick="renameZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="rename-pills"></div>
+      </div>
+      <div class="field">
+        <div class="checkbox-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="rename-dry-run" checked>
+            Dry Run (preview only — no files will be renamed)
+          </label>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-rename" onclick="runRename()">
+          <img src="/static/icon-organizer.png" style="width:16px;height:16px;filter:brightness(0) invert(1)" alt="">
+          Clean File Names
+        </button>
       </div>
     </div>
   </div>

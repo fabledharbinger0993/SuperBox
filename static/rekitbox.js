@@ -2632,6 +2632,34 @@ function runNovelty() {
     ec => { if (ec === 0) _clearToolCkpt('novelty'); });
 }
 
+/* ── Rename Files ──────────────────────────────────────────────────────────── */
+
+function renameZoneAdd() {
+  const input = document.getElementById('rename-zone-text');
+  const path = input.value.trim();
+  if (!path) { alert('Enter a folder path'); return; }
+  addFolderPill('rename-pills', path);
+  input.value = '';
+}
+
+function runRename() {
+  const paths = getFolderPaths('rename-pills');
+  const dryRun = document.getElementById('rename-dry-run').checked;
+  if (!paths.length) { alert('Add a folder to rename files in.'); return; }
+  const p = new URLSearchParams();
+  p.set('path', paths[0]);
+  if (!dryRun) p.set('no_dry_run', '1');
+  const label = dryRun
+    ? 'Rename Files — Dry Run (preview only)'
+    : 'Rename Files — Cleaning file names';
+  if (!dryRun) {
+    _saveToolCkpt('rename', { path: paths[0], dryRun: false });
+    document.getElementById('step-rename')?.querySelector('.tool-resume-banner')?.remove();
+  }
+  runCommand(`/api/run/rename?${p}`, label,
+    ec => { if (ec === 0) _clearToolCkpt('rename'); });
+}
+
 /* ── Prune Duplicates ──────────────────────────────────────────────────────── */
 let pruneGroups        = [];          // current page's groups
 let pruneSelected      = new Set();   // file_paths checked for removal

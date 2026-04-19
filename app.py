@@ -789,6 +789,25 @@ def api_novelty():
     return _sse_response(cmd, library_root=library_root, step_name="novelty")
 
 
+@app.route("/api/run/rename")
+def api_rename():
+    path = request.args.get("path", "").strip()
+    if not path:
+        return jsonify({"error": "path is required"}), 400
+
+    cmd = [sys.executable, str(CLI_PATH), "rename", path]
+
+    if request.args.get("no_dry_run") == "1":
+        cmd.append("--no-dry-run")
+
+    workers = request.args.get("workers", "1").strip()
+    if workers.isdigit() and int(workers) > 1:
+        cmd += ["--workers", workers]
+
+    library_root = path
+    return _sse_response(cmd, library_root=library_root, step_name="rename")
+
+
 @app.route("/api/run/duplicates")
 def api_duplicates():
     paths = [p.strip() for p in request.args.getlist("path") if p.strip()]
