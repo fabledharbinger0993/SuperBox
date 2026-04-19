@@ -83,6 +83,19 @@ Chain any combination of tools into one automated run. Choose **auto mode** (run
 
 ---
 
+## RekitGo + RekitBox repo strategy
+
+RekitGo is intentionally kept in this same repository (`ios/RekitGo`) rather than split into a separate repo.
+
+Why this is the current default:
+- RekitGo depends directly on RekitBox's `/api/mobile/*` surface and auth flow
+- Backend/mobile changes are easier to ship safely when versioned together
+- One repo keeps release coordination and API compatibility checks in one place
+
+If RekitGo eventually needs an independent release cadence, separate contributor model, or public SDK-style API contract, splitting it into its own repo would make sense.
+
+---
+
 ## Under the hood
 
 | Library | Purpose |
