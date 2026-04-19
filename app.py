@@ -117,6 +117,65 @@ def _backup_info() -> dict:
     return {"exists": True, "name": latest.name, "age": age_str}
 
 
+def _release_info() -> dict:
+    """Return a short git-based release blurb for the UI status row."""
+    env_version = os.environ.get("REKITBOX_VERSION", "").strip()
+    if env_version:
+        return {
+            "exists": True,
+            "label": f"Version: {env_version}",
+            "tag": env_version,
+            "commit": None,
+            "source": "env",
+        }
+
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(REPO_ROOT),
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=1.0,
+        ).strip()
+    except Exception:
+        return {
+            "exists": False,
+            "label": "Version: unknown",
+            "tag": None,
+            "commit": None,
+            "source": "none",
+        }
+
+    try:
+        tag = subprocess.check_output(
+            ["git", "describe", "--tags", "--exact-match", "HEAD"],
+            cwd=str(REPO_ROOT),
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=1.0,
+        ).strip()
+    except Exception:
+        tag = None
+
+    if tag:
+        label = f"Release: {tag} ({commit})"
+        source = "git-tag"
+    else:
+        label = f"Build: {commit} (unreleased)"
+        source = "git-head"
+
+    return {
+        "exists": True,
+        "label": label,
+        "tag": tag,
+        "commit": commit,
+        "source": source,
+    }
+
+
+_CACHED_RELEASE_INFO = _release_info()
+
+
 def _subprocess_env() -> dict:
     """Return an environment dict for subprocesses running cli.py."""
     return os.environ.copy()
@@ -298,6 +357,7 @@ def api_status():
     return jsonify({
         "rb_running": _rb_is_running(),
         "backup": _backup_info(),
+        "release": _CACHED_RELEASE_INFO,
     })
 
 

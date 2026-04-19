@@ -834,6 +834,17 @@ async function refreshStatus() {
       bp.style.display = 'flex';
       bl.textContent = `Last backup: ${data.backup.age}`;
     }
+
+    const rp = document.getElementById('release-pill');
+    const rl = document.getElementById('release-label');
+    if (rp && rl) {
+      if (data.release?.exists && data.release?.label) {
+        rp.style.display = 'flex';
+        rl.textContent = data.release.label;
+      } else {
+        rp.style.display = 'none';
+      }
+    }
   } catch (_) {}
 }
 refreshStatus();
