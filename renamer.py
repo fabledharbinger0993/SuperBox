@@ -21,6 +21,7 @@ Supported naming patterns (detected and cleaned):
   - "SomethingPN.mp3" or "Something_PN.mp3" → extracts title, removes PN
   - "918223_SomethingElse.mp3" → extracts title, removes ID prefix
   - "Something_918223.mp3" → extracts title, removes ID suffix
+  - "Track (remix).mp3" or "Track (dub).mp3" → preserves remix/version markers
   - Standard "Artist - Title.mp3" → extracted as just Title if tags missing
   - Anything else → fallback to original name
 """
@@ -49,6 +50,10 @@ _ID_PREFIX = re.compile(r'^\d{6,}\s*[-_.]')             # "918223_Title" or "918
 _ID_SUFFIX = re.compile(r'[-_\.]\d{6,}$')               # "Title_918223" or "Title-918223"
 _MULTI_SPACE = re.compile(r'\s{2,}')                    # Multiple spaces
 _UNSAFE_CHARS = re.compile(r'[\\/:*?"<>|]')             # Filesystem-unsafe
+_VERSION_MARKERS = re.compile(
+    r'\((remix|dub|extended|acoustic|instrumental|version|edit|remix[\s\-]mix|remaster|radio[\s\-]edit)\)',
+    re.IGNORECASE
+)                                                        # Version/remix markers to preserve
 
 
 @dataclass
@@ -66,12 +71,15 @@ def _extract_artist_title(path: Path, metadata) -> tuple[str | None, str | None]
     Best-effort extraction of artist and title from metadata.
     Prefers tag fields, falls back to filename parsing.
     
+    Preserves version markers like (remix), (dub), (extended), etc. in the title.
+    Removes only filler: PN suffixes, numeric prefixes/suffixes, underscores.
+    
     Returns: (artist, title) or (None, None) if unable to extract.
     """
     artist = metadata.artist or None
     title = metadata.title or None
     
-    # Both found in tags — use them
+    # Both found in tags — use them (preserves remix/dub markers if in tag)
     if artist and title:
         return artist, title
     
