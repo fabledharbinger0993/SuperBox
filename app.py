@@ -2944,6 +2944,20 @@ def mobile_events(ws):
         ws_bus.unregister(ws)
 
 
+@app.after_request
+def disable_cache_on_static_files(response):
+    """Disable caching for static files to ensure fresh assets are always served.
+    
+    This is critical for icon files and CSS/JS updates to be reflected immediately
+    in the embedded webview without requiring a full app restart.
+    """
+    if request.path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
 if __name__ == "__main__":
     print()
     print("  ┌─────────────────────────────────────┐")
