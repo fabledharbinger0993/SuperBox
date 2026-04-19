@@ -1118,6 +1118,7 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
   let reportBuffer = [];
   let inReport = false;
   let capturedReportPath = null;   // set by REKITBOX_REPORT_PATH: line
+  let capturedDuplicateCsv = null; // explicit CSV path for duplicate scans
 
   activeSource = new EventSource(url);
 
@@ -1129,7 +1130,13 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
       // Detect report block boundaries
       if (line === 'REKITBOX_REPORT_BEGIN') { inReport = true; reportBuffer = []; return; }
       if (line === 'REKITBOX_REPORT_END')   { inReport = false; return; }
-      if (inReport) reportBuffer.push(line);
+      if (inReport) {
+        reportBuffer.push(line);
+        if (logTitle === 'Find Duplicates — Acoustic Fingerprinting') {
+          const match = line.match(/^Report saved to:\s+(.+\.csv)$/i);
+          if (match) capturedDuplicateCsv = match[1].trim();
+        }
+      }
 
       // Machine-readable report path — capture silently, don't echo to log
       if (line.startsWith('REKITBOX_REPORT_PATH: ')) {
@@ -1202,10 +1209,11 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
       // On failure: store silently as pill.
       if (reportBuffer.length > 0) {
         const reportText = reportBuffer.join('\n');
+        const effectiveReportPath = capturedDuplicateCsv || capturedReportPath;
         if (data.exit_code === 0) {
-          openReportModal(logTitle, reportText, capturedReportPath);
+          openReportModal(logTitle, reportText, effectiveReportPath);
         } else {
-          sessionReports[logTitle] = { text: reportText, reportPath: capturedReportPath };
+          sessionReports[logTitle] = { text: reportText, reportPath: effectiveReportPath };
           _addOrUpdateSummaryPill(logTitle);
         }
       }
@@ -1465,7 +1473,7 @@ function runDuplicates() {
     if (exitCode === 0) {
       _clearToolCkpt('duplicates');
       const rp = sessionReports[title]?.reportPath;
-      if (rp) {
+      if (rp && /\.csv$/i.test(rp)) {
         const el = document.getElementById('prune-csv-path');
         if (el) el.value = rp;
         _autoLoadDupeResults(rp);
@@ -2940,7 +2948,7 @@ async function _loadPrunePage(page) {
 
   const res  = await fetch(url);
   const data = await res.json();
-  if (!res.ok) { alert('Could not load report:\n' + data.error); return; }
+  if (!res.ok) { alert('Could not load report:\n' + data.error); return false; }
 
   pruneGroups        = data.groups;
   prunePage          = data.page;
@@ -2953,6 +2961,7 @@ async function _loadPrunePage(page) {
   _syncCheckboxes();
   _updateSaButtons();
   _updatePruneSummary();
+  return true;
 }
 
 function _renderPruneGroups() {
@@ -3078,7 +3087,8 @@ async function _autoLoadDupeResults(csvPath) {
   saState = null;
 
   try {
-    await _loadPrunePage(0);
+    const loaded = await _loadPrunePage(0);
+    if (!loaded) return;
     await selectAllLower();
 
     // Switch card into review/prune phase
