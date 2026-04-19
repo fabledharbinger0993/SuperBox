@@ -50,6 +50,61 @@
         "clear": false
       },
       "problemMatcher": []
+    },
+    {
+      "label": "agent-workflow-start",
+      "type": "shell",
+      "command": "./scripts/agent_workflow.sh start",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "agent-workflow-status",
+      "type": "shell",
+      "command": "./scripts/agent_workflow.sh status",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "agent-workflow-stop",
+      "type": "shell",
+      "command": "./scripts/agent_workflow.sh stop",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "sync-public-once",
+      "type": "shell",
+      "command": "./scripts/sync_public_repo.sh once",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "import-fabledclaw-assets",
+      "type": "shell",
+      "command": "./scripts/import_fabledclaw_assets.sh",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      },
+      "problemMatcher": []
     }
   ]
 }

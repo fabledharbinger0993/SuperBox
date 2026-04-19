@@ -41,18 +41,6 @@ from config import AUDIO_EXTENSIONS, BPM_MAX, BPM_MIN, LUFS_TOLERANCE, TARGET_LU
 
 log = logging.getLogger(__name__)
 
-# ─── Tag write policy ────────────────────────────────────────────────────────
-# Inspired by Picard's sort_multivalue_tags.py _sort_multivalue_tags_exclude:
-# Tags in this set are NEVER overwritten by audio_processor, even if force=True.
-# This protects hand-curated metadata from accidental overwrites during analysis.
-PROTECTED_TAGS = frozenset({
-    "artist",          # User-curated artist (avoid forced overwrites)
-    "albumartist",     # Album context (not an audio property)
-    "album",           # Album context (not an audio property)
-    "comment",         # User notes (preserve intentions)
-    "grouping",        # User-defined grouping (custom metadata)
-})
-
 # Resolve ffmpeg once at import time — on macOS with Homebrew the server process
 # may not inherit the shell PATH, so we fall back to common install locations.
 def _find_ffmpeg() -> str:

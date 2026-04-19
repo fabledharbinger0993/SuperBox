@@ -24,6 +24,7 @@ env/
 # Secrets / config
 *.env
 .env
+.rekitbox-agent.env
 settings.json
 
 # Setup sentinel (written by setup.sh, local to each machine)

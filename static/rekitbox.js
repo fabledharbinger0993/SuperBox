@@ -4495,3 +4495,157 @@ fetch('/api/connectivity')
     else if (d.local_ip && d.local_ip !== '127.0.0.1') btnDot.classList.add('lan');
   })
   .catch(() => {});
+
+// ── Rekki side panel (read-only Ollama helper) ─────────────────────────────
+let _rekkiOpen = false;
+let _rekkiHistory = [];
+
+function toggleRekkiPanel() {
+  const panel = document.getElementById('rekki-panel');
+  const btn = document.getElementById('rekki-btn');
+  if (!panel || !btn) return;
+  _rekkiOpen = !_rekkiOpen;
+  panel.classList.toggle('open', _rekkiOpen);
+  btn.classList.toggle('active', _rekkiOpen);
+  if (_rekkiOpen) {
+    rekkiRefreshStatus();
+    const input = document.getElementById('rekki-input');
+    if (input) input.focus();
+  }
+}
+
+function _rekkiSetStatus(text) {
+  const el = document.getElementById('rekki-status');
+  if (el) el.textContent = text;
+}
+
+function _rekkiAppend(role, content) {
+  const log = document.getElementById('rekki-chat-log');
+  if (!log) return;
+  const msg = document.createElement('div');
+  msg.className = `rekki-msg ${role === 'user' ? 'user' : 'rekki'}`;
+  msg.textContent = content;
+  log.appendChild(msg);
+  log.scrollTop = log.scrollHeight;
+}
+
+async function rekkiRefreshStatus() {
+  _rekkiSetStatus('Checking Ollama connection…');
+  try {
+    const r = await fetch('/api/rekki/status', { cache: 'no-store' });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'status unavailable');
+    if (d.ollama_reachable) {
+      const availability = d.model_available === null
+        ? ''
+        : (d.model_available ? 'model ready' : 'model not found locally');
+      const resolved = d.model_resolved ? ` (using ${d.resolved_model})` : '';
+      _rekkiSetStatus(`Rekki · ${d.provider} · ${d.model}${resolved} · profile=${d.profile}${availability ? ` · ${availability}` : ''}`);
+      if (d.automation_status) {
+        _rekkiAppend('assistant', `Automation status:\n${d.automation_status}`);
+      }
+    } else {
+      _rekkiSetStatus(`Rekki offline: ${d.error || 'could not reach Ollama'}`);
+    }
+  } catch (err) {
+    _rekkiSetStatus(`Rekki status error: ${err.message || err}`);
+  }
+}
+
+async function rekkiAutomation(action) {
+  const send = document.getElementById('rekki-send');
+  if (send) send.disabled = true;
+  _rekkiSetStatus(`Rekki automation: ${action}…`);
+  try {
+    const r = await fetch('/api/rekki/automation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || d.output || 'automation failed');
+    if (d.output) {
+      _rekkiAppend('assistant', `Automation ${action}:\n${d.output}`);
+    }
+    if (d.status_text) {
+      _rekkiAppend('assistant', `Automation status:\n${d.status_text}`);
+    }
+    _rekkiSetStatus(`Rekki automation ${action} complete`);
+  } catch (err) {
+    _rekkiAppend('assistant', `Automation error (${action}): ${err.message || err}`);
+    _rekkiSetStatus('Rekki automation unavailable');
+  } finally {
+    if (send) send.disabled = false;
+  }
+}
+
+async function rekkiInjectContext() {
+  try {
+    const r = await fetch('/api/rekki/context', { cache: 'no-store' });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'context unavailable');
+    const input = document.getElementById('rekki-input');
+    if (!input) return;
+    const ctxText = `Context:\n${JSON.stringify(d, null, 2)}\n`;
+    input.value = input.value.trim() ? `${input.value.trim()}\n\n${ctxText}` : ctxText;
+    input.focus();
+  } catch (err) {
+    _rekkiAppend('assistant', `Could not fetch context: ${err.message || err}`);
+  }
+}
+
+async function rekkiSendMessage() {
+  const input = document.getElementById('rekki-input');
+  const send = document.getElementById('rekki-send');
+  if (!input || !send) return;
+  const text = (input.value || '').trim();
+  if (!text) return;
+
+  _rekkiAppend('user', text);
+  _rekkiHistory.push({ role: 'user', content: text });
+  input.value = '';
+  send.disabled = true;
+  _rekkiSetStatus('Rekki thinking…');
+
+  try {
+    const r = await fetch('/api/rekki/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, history: _rekkiHistory }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || 'chat failed');
+    _rekkiAppend('assistant', d.reply || '(no reply)');
+    _rekkiHistory.push({ role: 'assistant', content: d.reply || '' });
+    _rekkiSetStatus(`Rekki · ${d.provider} · ${d.model}`);
+  } catch (err) {
+    _rekkiAppend('assistant', `Rekki error: ${err.message || err}`);
+    _rekkiSetStatus('Rekki unavailable');
+  } finally {
+    send.disabled = false;
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && _rekkiOpen) {
+    toggleRekkiPanel();
+    return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+    e.preventDefault();
+    toggleRekkiPanel();
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('rekki-input');
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        rekkiSendMessage();
+      }
+    });
+  }
+  rekkiRefreshStatus();
+});

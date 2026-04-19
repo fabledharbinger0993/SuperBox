@@ -18,16 +18,22 @@ import os
 import platform
 import queue
 import signal
+import sqlite3
 import subprocess
 import sys
 import threading
 import time
 import uuid
 import datetime
+import tempfile
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, render_template, request, send_file
 from flask_sock import Sock
+from mutagen import File as MutagenFile
 
 # ── Resource root — handles both dev and PyInstaller bundle ──────────────────
 # When PyInstaller runs, sys._MEIPASS is the temp dir where everything lives.
@@ -178,7 +184,390 @@ def _subprocess_env() -> dict:
     return os.environ.copy()
 
 
-def _stream(cmd: list[str], library_root: str = "", step_name: str = ""):
+def _rekki_sqlite_health() -> dict:
+    """Read-only SQLite snapshot for Rekordbox DB sanity checks."""
+    try:
+        from config import DJMT_DB  # noqa: PLC0415
+    except Exception as exc:
+        return {"ok": False, "error": f"config unavailable: {exc}"}
+
+    db_path = Path(DJMT_DB)
+    info = {
+        "ok": True,
+        "db_path": str(db_path),
+        "exists": db_path.exists(),
+        "size_bytes": None,
+        "mtime": None,
+        "integrity": None,
+        "quick_check": None,
+        "tables": {},
+        "errors": [],
+    }
+
+    if not db_path.exists():
+        info["ok"] = False
+        info["error"] = "rekordbox database not found"
+        return info
+
+    try:
+        st = db_path.stat()
+        info["size_bytes"] = st.st_size
+        info["mtime"] = datetime.datetime.fromtimestamp(st.st_mtime).isoformat()
+    except Exception as exc:
+        info["errors"].append(f"stat failed: {exc}")
+
+    try:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
+        try:
+            integrity = conn.execute("PRAGMA integrity_check;").fetchone()
+            quick = conn.execute("PRAGMA quick_check;").fetchone()
+            info["integrity"] = integrity[0] if integrity else None
+            info["quick_check"] = quick[0] if quick else None
+
+            table_queries = {
+                "djmdContent": "SELECT COUNT(*) FROM djmdContent",
+                "djmdPlaylist": "SELECT COUNT(*) FROM djmdPlaylist",
+                "djmdCue": "SELECT COUNT(*) FROM djmdCue",
+                "content_missing_folder": (
+                    "SELECT COUNT(*) FROM djmdContent "
+                    "WHERE FolderPath IS NULL OR TRIM(FolderPath) = ''"
+                ),
+                "content_missing_bpm": (
+                    "SELECT COUNT(*) FROM djmdContent "
+                    "WHERE BPM IS NULL OR CAST(BPM AS INTEGER) = 0"
+                ),
+                "content_missing_key": (
+                    "SELECT COUNT(*) FROM djmdContent "
+                    "WHERE KeyID IS NULL OR CAST(KeyID AS INTEGER) = 0"
+                ),
+            }
+            for key, sql in table_queries.items():
+                try:
+                    row = conn.execute(sql).fetchone()
+                    info["tables"][key] = int(row[0]) if row else 0
+                except Exception as exc:
+                    info["tables"][key] = None
+                    info["errors"].append(f"{key} query failed: {exc}")
+        finally:
+            conn.close()
+    except Exception as exc:
+        info["ok"] = False
+        info["error"] = f"sqlite check failed: {exc}"
+
+    return info
+
+
+def _rekki_pyrekordbox_health() -> dict:
+    """Read-only pyrekordbox snapshot for high-level record counts."""
+    out = {
+        "ok": True,
+        "tracks": None,
+        "playlists": None,
+        "errors": [],
+    }
+    try:
+        from db_connection import read_db  # noqa: PLC0415
+
+        with read_db() as db:
+            try:
+                out["tracks"] = int(db.get_content().count())
+            except Exception as exc:
+                out["errors"].append(f"tracks count failed: {exc}")
+            try:
+                out["playlists"] = int(db.get_playlist().count())
+            except Exception as exc:
+                out["errors"].append(f"playlists count failed: {exc}")
+    except Exception as exc:
+        out["ok"] = False
+        out["error"] = f"pyrekordbox read failed: {exc}"
+
+    return out
+
+
+def _rekki_db_health_snapshot() -> dict:
+    sqlite_health = _rekki_sqlite_health()
+    pyrekordbox_health = _rekki_pyrekordbox_health()
+    return {
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "sqlite": sqlite_health,
+        "pyrekordbox": pyrekordbox_health,
+    }
+
+
+# ── Rekki (local read-only assistant panel) ─────────────────────────────────
+
+_REKKI_DEFAULT_MODEL = os.environ.get("REKIT_AGENT_MODEL", "qwen2.5-coder:7b")
+_REKKI_PROFILE = os.environ.get("REKIT_AGENT_PROFILE", "default")
+_REKKI_AUTOMATION_SCRIPT = REPO_ROOT / "scripts" / "agent_workflow.sh"
+
+
+def _rekki_chat_url() -> str:
+    return os.environ.get("REKIT_OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
+
+
+def _rekki_base_url() -> str:
+    chat_url = _rekki_chat_url()
+    parsed = urllib.parse.urlparse(chat_url)
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}"
+    return "http://127.0.0.1:11434"
+
+
+def _rekki_http_post_json(url: str, payload: dict, timeout: int = 30) -> dict:
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+
+def _rekki_http_get_json(url: str, timeout: int = 10) -> dict:
+    req = urllib.request.Request(url, method="GET")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+
+def _rekki_list_models() -> list[str]:
+    tags = _rekki_http_get_json(f"{_rekki_base_url()}/api/tags", timeout=8)
+    return [str((m or {}).get("name", "")).strip() for m in (tags.get("models") or []) if str((m or {}).get("name", "")).strip()]
+
+
+def _rekki_resolve_model(requested_model: str) -> tuple[str, bool, str | None]:
+    model = (requested_model or "").strip() or _REKKI_DEFAULT_MODEL
+    try:
+        names = _rekki_list_models()
+    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as exc:
+        return model, False, str(exc)
+
+    if not names:
+        return model, False, "no local ollama models found"
+
+    if model in names:
+        return model, True, None
+
+    for name in names:
+        if name.startswith(f"{model}:") or model.startswith(f"{name}:"):
+            return name, True, None
+
+    # Safe fallback: first locally-installed model to avoid hard 400 failures.
+    return names[0], True, None
+
+
+def _rekki_automation_env(model: str, profile: str) -> dict:
+    env = os.environ.copy()
+    env["REKIT_AGENT_PROVIDER"] = "ollama"
+    env["REKIT_AGENT_MODEL"] = model or _REKKI_DEFAULT_MODEL
+    env["REKIT_AGENT_PROFILE"] = profile or _REKKI_PROFILE
+    return env
+
+
+def _rekki_automation_status(model: str, profile: str) -> tuple[bool, str, int]:
+    if not _REKKI_AUTOMATION_SCRIPT.exists():
+        return False, "agent workflow script not found", 404
+    proc = subprocess.run(
+        ["bash", str(_REKKI_AUTOMATION_SCRIPT), "status"],
+        cwd=str(REPO_ROOT),
+        env=_rekki_automation_env(model, profile),
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    output = (proc.stdout or "").strip() or (proc.stderr or "").strip()
+    return proc.returncode == 0, output, proc.returncode
+
+
+def _rekki_automation_action(action: str, model: str, profile: str) -> tuple[bool, str, int]:
+    if action not in {"start", "stop", "once"}:
+        return False, "unsupported action", 400
+    if not _REKKI_AUTOMATION_SCRIPT.exists():
+        return False, "agent workflow script not found", 404
+    proc = subprocess.run(
+        ["bash", str(_REKKI_AUTOMATION_SCRIPT), action],
+        cwd=str(REPO_ROOT),
+        env=_rekki_automation_env(model, profile),
+        capture_output=True,
+        text=True,
+        timeout=120 if action == "once" else 20,
+    )
+    output = (proc.stdout or "").strip() or (proc.stderr or "").strip()
+    return proc.returncode == 0, output, proc.returncode
+
+
+def _rekki_context_snapshot() -> dict:
+    with _proc_lock:
+        proc = _active_proc
+    active = bool(proc is not None and proc.poll() is None)
+
+    last_response = None
+    state_dir = REPO_ROOT / ".git" / "agent-workflow"
+    response_file = state_dir / "response.json"
+    try:
+        if response_file.exists():
+            last_response = json.loads(response_file.read_text(encoding="utf-8"))
+    except Exception:
+        last_response = None
+
+    return {
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "rb_running": _rb_is_running(),
+        "scan_running": active,
+        "backup": _backup_info(),
+        "release": _release_info(),
+        "db_health": _rekki_db_health_snapshot(),
+        "agent_last_response": last_response,
+    }
+
+
+@app.route("/api/rekki/status")
+def api_rekki_status():
+    model = os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)
+    resolved_model, model_ok, model_error = _rekki_resolve_model(model)
+    result = {
+        "ok": True,
+        "name": "Rekki",
+        "provider": "ollama",
+        "model": model,
+        "resolved_model": resolved_model,
+        "model_resolved": model != resolved_model,
+        "profile": os.environ.get("REKIT_AGENT_PROFILE", _REKKI_PROFILE),
+        "ollama_base": _rekki_base_url(),
+        "ollama_reachable": False,
+        "model_available": None,
+        "error": None,
+    }
+    if model_ok:
+        result["ollama_reachable"] = True
+        result["model_available"] = True
+    else:
+        result["error"] = model_error
+
+    ok, status_text, status_code = _rekki_automation_status(
+        resolved_model,
+        os.environ.get("REKIT_AGENT_PROFILE", _REKKI_PROFILE),
+    )
+    result["automation_ok"] = ok
+    result["automation_status"] = status_text
+    result["automation_status_code"] = status_code
+    return jsonify(result)
+
+
+@app.route("/api/rekki/context")
+def api_rekki_context():
+    return jsonify(_rekki_context_snapshot())
+
+
+@app.route("/api/rekki/db-health")
+def api_rekki_db_health():
+    return jsonify(_rekki_db_health_snapshot())
+
+
+@app.route("/api/rekki/chat", methods=["POST"])
+def api_rekki_chat():
+    data = request.get_json(silent=True) or {}
+    user_message = str(data.get("message", "")).strip()
+    history = data.get("history") or []
+    model = str(data.get("model") or os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)).strip()
+
+    if not user_message:
+        return jsonify({"ok": False, "error": "message is required"}), 400
+    if not model:
+        return jsonify({"ok": False, "error": "model is required"}), 400
+
+    resolved_model, model_ok, model_error = _rekki_resolve_model(model)
+    if not model_ok:
+        return jsonify({"ok": False, "error": f"Ollama unavailable: {model_error}"}), 502
+
+    sanitized_history = []
+    if isinstance(history, list):
+        for item in history[-8:]:
+            if not isinstance(item, dict):
+                continue
+            role = str(item.get("role", "")).strip()
+            content = str(item.get("content", "")).strip()
+            if role in {"user", "assistant"} and content:
+                sanitized_history.append({"role": role, "content": content})
+
+    context = _rekki_context_snapshot()
+    system_prompt = (
+        "You are Rekki, a read-only assistant for RekitBox. "
+        "Help the user understand app state and suggest safe next actions. "
+        "Do not claim to have executed commands or modified files unless explicitly told by server context."
+    )
+    user_payload = (
+        "RekitBox runtime context (JSON):\n"
+        f"{json.dumps(context, indent=2)}\n\n"
+        "User message:\n"
+        f"{user_message}"
+    )
+
+    payload = {
+        "model": resolved_model,
+        "stream": False,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            *sanitized_history,
+            {"role": "user", "content": user_payload},
+        ],
+        "options": {"temperature": 0.2},
+    }
+
+    try:
+        data = _rekki_http_post_json(_rekki_chat_url(), payload, timeout=90)
+        reply = str((data.get("message") or {}).get("content", "")).strip()
+        if not reply:
+            return jsonify({"ok": False, "error": "empty response from ollama"}), 502
+        return jsonify({
+            "ok": True,
+            "name": "Rekki",
+            "provider": "ollama",
+            "model": resolved_model,
+            "requested_model": model,
+            "reply": reply,
+            "context": context,
+        })
+    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 502
+
+
+@app.route("/api/rekki/automation", methods=["POST"])
+def api_rekki_automation():
+    data = request.get_json(silent=True) or {}
+    action = str(data.get("action", "")).strip().lower()
+    model = str(data.get("model") or os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)).strip()
+    profile = str(data.get("profile") or os.environ.get("REKIT_AGENT_PROFILE", _REKKI_PROFILE)).strip()
+
+    resolved_model, model_ok, model_error = _rekki_resolve_model(model)
+    if not model_ok:
+        return jsonify({"ok": False, "error": f"Ollama unavailable: {model_error}"}), 502
+
+    ok, output, code = _rekki_automation_action(action, resolved_model, profile)
+    status_ok, status_text, status_code = _rekki_automation_status(resolved_model, profile)
+    http_code = 200 if ok else (code if code in {400, 404} else 502)
+    return jsonify({
+        "ok": ok,
+        "action": action,
+        "provider": "ollama",
+        "requested_model": model,
+        "model": resolved_model,
+        "profile": profile,
+        "output": output,
+        "code": code,
+        "status_ok": status_ok,
+        "status_text": status_text,
+        "status_code": status_code,
+    }), http_code
+
+
+def _stream(
+    cmd: list[str],
+    library_root: str = "",
+    step_name: str = "",
+    prelude_lines: list[str] | None = None,
+    cleanup_paths: list[Path] | None = None,
+):
     """
     Generator that yields SSE-formatted lines from a subprocess.
     Each event is a JSON object:
@@ -192,6 +581,9 @@ def _stream(cmd: list[str], library_root: str = "", step_name: str = ""):
     _library_root = library_root
     _step_name    = step_name
     try:
+        for line in prelude_lines or []:
+            yield f"data: {json.dumps({'line': line})}\n\n"
+
         process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -217,11 +609,141 @@ def _stream(cmd: list[str], library_root: str = "", step_name: str = ""):
         with _proc_lock:
             _active_proc = None
         yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}', 'done': True, 'exit_code': 1})}\n\n"
+    finally:
+        for path in cleanup_paths or []:
+            try:
+                path.unlink(missing_ok=True)
+            except Exception:
+                pass
 
 
-def _sse_response(cmd: list[str], library_root: str = "", step_name: str = "") -> Response:
+def _sse_response(
+    cmd: list[str],
+    library_root: str = "",
+    step_name: str = "",
+    prelude_lines: list[str] | None = None,
+    cleanup_paths: list[Path] | None = None,
+) -> Response:
     return Response(
-        _stream(cmd, library_root=library_root, step_name=step_name),
+        _stream(
+            cmd,
+            library_root=library_root,
+            step_name=step_name,
+            prelude_lines=prelude_lines,
+            cleanup_paths=cleanup_paths,
+        ),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+def _tag_value_present(value) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (list, tuple)):
+        if not value:
+            return False
+        value = value[0]
+    if isinstance(value, bytes):
+        try:
+            value = value.decode("utf-8", errors="ignore")
+        except Exception:
+            return False
+    text = str(value).strip()
+    return text not in {"", "0", "0.0"}
+
+
+def _track_needs_tag_work(path: Path, detect_bpm: bool, detect_key: bool) -> tuple[bool, bool]:
+    """Return (needs_bpm, needs_key) using fast tag presence checks only."""
+    try:
+        audio = MutagenFile(str(path), easy=False)
+        tags = audio.tags if audio else None
+    except Exception:
+        # If tags cannot be read, keep file in pending list so normal processing can handle/report it.
+        return detect_bpm, detect_key
+
+    if tags is None:
+        return detect_bpm, detect_key
+
+    tag_type = type(tags).__name__
+    is_vorbis = "VCFLACDict" in tag_type or "VComment" in tag_type
+    is_mp4 = "MP4Tags" in tag_type or "MP4" in tag_type
+
+    has_bpm = False
+    has_key = False
+
+    if is_vorbis:
+        has_bpm = _tag_value_present(tags.get("bpm"))
+        has_key = _tag_value_present(tags.get("initialkey"))
+    elif is_mp4:
+        has_bpm = _tag_value_present(tags.get("tmpo"))
+        has_key = _tag_value_present(tags.get("----:com.apple.iTunes:initialkey"))
+    else:
+        has_bpm = _tag_value_present(tags.get("TBPM"))
+        has_key = _tag_value_present(tags.get("TKEY"))
+
+    needs_bpm = detect_bpm and not has_bpm
+    needs_key = detect_key and not has_key
+    return needs_bpm, needs_key
+
+
+def _smart_skip_candidates(roots: list[Path], detect_bpm: bool, detect_key: bool) -> dict:
+    """Build process candidate list that excludes tracks already complete for requested tag ops."""
+    from scanner import scan_directory  # noqa: PLC0415
+    from config import AUDIO_EXTENSIONS  # noqa: PLC0415
+
+    pending: list[str] = []
+    total = 0
+    skipped_complete = 0
+    unreadable = 0
+    invalid_paths = 0
+
+    for root in roots:
+        if root.is_file():
+            total += 1
+            if root.suffix.lower() not in AUDIO_EXTENSIONS:
+                invalid_paths += 1
+                continue
+            needs_bpm, needs_key = _track_needs_tag_work(root, detect_bpm, detect_key)
+            if needs_bpm or needs_key:
+                pending.append(str(root))
+            else:
+                skipped_complete += 1
+            continue
+
+        if not root.is_dir():
+            invalid_paths += 1
+            continue
+
+        for track in scan_directory(root):
+            total += 1
+            path = track.path
+            needs_bpm, needs_key = _track_needs_tag_work(path, detect_bpm, detect_key)
+            if needs_bpm or needs_key:
+                pending.append(str(path))
+            else:
+                skipped_complete += 1
+            if track.errors:
+                unreadable += 1
+
+    return {
+        "total": total,
+        "pending": pending,
+        "pending_count": len(pending),
+        "skipped_complete": skipped_complete,
+        "unreadable": unreadable,
+        "invalid_paths": invalid_paths,
+    }
+
+
+def _sse_done(lines: list[str], exit_code: int = 0) -> Response:
+    def _gen():
+        for line in lines:
+            yield f"data: {json.dumps({'line': line})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'exit_code': exit_code})}\n\n"
+
+    return Response(
+        _gen(),
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -429,18 +951,29 @@ def api_process():
     if not paths:
         return jsonify({"error": "path is required"}), 400
 
+    no_bpm = request.args.get("no_bpm") == "1"
+    no_key = request.args.get("no_key") == "1"
+    no_normalize = request.args.get("no_normalize") == "1"
+    force = request.args.get("force") == "1"
+    enrich_tags = request.args.get("enrich_tags") == "1"
+    smart_skip = request.args.get("smart_skip", "1") == "1"
+
+    detect_bpm = not no_bpm
+    detect_key = not no_key
+
     cmd = [sys.executable, str(CLI_PATH), "process", paths[0]]
     for extra in paths[1:]:
         cmd += ["--also-scan", extra]
-    if request.args.get("no_bpm") == "1":
+
+    if no_bpm:
         cmd.append("--no-bpm")
-    if request.args.get("no_key") == "1":
+    if no_key:
         cmd.append("--no-key")
-    if request.args.get("no_normalize") == "1":
+    if no_normalize:
         cmd.append("--no-normalize")
-    if request.args.get("force") == "1":
+    if force:
         cmd.append("--force")
-    if request.args.get("enrich_tags") == "1":
+    if enrich_tags:
         cmd.append("--enrich-tags")
     if request.args.get("dry_run") == "1":
         cmd.append("--dry-run")
@@ -454,6 +987,64 @@ def api_process():
                 cmd += ["--pause", pause]
         except ValueError:
             pass
+
+    # Smart skip mode: pre-filter tracks that already have requested tags so
+    # heavy processing is focused only on incomplete files.
+    if (
+        smart_skip
+        and not force
+        and no_normalize
+        and not enrich_tags
+        and (detect_bpm or detect_key)
+    ):
+        roots = [Path(p) for p in paths]
+        filter_result = _smart_skip_candidates(roots, detect_bpm=detect_bpm, detect_key=detect_key)
+        pending = filter_result["pending"]
+
+        prelude = [
+            (
+                "Smart Skip: "
+                f"{filter_result['pending_count']}/{filter_result['total']} file(s) need work; "
+                f"{filter_result['skipped_complete']} already complete and skipped upfront."
+            )
+        ]
+        if filter_result["unreadable"]:
+            prelude.append(
+                f"Smart Skip note: {filter_result['unreadable']} file(s) had read warnings and remain included for safe handling."
+            )
+        if filter_result["invalid_paths"]:
+            prelude.append(
+                f"Smart Skip note: {filter_result['invalid_paths']} path(s) were invalid or unsupported and ignored."
+            )
+
+        if not pending:
+            return _sse_done([
+                prelude[0],
+                "No files require BPM/key updates for this run.",
+                "Finished successfully.",
+            ])
+
+        tf = tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".txt",
+            prefix="rekitbox_smart_skip_",
+            delete=False,
+            encoding="utf-8",
+        )
+        tf.write("\n".join(pending))
+        tf.close()
+        cmd += ["--paths-file", tf.name]
+        # In --paths-file mode the positional path is a placeholder only.
+        cmd = [sys.executable, str(CLI_PATH), "process", paths[0], *cmd[4:]]
+        library_root = _get_library_root(request, "path")
+        return _sse_response(
+            cmd,
+            library_root=library_root,
+            step_name="process",
+            prelude_lines=prelude,
+            cleanup_paths=[Path(tf.name)],
+        )
+
     library_root = _get_library_root(request, "path")
     return _sse_response(cmd, library_root=library_root, step_name="process")
 
