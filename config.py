@@ -130,7 +130,32 @@ LUFS_TOLERANCE: float = float(_cfg["lufs_tolerance"])
 ACOUSTID_API_KEY: str = _cfg.get("acoustid_api_key", "")
 
 # Supported audio file extensions (lowercase)
-AUDIO_EXTENSIONS = {".mp3", ".aiff", ".aif", ".wav", ".flac", ".m4a", ".ogg", ".opus", ".wma"}
+# 
+# Modern formats (Rekordbox native):
+#   .mp3, .wav, .aiff/.aif, .flac, .m4a (AAC/ALAC), .ogg (Vorbis), .opus
+#
+# Legacy formats (early 2000s, auto-converted to Rekordbox format on import):
+#   .wma (Windows Media Audio) → MP3 or WAV
+#   .ape (Monkey's Audio) → FLAC
+#   .mpc/.mp+ (Musepack) → MP3 or FLAC
+#   .wv (WavPack) → FLAC
+#   .aac (raw AAC) → M4A
+#   .ac3 (Dolby Digital) → WAV
+#   .dff/.dsf (DSD) → FLAC or WAV
+#   .ape (APEv2 tagged) → FLAC
+#
+AUDIO_EXTENSIONS = {
+    # Modern formats — Rekordbox native
+    ".mp3", ".wav", ".aiff", ".aif", ".flac", ".m4a", ".ogg", ".opus",
+    # Legacy formats — auto-converted on import
+    ".wma",        # Windows Media Audio
+    ".ape",        # Monkey's Audio (lossless)
+    ".mpc", ".mp+",  # Musepack (early 2000s codec)
+    ".wv",         # WavPack (lossless)
+    ".aac",        # Raw AAC (usually in M4A container, but raw files exist)
+    ".ac3",        # Dolby Digital audio
+    ".dff", ".dsf",  # DSD formats
+}
 
 # Files to skip when scanning.
 # "._"       — macOS resource fork sidecar files

@@ -32,9 +32,46 @@ _JOBS: OrderedDict[str, dict] = OrderedDict()   # job_id → job dict, insertion
 _MAX_JOBS = 200
 
 # ─── Supported formats ────────────────────────────────────────────────────────
+#
+# Output formats: All formats natively supported by Rekordbox.
+# The downloader converts web streams or source files to these formats.
+#
+# LOSSLESS PREFERRED (for DJ library integrity):
+#   - "aiff"   AIFF Interchange File Format — highest DJ standard, lossless
+#   - "wav"    WAV — lossless uncompressed, universal compatibility
+#   - "flac"   FLAC — lossless compression, smaller files than WAV
+#
+# COMPRESSED (smaller file size):
+#   - "mp3"    MP3 — lossy, universal compatibility, DJ standard fallback
+#   - "m4a"    M4A/AAC — lossy, Apple standard, smaller than MP3
+#   - "ogg"    OGG Vorbis — open-source lossy, excellent quality/compression ratio
+#   - "opus"   Opus — modern lossy, best quality-to-bitrate ratio
+#
+# DEFAULT: "aiff" (maximum fidelity for DJ use)
+#
 
-FORMATS = {"aiff", "flac", "wav", "mp3"}
+FORMATS = {
+    # Lossless (preferred for master library)
+    "aiff", "wav", "flac",
+    # Compressed (space-efficient, full DJ compatibility)
+    "mp3", "m4a", "ogg", "opus",
+    # Rekordbox also supports ALAC (Apple Lossless) but it's typically in .m4a container
+}
 DEFAULT_FORMAT = "aiff"
+
+# Legacy format conversion mapping
+# Maps input formats (early 2000s, etc.) to recommended Rekordbox output format
+LEGACY_CONVERSION_MAP = {
+    ".wma": "mp3",       # Windows Media Audio → MP3
+    ".ape": "flac",      # Monkey's Audio (lossless) → FLAC
+    ".mpc": "flac",      # Musepack → FLAC (preserves lossless quality)
+    ".mp+": "flac",      # Musepack alternate extension
+    ".wv": "flac",       # WavPack → FLAC
+    ".aac": "m4a",       # Raw AAC → M4A container
+    ".ac3": "wav",       # Dolby Digital → WAV (safe fallback)
+    ".dff": "flac",      # DSD → FLAC
+    ".dsf": "flac",      # DSD alternate → FLAC
+}
 
 # ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -109,6 +146,30 @@ def _find_ytdlp() -> str:
     return "yt-dlp"
 
 
+def get_recommended_format(input_file: Optional[str] = None) -> str:
+    """
+    Determine recommended Rekordbox output format for a given input file.
+    
+    For legacy formats (early 2000s), uses LEGACY_CONVERSION_MAP.
+    For modern formats, defaults to AIFF (lossless/maximum fidelity).
+    
+    Parameters
+    ----------
+    input_file : str, optional
+        Input filename or path. If provided, uses its extension for mapping.
+        If None or unknown extension, returns DEFAULT_FORMAT.
+    
+    Returns
+    -------
+    str
+        Format string: "aiff", "wav", "flac", "mp3", "m4a", "ogg", or "opus"
+    """
+    if input_file:
+        ext = Path(input_file).suffix.lower()
+        return LEGACY_CONVERSION_MAP.get(ext, DEFAULT_FORMAT)
+    return DEFAULT_FORMAT
+
+
 def _run(job_id: str) -> None:
     with _LOCK:
         job = dict(_JOBS.get(job_id, {}))
@@ -139,11 +200,18 @@ def _run(job_id: str) -> None:
     else:
         output_tmpl = str(dest_path / "%(artist)s - %(title)s.%(ext)s")
 
-    # Format-specific postprocessor args
-    if fmt == "mp3":
-        pp_args = ["--audio-format", "mp3", "--audio-quality", "320K"]
-    else:
-        pp_args = ["--audio-format", fmt]
+    # Format-specific postprocessor args for quality/codec settings
+    # Quality levels aligned with DJ standards and Rekordbox compatibility
+    audio_quality = {
+        "mp3":   ["--audio-format", "mp3", "--audio-quality", "320K"],
+        "m4a":   ["--audio-format", "m4a", "--audio-quality", "192"],
+        "ogg":   ["--audio-format", "vorbis", "--audio-quality", "192"],
+        "opus":  ["--audio-format", "opus", "--audio-quality", "192"],
+        "flac":  ["--audio-format", "flac"],         # lossless, no quality needed
+        "wav":   ["--audio-format", "wav"],          # lossless, no quality needed
+        "aiff":  ["--audio-format", "aiff"],         # lossless, no quality needed
+    }
+    pp_args = audio_quality.get(fmt, ["--audio-format", fmt])
 
     cmd = [
         yt_dlp,
@@ -185,7 +253,7 @@ def _run(job_id: str) -> None:
 
     # Fallback: most-recently-modified audio file in dest
     if downloaded_path is None:
-        audio_exts = {".aiff", ".aif", ".flac", ".wav", ".mp3"}
+        audio_exts = {".aiff", ".aif", ".flac", ".wav", ".mp3", ".m4a", ".ogg", ".opus"}
         candidates = sorted(
             [f for f in dest_path.iterdir() if f.suffix.lower() in audio_exts],
             key=lambda f: f.stat().st_mtime,
