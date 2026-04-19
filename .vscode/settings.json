@@ -1,4 +1,12 @@
 {
 	"task.allowAutomaticTasks": "on",
-	"git.autofetch": true
+	"git.autofetch": true,
+	"files.exclude": {
+		"**/.venv": true,
+		"**/venv": true
+	},
+	"search.exclude": {
+		"**/.venv": true,
+		"**/venv": true
+	}
 }
