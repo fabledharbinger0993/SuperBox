@@ -143,7 +143,7 @@ FORMAT_TIER: dict[str, int] = {
     ".aiff": 6, ".aif": 6,
     ".wav":  5,
     ".flac": 4,
-    ".m4a":  3,
+    ".m4a":  3, ".m4p": 3,
     ".mp3":  2,
     ".ogg":  1, ".opus": 1,
 }
