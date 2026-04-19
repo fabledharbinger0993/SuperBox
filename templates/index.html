@@ -880,10 +880,11 @@
     <details class="explain-block">
       <summary>How it works</summary>
       <div class="explain-body">
-        <p><strong>Input:</strong> Files like <code>918223_SomethingPN.mp3</code> or <code>Artist_Remix_12345.mp3</code></p>
+        <p><strong>Input:</strong> Files like <code>918223_SomethingPN.mp3</code> or <code>Artist_Remix_12345.mp3</code> or <code>Track (2).mp3</code></p>
         <p><strong>Artist priority:</strong> Vocal/lead artist → Album artist/band → Producer. So a Donna Summer remix by Felix da-Housecat becomes <code>Donna Summer: On the Radio (Felix da-Housecat remix)</code> — using Donna as the primary artist.</p>
-        <p><strong>Process:</strong> Reads title and artist from ID3 tags with smart priority, strips processing markers and odd patterns.</p>
-        <p><strong>Output:</strong> Clean filenames like <code>Artist: Title.mp3</code> or <code>Band: Song.mp3</code></p>
+        <p><strong>Copy markers preserved:</strong> If a file is named <code>Track (2).mp3</code>, it becomes <code>Artist: Track (2).mp3</code>. Duplicates detected during rename get <code>(2)</code>, <code>(3)</code>, etc.</p>
+        <p><strong>Process:</strong> Reads title and artist from ID3 tags with smart priority, preserves copy markers (2), (copy), (v2), etc., strips processing markers and odd patterns.</p>
+        <p><strong>Output:</strong> Clean filenames like <code>Artist: Title.mp3</code> or <code>Artist: Title (2).mp3</code></p>
         <p><strong>Metadata preserved:</strong> Artist, album, and all other tags stay intact — full searchability in Rekordbox.</p>
       </div>
     </details>

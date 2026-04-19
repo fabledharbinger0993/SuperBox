@@ -11,9 +11,10 @@ All metadata remains in the ID3 tags for database searchability.
 Design:
   - Reads metadata via mutagen (same as scanner.py)
   - Artist priority: vocal/lead (TPE1) > album artist/band (TPE2) > fallback
-  - Generates clean filenames: "{Artist}: {Title}.{ext}"
+  - Generates clean filenames: "{Artist}: {Title}.{ext}" or "{Artist}: {Title} (2).{ext}"
+  - Preserves copy markers: (2), (3), (copy), (duplicate), (v2) from original filename
   - Falls back to original filename if title missing
-  - Handles collisions: if "Title.mp3" exists, uses "_1" suffix
+  - Handles collisions: if file exists, uses (2), (3), ... until free slot found
   - Updates rekordbox DjmdContent.FolderPath for each renamed file
   - No file moves — renames happen in place
   - Dry-run mode by default; pass dry_run=False to execute
@@ -23,6 +24,7 @@ Supported naming patterns (detected and cleaned):
   - "918223_SomethingElse.mp3" → extracts title, removes ID prefix
   - "Something_918223.mp3" → extracts title, removes ID suffix
   - "Track (remix).mp3" or "Track (dub).mp3" → preserves remix/version markers
+  - "Track (2).mp3" → preserves copy marker as "Artist: Track (2).mp3"
   - Remixes: Uses original artist, preserves remixer in title marker
     E.g., "Donna Summer: On the Radio (Felix da-Housecat remix)"
   - Standard "Artist - Title.mp3" → extracted with artist prioritization
@@ -33,6 +35,11 @@ Artist Priority Examples:
   - If only album artist exists → uses band name
   - If only producer/release artist exists → uses producer name
   - If nothing in tags → tries filename parsing
+
+Copy Suffix Examples:
+  - "Track (2).mp3" → "Artist: Track (2).mp3"
+  - "Remix (copy).mp3" → "Artist: Remix (copy).mp3"
+  - Duplicates after rename: "Artist: Track (2).mp3", "Artist: Track (3).mp3", etc.
 """
 
 import json
@@ -60,6 +67,7 @@ _ID_SUFFIX = re.compile(r'[-_\.]\d{6,}$')               # "Title_918223" or "Tit
 _UNDERSCORE = re.compile(r'_')                          # Underscores (replaced with spaces)
 _MULTI_SPACE = re.compile(r'\s{2,}')                    # Multiple spaces
 _UNSAFE_CHARS = re.compile(r'[\\/:*?"<>|]')             # Filesystem-unsafe
+_COPY_SUFFIX = re.compile(r'\s*\((\d+|copy|duplicate|v\d+)\)\s*$', re.IGNORECASE)  # "(2)", "(copy)", etc.
 _VERSION_MARKERS = re.compile(
     r'\((remix|dub|extended|acoustic|instrumental|version|edit|remix[\s\-]mix|remaster|radio[\s\-]edit)\)',
     re.IGNORECASE
@@ -125,16 +133,17 @@ class RenameResult:
     content_id: str | None = None
 
 
-def _extract_artist_title(path: Path, metadata) -> tuple[str | None, str | None]:
+def _extract_artist_title(path: Path, metadata) -> tuple[str | None, str | None, str | None]:
     """
-    Best-effort extraction of artist and title from metadata.
+    Best-effort extraction of artist, title, and copy suffix from metadata.
     Prefers tag fields, falls back to filename parsing.
     
     Artist priority: vocal artist (TPE1) > album artist (TPE2) > fallback
     Title: extracted from tags or filename, preserves remix/version markers.
+    Copy suffix: extracted from original filename (e.g., "(2)", "(copy)", "(v2)")
     Removes only filler: PN suffixes, numeric prefixes/suffixes, underscores.
     
-    Returns: (artist, title) or (None, None) if unable to extract.
+    Returns: (artist, title, copy_suffix) where copy_suffix is None or a string like "(2)"
     """
     # Try to get artist from tags with priority (vocalist > band > producer)
     artist = _get_prioritized_artist(path)
@@ -144,13 +153,22 @@ def _extract_artist_title(path: Path, metadata) -> tuple[str | None, str | None]
         artist = metadata.artist or None
     
     title = metadata.title or None
+    copy_suffix = None
+    
+    # Extract copy suffix from original filename first (before any cleaning)
+    stem_original = path.stem
+    copy_match = _COPY_SUFFIX.search(stem_original)
+    if copy_match:
+        copy_suffix = f"({copy_match.group(1)})"
+        # Remove copy suffix from stem for further processing
+        stem_original = _COPY_SUFFIX.sub('', stem_original).strip()
     
     # Both found in tags — use them (preserves remix/dub markers if in tag)
     if artist and title:
-        return artist, title
+        return artist, title, copy_suffix
     
     # Try filename-based fallback for title
-    stem = path.stem
+    stem = stem_original
     
     # Strip Pioneer/MiX markers: _PN, _PN2, _PN 3, or PN (no underscore)
     stem = _PN_SUFFIX.sub('', stem).strip()
@@ -177,7 +195,7 @@ def _extract_artist_title(path: Path, metadata) -> tuple[str | None, str | None]
     if not title:
         title = stem if stem else None
     
-    return artist or None, title or None
+    return artist or None, title or None, copy_suffix
 
 
 def _sanitize_filename(text: str, max_len: int = 200) -> str:
@@ -190,30 +208,34 @@ def _sanitize_filename(text: str, max_len: int = 200) -> str:
     return text[:max_len] if text else "Unknown"
 
 
-def _generate_filename(artist: str | None, title: str | None, ext: str) -> str:
+def _generate_filename(artist: str | None, title: str | None, ext: str, copy_suffix: str | None = None) -> str:
     """
-    Generate a clean filename with artist and title.
-    Format: "Artist: Title.ext" or "Unknown: Title.ext"
+    Generate a clean filename with artist, title, and optional copy suffix.
+    Format: "Artist: Title.ext" or "Artist: Title (2).ext"
     
     Artist and title are both included in filename for clear visual identification.
+    Copy suffix (e.g., "(2)", "(copy)") is appended before the extension if present.
     Full metadata remains in ID3 tags for database searchability.
     """
     artist = _sanitize_filename(artist or "Unknown")
     title = _sanitize_filename(title or "Unknown")
-    return f"{artist}: {title}{ext}"
+    suffix_str = f" {copy_suffix}" if copy_suffix else ""
+    return f"{artist}: {title}{suffix_str}{ext}"
 
 
 def _resolve_filename_collision(dest: Path) -> Path:
     """
-    If dest already exists, append _1, _2, ... until a free slot is found.
+    If dest already exists, append (2), (3), ... until a free slot is found.
     Returns the new collision-safe path or None if no slot found within 100 attempts.
+    
+    Uses (2), (3) format to match standard copy naming conventions.
     """
     if not dest.exists():
         return dest
     
     stem, suffix = dest.stem, dest.suffix
-    for i in range(1, 100):
-        candidate = dest.with_name(f"{stem}_{i}{suffix}")
+    for i in range(2, 101):
+        candidate = dest.with_name(f"{stem} ({i}){suffix}")
         if not candidate.exists():
             return candidate
     
@@ -253,7 +275,7 @@ def _rename_one(
     """
     try:
         metadata = extract_metadata(path)
-        artist, title = _extract_artist_title(path, metadata)
+        artist, title, copy_suffix = _extract_artist_title(path, metadata)
     except Exception as e:
         return RenameResult(
             original_path=path,
@@ -263,7 +285,7 @@ def _rename_one(
         )
     
     ext = path.suffix
-    new_name = _generate_filename(artist, title, ext)
+    new_name = _generate_filename(artist, title, ext, copy_suffix)
     new_path = path.parent / new_name
     
     # If the new name matches the current name, skip
