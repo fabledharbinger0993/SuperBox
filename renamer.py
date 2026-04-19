@@ -74,6 +74,27 @@ _VERSION_MARKERS = re.compile(
 )                                                        # Version/remix markers to preserve
 
 
+def _normalize_artist_text(raw: str | None) -> str | None:
+    """Normalize and de-duplicate obvious repeated artist strings."""
+    if not raw:
+        return None
+    s = _MULTI_SPACE.sub(" ", str(raw)).strip()
+    if not s:
+        return None
+
+    # Collapse exact doubled strings, e.g. "Diana Ross Diana Ross".
+    m = re.match(r'^(?P<a>.+?)\s+(?P=a)$', s, flags=re.IGNORECASE)
+    if m:
+        s = m.group("a").strip()
+
+    # Collapse duplicated tokens separated by delimiters, e.g. "Diana Ross / Diana Ross".
+    m = re.match(r'^(?P<a>.+?)\s*[/|;,]+\s*(?P=a)$', s, flags=re.IGNORECASE)
+    if m:
+        s = m.group("a").strip()
+
+    return s or None
+
+
 def _strip_leading_artist_from_title(artist: str, title: str) -> str:
     """
     If title already starts with the same artist text, strip that prefix.
@@ -122,23 +143,41 @@ def _get_prioritized_artist(path: Path) -> str | None:
         if isinstance(tags, ID3):
             # TPE1: Lead/Vocal artist
             tpe1 = tags.get('TPE1')
-            if tpe1 and str(tpe1).strip():
-                return str(tpe1).strip()
+            if tpe1 is not None:
+                text = getattr(tpe1, 'text', None)
+                if text:
+                    s = _normalize_artist_text(str(text[0]).strip())
+                    if s:
+                        return s
+                s = _normalize_artist_text(str(tpe1).strip())
+                if s:
+                    return s
             # TPE2: Album artist (band, ensemble)
             tpe2 = tags.get('TPE2')
-            if tpe2 and str(tpe2).strip():
-                return str(tpe2).strip()
+            if tpe2 is not None:
+                text = getattr(tpe2, 'text', None)
+                if text:
+                    s = _normalize_artist_text(str(text[0]).strip())
+                    if s:
+                        return s
+                s = _normalize_artist_text(str(tpe2).strip())
+                if s:
+                    return s
         
         # Vorbis comments (FLAC, OGG, Opus)
         elif hasattr(tags, 'get'):
             # Vorbis ARTIST (vocalist/lead)
             artist = tags.get('artist')
             if artist and isinstance(artist, list) and artist[0].strip():
-                return artist[0].strip()
+                s = _normalize_artist_text(artist[0].strip())
+                if s:
+                    return s
             # Vorbis ALBUMARTIST (band/ensemble)
             album_artist = tags.get('albumartist')
             if album_artist and isinstance(album_artist, list) and album_artist[0].strip():
-                return album_artist[0].strip()
+                s = _normalize_artist_text(album_artist[0].strip())
+                if s:
+                    return s
         
         return None
     except Exception as e:
@@ -174,6 +213,7 @@ def _extract_artist_title(path: Path, metadata) -> tuple[str | None, str | None,
     # Fallback to scanner's metadata.artist if prioritized method returned nothing
     if not artist:
         artist = metadata.artist or None
+    artist = _normalize_artist_text(artist)
     
     title = metadata.title or None
     copy_suffix = None
