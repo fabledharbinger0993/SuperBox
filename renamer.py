@@ -10,7 +10,7 @@ Artist information is kept in the ID3 tags for database searchability.
 
 Design:
   - Reads metadata via mutagen (same as scanner.py)
-  - Generates clean filenames: "{Title}.{ext}" (artist remains in tags)
+  - Generates clean filenames: "{Artist}: {Title}.{ext}"
   - Falls back to original filename if title missing
   - Handles collisions: if "Title.mp3" exists, uses "_1" suffix
   - Updates rekordbox DjmdContent.FolderPath for each renamed file
@@ -22,7 +22,7 @@ Supported naming patterns (detected and cleaned):
   - "918223_SomethingElse.mp3" → extracts title, removes ID prefix
   - "Something_918223.mp3" → extracts title, removes ID suffix
   - "Track (remix).mp3" or "Track (dub).mp3" → preserves remix/version markers
-  - Standard "Artist - Title.mp3" → extracted as just Title if tags missing
+  - Standard "Artist - Title.mp3" → extracted as "Artist: Title" if tags missing
   - Anything else → fallback to original name
 """
 
@@ -127,14 +127,15 @@ def _sanitize_filename(text: str, max_len: int = 200) -> str:
 
 def _generate_filename(artist: str | None, title: str | None, ext: str) -> str:
     """
-    Generate a clean filename from title only.
-    Format: "Title.ext" or "Unknown.ext"
+    Generate a clean filename with artist and title.
+    Format: "Artist: Title.ext" or "Unknown: Title.ext"
     
-    Artist information is preserved in ID3 tags so tracks remain searchable by artist.
-    File names are simplified to just the track title for cleaner browsing on Pioneer devices.
+    Artist and title are both included in filename for clear visual identification.
+    Full metadata remains in ID3 tags for database searchability.
     """
+    artist = _sanitize_filename(artist or "Unknown")
     title = _sanitize_filename(title or "Unknown")
-    return f"{title}{ext}"
+    return f"{artist}: {title}{ext}"
 
 
 def _resolve_filename_collision(dest: Path) -> Path:

@@ -874,15 +874,15 @@
       <div class="card-icon caution"><img src="/static/icon-filename.png?v=1.9.17" alt="Rename Files"></div>
       <div class="card-meta">
         <div class="card-title">Rename Files</div>
-        <div class="card-blurb">Clean up file names using metadata tags. Removes underscores, numbers, processing markers (PN, IDs) — keeps artist and album in the tags so tracks stay searchable in Rekordbox.</div>
+        <div class="card-blurb">Clean up file names using metadata tags. Generates "Artist: Title" format, removes underscores, numbers, processing markers (PN, IDs) — keeps all metadata searchable in Rekordbox.</div>
       </div>
     </div>
     <details class="explain-block">
       <summary>How it works</summary>
       <div class="explain-body">
         <p><strong>Input:</strong> Files like <code>918223_SomethingPN.mp3</code> or <code>Artist_Remix_12345.mp3</code></p>
-        <p><strong>Process:</strong> Reads title from ID3 tags, strips processing markers and odd patterns.</p>
-        <p><strong>Output:</strong> Clean titles like <code>Something.mp3</code> or <code>Remix.mp3</code></p>
+        <p><strong>Process:</strong> Reads title and artist from ID3 tags, strips processing markers and odd patterns.</p>
+        <p><strong>Output:</strong> Clean filenames like <code>Artist: Something.mp3</code> or <code>Artist: Remix.mp3</code></p>
         <p><strong>Metadata preserved:</strong> Artist, album, and all other tags stay intact — full searchability in Rekordbox.</p>
       </div>
     </details>

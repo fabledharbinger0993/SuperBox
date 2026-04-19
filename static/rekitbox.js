@@ -3885,6 +3885,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFolderZone('novelty-zone',   'novelty-pills',   'novelty-zone-text');
   setupFolderZone('import-zone',    'import-pills',    'import-zone-text');
   setupFolderZone('link-zone',      'link-pills',      'link-zone-text');
+  setupFolderZone('rename-zone',    'rename-pills',    'rename-zone-text');
   setupFolderZone('organize-zone',  'organize-source-pills', 'organize-zone-text');
   // Single-path zones (visual feedback + Browse/drop, no pills)
   setupFolderZone('relocate-old-zone', 'relocate-old-pills', 'relocate-old-zone-text');
