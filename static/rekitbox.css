@@ -1406,43 +1406,49 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
 /* ── Lightbulb / Welcome button (in tools panel) ────────────────────────── */
 /* Scan bar is always visible (--scan-bar-h), so base offset already includes it */
 body.log-open #owl-hover-panel             { bottom: calc(var(--log-h) + var(--scan-bar-h) + 74px); }
-body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--scan-bar-h) + 308px); }
+body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--scan-bar-h) + 8px); }
 
 /* ── Session summary pills ──────────────────────────────────────────────── */
 #session-pills-container {
   position: fixed;
-  right: 28px;
-  bottom: calc(var(--scan-bar-h) + 308px);
+  left: 28px;
+  bottom: calc(var(--scan-bar-h) + 8px);
   z-index: 9998;
   display: flex;
-  flex-direction: column-reverse;
+  flex-direction: column;
   gap: 8px;
-  align-items: flex-end;
+  align-items: flex-start;
   pointer-events: none;
   transition: bottom .25s;
+  max-width: 180px;
 }
 /* scan-active rules removed — base offsets already include the --scan-bar-h scan bar */
 .summary-pill {
   pointer-events: all;
   display: inline-flex; align-items: center; gap: 6px;
-  background: var(--accent);
-  border: 1px solid rgba(255,102,0,.6);
-  border-radius: 24px;
-  padding: 7px 14px 7px 12px;
-  font-size: .76rem; font-weight: 700; letter-spacing: .04em;
-  color: #000;
+  background: rgba(100, 120, 140, 0.35);
+  border: 1px solid rgba(100, 120, 140, 0.4);
+  border-radius: 20px;
+  padding: 6px 12px 6px 10px;
+  font-size: .72rem; font-weight: 600; letter-spacing: .02em;
+  color: var(--text-muted);
   cursor: pointer;
-  box-shadow: 0 0 8px rgba(255,102,0,.55), 0 0 18px rgba(255,102,0,.25);
-  text-shadow: 0 0 6px rgba(180,160,255,.45);
-  transition: box-shadow .2s, opacity .15s;
+  box-shadow: 0 0 4px rgba(100, 120, 140, 0.15);
+  text-shadow: none;
+  transition: background .15s, border-color .15s, box-shadow .15s, color .15s;
   user-select: none;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  width: 100%;
+  justify-content: flex-start;
 }
 .summary-pill:hover {
-  box-shadow: 0 0 12px rgba(255,102,0,.75), 0 0 28px rgba(255,102,0,.4);
-  text-shadow: 0 0 8px rgba(180,160,255,.65);
+  background: rgba(100, 120, 140, 0.5);
+  border-color: rgba(100, 120, 140, 0.6);
+  box-shadow: 0 0 6px rgba(100, 120, 140, 0.25);
+  color: var(--text);
 }
-.summary-pill-icon { font-size: .9rem; line-height: 1; }
+.summary-pill-icon { font-size: .85rem; line-height: 1; flex-shrink: 0; }
 
 /* ── Welcome modal ───────────────────────────────────────────────────────── */
 
