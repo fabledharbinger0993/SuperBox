@@ -1230,7 +1230,7 @@ _PREVIEW_TMP.mkdir(parents=True, exist_ok=True)
 _PREVIEW_JOBS: dict[str, dict] = {}
 _PREVIEW_LOCK  = threading.Lock()
 
-_PREVIEW_AUDIO_EXTS = {'.aiff', '.aif', '.wav', '.flac', '.mp3', '.m4a', '.m4p', '.mp4', '.alac', '.ogg', '.opus'}
+_PREVIEW_AUDIO_EXTS = {'.aiff', '.aif', '.aifc', '.wav', '.flac', '.mp3', '.m4a', '.m4p', '.mp4', '.m4v', '.alac', '.ogg', '.opus'}
 _PREVIEW_MIN_DUR    = 120    # track must be ≥ 2 min
 _PREVIEW_MAX_SCAN   = 40     # cap random sample for large folders
 _PREVIEW_WINDOW     = 20     # seconds of audio measured for LUFS
@@ -1643,7 +1643,7 @@ def api_fs_list():
     """
     if request.remote_addr not in ("127.0.0.1", "::1"):
         return jsonify({"error": "Forbidden"}), 403
-    AUDIO_EXTS = {'.aiff', '.aif', '.wav', '.flac', '.mp3', '.m4a', '.m4p', '.alac', '.ogg', '.opus', '.mp4'}
+    AUDIO_EXTS = {'.aiff', '.aif', '.aifc', '.wav', '.flac', '.mp3', '.m4a', '.m4p', '.mp4', '.m4v', '.alac', '.ogg', '.opus'}
     path_str = request.args.get("path", "/Volumes")
     p = Path(path_str)
     if not p.exists() or not p.is_dir():
@@ -2033,7 +2033,7 @@ def mobile_folder_files(folder_path: str):
         return jsonify({"error": "folder_not_found"}), 404
 
     audio_extensions = {
-        ".mp3", ".wav", ".aiff", ".aif", ".flac", ".m4a", ".m4p", ".mp4", ".ogg", ".opus",
+        ".mp3", ".wav", ".aiff", ".aif", ".aifc", ".flac", ".m4a", ".m4p", ".mp4", ".m4v", ".ogg", ".opus",
     }
 
     files = []
@@ -2219,7 +2219,7 @@ def mobile_rekordbox_add_track():
     if not p.exists():
         return jsonify({"error": f"File not found: {file_path}"}), 404
 
-    AUDIO_EXTS = {".mp3", ".wav", ".aiff", ".aif", ".flac", ".m4a", ".m4p", ".mp4", ".ogg", ".opus"}
+    AUDIO_EXTS = {".mp3", ".wav", ".aiff", ".aif", ".aifc", ".flac", ".m4a", ".m4p", ".mp4", ".m4v", ".ogg", ".opus"}
     if p.suffix.lower() not in AUDIO_EXTS:
         return jsonify({"error": f"Unsupported file type: {p.suffix}"}), 400
 

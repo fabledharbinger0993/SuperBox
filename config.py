@@ -132,7 +132,7 @@ ACOUSTID_API_KEY: str = _cfg.get("acoustid_api_key", "")
 # Supported audio file extensions (lowercase)
 # 
 # Modern formats (Rekordbox native):
-#   .mp3, .wav, .aiff/.aif, .flac, .m4a/.m4p/.mp4 (AAC/ALAC containers), .ogg (Vorbis), .opus
+#   .mp3, .wav, .aiff/.aif/.aifc, .flac, .m4a/.m4p/.mp4/.m4v (AAC/ALAC containers), .ogg (Vorbis), .opus
 #
 # Legacy formats (early 2000s, auto-converted to Rekordbox format on import):
 #   .wma (Windows Media Audio) → MP3 or WAV
@@ -146,7 +146,7 @@ ACOUSTID_API_KEY: str = _cfg.get("acoustid_api_key", "")
 #
 AUDIO_EXTENSIONS = {
     # Modern formats — Rekordbox native
-    ".mp3", ".wav", ".aiff", ".aif", ".flac", ".m4a", ".m4p", ".mp4", ".ogg", ".opus",
+    ".mp3", ".wav", ".aiff", ".aif", ".aifc", ".flac", ".m4a", ".m4p", ".mp4", ".m4v", ".ogg", ".opus",
     # Legacy formats — auto-converted on import
     ".wma",        # Windows Media Audio
     ".ape",        # Monkey's Audio (lossless)

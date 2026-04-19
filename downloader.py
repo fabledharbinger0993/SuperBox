@@ -253,7 +253,7 @@ def _run(job_id: str) -> None:
 
     # Fallback: most-recently-modified audio file in dest
     if downloaded_path is None:
-        audio_exts = {".aiff", ".aif", ".flac", ".wav", ".mp3", ".m4a", ".m4p", ".mp4", ".ogg", ".opus"}
+        audio_exts = {".aiff", ".aif", ".aifc", ".flac", ".wav", ".mp3", ".m4a", ".m4p", ".mp4", ".m4v", ".ogg", ".opus"}
         candidates = sorted(
             [f for f in dest_path.iterdir() if f.suffix.lower() in audio_exts],
             key=lambda f: f.stat().st_mtime,

@@ -28,7 +28,7 @@ from config import AUDIO_EXTENSIONS, BPM_MAX, BPM_MIN, MIN_FILE_BYTES, SKIP_DIRS
 
 # Formats where having no tags at all is normal and shouldn't be a WARNING.
 # WAV and AIFF files frequently have no ID3/metadata and are still valid audio.
-_TAG_OPTIONAL_EXTS = {".wav", ".aif", ".aiff"}
+_TAG_OPTIONAL_EXTS = {".wav", ".aif", ".aiff", ".aifc"}
 
 log = logging.getLogger(__name__)
 
