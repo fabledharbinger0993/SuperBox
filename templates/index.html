@@ -39,15 +39,15 @@
     <div class="brand-sub"><strong>Guthrie Entertainment LLC</strong>rekordbox-toolkit</div>
   </div>
   <div class="status-bar">
-    <div class="status-pill">
+    <div class="status-pill" data-rekki-context='{"type":"status-pill","label":"RekitBox Status","description":"This shows RekitBox server health — database connection and drive availability.","tool":null,"severity":"info"}'>
       <div class="dot" id="rb-dot"></div>
       <span id="rb-label">Checking…</span>
     </div>
-    <div class="status-pill" id="backup-pill" style="display:none">
+    <div class="status-pill" id="backup-pill" data-rekki-context='{"type":"status-pill","label":"Backup Status","description":"Shows when your Rekordbox database was last backed up. No backup means your library is unprotected — drop me here to understand the risk.","tool":"audit","severity":"warn"}' style="display:none">
       <div class="dot" style="background:var(--text-dim)"></div>
       <span id="backup-label"></span>
     </div>
-    <div class="status-pill" id="release-pill" style="display:none">
+    <div class="status-pill" id="release-pill" data-rekki-context='{"type":"status-pill","label":"Update Available","description":"A new version of RekitBox is available. Drop me here to understand what changed or whether to update now.","tool":null,"severity":"info"}' style="display:none">
       <div class="dot" style="background:var(--accent)"></div>
       <span id="release-label"></span>
     </div>
@@ -123,7 +123,7 @@
 </nav>
 
 <!-- ══ Main ════════════════════════════════════════════════════════════════ -->
-<main>
+<main data-rekki-droppable>
 
   <p class="section-title">Core Pipeline — each tool feeds the next</p>
 
@@ -131,7 +131,7 @@
 <div id="step-audit" style="display:none"></div>
 
     <!-- ── Step 2: Process (tags only) ────────────────────────────────────── -->
-  <div class="card" id="step-process" style="--card-watermark:url('/static/icon-tag.png')">
+  <div class="card" id="step-process" data-rekki-context='{"type":"tool-card","tool_name":"audio_processor","label":"Tag Tracks","description":"I write BPM and musical key into each audio file. Drop me here to check what needs tagging, what was skipped, or if something went wrong.","severity":"safe"}' style="--card-watermark:url('/static/icon-tag.png')">
     <div class="card-head">
       <div class="card-icon caution"><img src="/static/icon-tag.png" alt="Tag Tracks"></div>
       <div class="card-meta">
@@ -221,7 +221,7 @@
 
 
     <!-- ── Duplicate Tracks — unified scan + review + prune ─────────────── -->
-  <div class="card" id="step-duplicates" style="--card-watermark:url('/static/icon-find-duplicate.png')">
+  <div class="card" id="step-duplicates" data-rekki-context='{"type":"tool-card","tool_name":"duplicate_detector","label":"Duplicate Tracks","description":"I use acoustic fingerprinting to find identical recordings regardless of filename or format. Drop me here to understand match confidence or review results.","severity":"warn"}' style="--card-watermark:url('/static/icon-find-duplicate.png')">
     <div class="card-head">
       <div class="card-icon safe"><img src="/static/icon-find-duplicate.png" alt="Duplicate Tracks"></div>
       <div class="card-meta">
@@ -451,7 +451,7 @@
   <p class="section-title" style="margin-top:48px">Optional &amp; Transformative — run after the core pipeline is clean</p>
 
     <!-- ── Step 5: Normalize ───────────────────────────────────────────────── -->
-  <div class="card" id="step-normalize" style="--card-watermark:url('/static/icon-normalize.png')">
+  <div class="card" id="step-normalize" data-rekki-context='{"type":"tool-card","tool_name":"normalizer","label":"Normalize Loudness","description":"I rewrite audio files to hit -8.0 LUFS — the DJ standard. This is destructive and changes the actual file. Drop me here to check what was changed or if something sounds wrong.","severity":"warn"}' style="--card-watermark:url('/static/icon-normalize.png')">
     <div class="card-head">
       <div class="card-icon danger"><img src="/static/icon-normalize.png" alt="Normalize"></div>
       <div class="card-meta">
@@ -549,7 +549,7 @@
   </div>
 
 
-  <div class="card" id="step-convert" style="--card-watermark:url('/static/icon-convert.png')">
+  <div class="card" id="step-convert" data-rekki-context='{"type":"tool-card","tool_name":"converter","label":"Convert Format","description":"I convert audio between MP3, WAV, AIFF, and FLAC. Drop me here to check conversion status, format compatibility, or why a track failed to convert.","severity":"info"}' style="--card-watermark:url('/static/icon-convert.png')">
     <div class="card-head">
       <div class="card-icon"><img src="/static/icon-convert.png" alt="Convert"></div>
       <div class="card-meta">
@@ -632,7 +632,7 @@
 
 
     <!-- ── Organize Library ──────────────────────────────────────────────── -->
-  <div class="card" id="step-organize" style="--card-watermark:url('/static/icon-organizer.png')">
+  <div class="card" id="step-organize" data-rekki-context='{"type":"tool-card","tool_name":"library_organizer","label":"Organize Library","description":"I move tracks into Artist/Album/Track folder structure. Drop me here to understand what was moved, merged, or if anything ended up in the wrong place.","severity":"warn"}' style="--card-watermark:url('/static/icon-organizer.png')">
     <div class="card-head">
       <div class="card-icon"><img src="/static/icon-organizer.png" alt="Organize"></div>
       <div class="card-meta">
@@ -797,7 +797,7 @@
   <p class="section-title" style="margin-top:48px">Cross-Library Rescue — find unique tracks on other drives</p>
 
     <!-- ── Novelty Scanner ───────────────────────────────────────────────── -->
-  <div class="card" id="step-novelty" style="--card-watermark:url('/static/icon-novelty.png')">
+  <div class="card" id="step-novelty" data-rekki-context='{"type":"tool-card","tool_name":"novelty_scanner","label":"Novelty Scanner","description":"I find tracks on a source drive that do not exist in your library and copy them over. Drop me here to understand what was found or what was skipped.","severity":"safe"}' style="--card-watermark:url('/static/icon-novelty.png')">
     <div class="card-head">
       <div class="card-icon"><img src="/static/icon-novelty.png" alt="Novelty Scanner"></div>
       <div class="card-meta">
@@ -875,7 +875,7 @@
 
 
   <!-- ── Rename ──────────────────────────────────────────────────────────── -->
-  <div class="card" id="step-rename" style="--card-watermark:url('/static/icon-filename.png?v=2.0.0')">
+  <div class="card" id="step-rename" data-rekki-context='{"type":"tool-card","tool_name":"renamer","label":"Rename Files","description":"I clean up filenames using metadata tags into Artist: Title format. Drop me here to review rename proposals, check what was flagged, or understand why a filename changed.","severity":"info"}' style="--card-watermark:url('/static/icon-filename.png?v=2.0.0')">
     <div class="card-head">
       <div class="card-icon caution"><img src="/static/icon-filename.png?v=2.0.0" alt="Rename Files"></div>
       <div class="card-meta">
@@ -1222,19 +1222,19 @@
 <!-- ══ Tools Panel (RekitBox modals + Rekordbox tools) ══════════════════════ -->
 <div id="tools-panel">
   <!-- Rekordbox DB tools -->
-  <button class="tool-btn db-tool-btn" id="rail-btn-audit" onclick="openDbPanel('audit')" title="Audit Library">
+  <button class="tool-btn db-tool-btn" id="rail-btn-audit" onclick="openDbPanel('audit')" title="Audit Library" data-rekki-context='{"type":"tool-card","tool_name":"audit","label":"Audit Library","description":"I take a full database snapshot and cross-check it against the physical filesystem. Drop me here to understand library health or recent audit results.","severity":"info"}'>
     <img src="/static/icon-audit.png" class="tool-icon" alt="Audit">
   </button>
 
-  <button class="tool-btn db-tool-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths">
+  <button class="tool-btn db-tool-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths" data-rekki-context='{"type":"tool-card","tool_name":"relocator","label":"Relocate Paths","description":"I update Rekordbox when files have moved on disk. Drop me here if tracks are showing as missing or to check relocate status.","severity":"warn"}'>
     <img src="/static/icon-move.png" class="tool-icon" alt="Relocate">
   </button>
 
-  <button class="tool-btn db-tool-btn" id="rail-btn-import" onclick="openDbPanel('import')" title="Import Tracks">
+  <button class="tool-btn db-tool-btn" id="rail-btn-import" onclick="openDbPanel('import')" title="Import Tracks" data-rekki-context='{"type":"tool-card","tool_name":"importer","label":"Import Tracks","description":"I add new audio files into the Rekordbox database. Drop me here to understand what has been imported, what failed, or what is waiting.","severity":"info"}'>
     <img src="/static/icon-import.png" class="tool-icon" alt="Import">
   </button>
 
-  <button class="tool-btn db-tool-btn" id="rail-btn-link" onclick="openDbPanel('link')" title="Link Playlists">
+  <button class="tool-btn db-tool-btn" id="rail-btn-link" onclick="openDbPanel('link')" title="Link Playlists" data-rekki-context='{"type":"tool-card","tool_name":"linker","label":"Link Playlists","description":"I connect imported tracks to Rekordbox playlists by folder name. Drop me here if playlist linkage is not working or to check link results.","severity":"info"}'>
     <img src="/static/icon-link.png" class="tool-icon" alt="Link">
   </button>
 
@@ -1617,7 +1617,7 @@
 </div>
 
 <!-- ══ Scan bar ═══════════════════════════════════════════════════════════ -->
-<div id="scan-bar">
+<div id="scan-bar" data-rekki-context='{"type":"scan-bar","label":"Scan Progress","description":"This shows the current scan progress — how many tracks remain, current rate, and elapsed time. Drop me here to ask about the active operation.","tool":null,"severity":"info"}'>
   <!-- Shown only when idle (no active scan) -->
   <span id="scan-bar-idle" style="font-family:var(--mono);font-size:.72rem;color:var(--text-dim);letter-spacing:.05em;">RekitBox — Ready</span>
    <!-- Stat counters scroll horizontally when they overflow, so the action
@@ -1672,7 +1672,7 @@
     <div id="log-spinner"></div>
     <button class="log-close-btn" onclick="toggleLog()" title="Hide output — scan keeps running">−</button>
   </div>
-  <div id="log-output"></div>
+  <div id="log-output" data-rekki-context='{"type":"log-panel","label":"Output Log","description":"Live output from RekitBox tools. Drop me on a specific line to ask about it, or drop me here to discuss the recent output generally.","tool":null,"severity":"info"}'></div>
 </div>
 
 <script src="/static/rekitbox.js"></script>

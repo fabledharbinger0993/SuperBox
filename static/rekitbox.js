@@ -1061,6 +1061,21 @@ function appendLog(text, cls = '') {
   const line = document.createElement('div');
   line.className = 'log-line ' + cls;
   line.textContent = text;
+  const _logTool = document.getElementById('log-cmd-label')?.textContent?.trim() || '';
+  const _logSev  = cls.includes('error') ? 'error' : cls.includes('warn') ? 'warn' : (cls.includes('success') || cls.includes('exit-ok')) ? 'safe' : 'info';
+  line.dataset.rekkiContext = JSON.stringify({
+    type: 'log-entry',
+    label: text.slice(0, 60),
+    level: _logSev,
+    tool: _logTool,
+    message: text,
+    severity: _logSev,
+    description: _logSev === 'error'
+      ? 'Error from ' + (_logTool || 'RekitBox') + ': "' + text.slice(0, 80) + '". Drop me here to investigate.'
+      : _logSev === 'warn'
+      ? 'Warning from ' + (_logTool || 'RekitBox') + ': "' + text.slice(0, 80) + '". Drop me here to understand this.'
+      : 'Log output from ' + (_logTool || 'RekitBox') + '. Drop me here to ask about this.',
+  });
   out.appendChild(line);
   // Trim oldest lines to keep DOM size bounded (prevents browser freeze on large scans)
   while (out.children.length > LOG_MAX_LINES) {
@@ -2977,6 +2992,15 @@ function _renderPruneGroups() {
     const lowers  = g.entries.filter(e => e.action === 'REVIEW_REMOVE');
     const title   = keep ? keep.filename : ('Group ' + g.group_id);
 
+    wrap.dataset.rekkiContext = JSON.stringify({
+      type: 'duplicate-group',
+      label: title + ' (' + g.entries.length + ' copies)',
+      track_count: g.entries.length,
+      tool: 'duplicate_detector',
+      severity: 'warn',
+      description: 'I found ' + g.entries.length + ' copies of "' + title + '". The starred entry is the recommended keep. Drop me here to understand why these were matched or which to remove.',
+    });
+
     wrap.innerHTML = `<div class="prune-group-head">
       <span class="prune-group-title">${_esc(title)}</span>
       <span class="prune-group-count">${g.entries.length} copies</span>
@@ -2993,6 +3017,16 @@ function _makeRow(entry, isLower) {
   row.className = isLower ? 'prune-row-lower' : 'prune-row-keep';
   // Store path safely as a data attribute — avoids inline onclick string injection
   row.dataset.filePath = entry.file_path;
+  row.dataset.rekkiContext = JSON.stringify({
+    type: isLower ? 'duplicate-track' : 'duplicate-keep',
+    label: entry.filename,
+    file_path: entry.file_path,
+    tool: 'pruner',
+    severity: isLower ? 'warn' : 'safe',
+    description: isLower
+      ? 'This copy is flagged for removal: "' + entry.filename + '". Drop me here to understand why it was marked as a duplicate.'
+      : 'This is the recommended keep copy: "' + entry.filename + '". Drop me here to understand why this one was selected.',
+  });
 
   const ext   = (entry.format_ext || '').replace('.','').toUpperCase();
   const lossless = ['AIFF','AIF','WAV','FLAC'].includes(ext);
