@@ -39,9 +39,11 @@ from mutagen import File as MutagenFile
 try:
     from rekki.recall import recall_memory, create_memory, format_recalled_memory
     from rekki.db import get_memory_db
+    from rekki.review import run_tribunal
     _REKKI_MEMORY_ENABLED = True
 except Exception as _rekki_import_err:  # pragma: no cover
     _REKKI_MEMORY_ENABLED = False
+    run_tribunal = None  # type: ignore[assignment]
     print(f"[rekki] memory disabled — import failed: {_rekki_import_err}")
 
 # ── Resource root — handles both dev and PyInstaller bundle ──────────────────
@@ -670,6 +672,31 @@ def api_rekki_automation():
         "status_text": status_text,
         "status_code": status_code,
     }), http_code
+
+
+@app.route("/api/rekki/congress/review", methods=["POST"])
+def api_rekki_congress_review():
+    """Background Congress review — called fire-and-forget by the JS after every tool run.
+    Validates the payload and starts run_tribunal() in a daemon thread.
+    Always returns {ok: true} immediately so the client never waits.
+    """
+    if not _REKKI_MEMORY_ENABLED or run_tribunal is None:
+        return jsonify({"ok": True, "skipped": "memory disabled"})
+
+    data = request.get_json(silent=True) or {}
+    tool_name  = str(data.get("tool") or "unknown").strip()[:80]
+    exit_code  = int(data.get("exit_code") if data.get("exit_code") is not None else 0)
+    log_lines  = [str(l)[:300] for l in (data.get("log_lines") or []) if str(l).strip()]
+    report_text = str(data.get("report") or "")[:2000]
+
+    import threading
+    t = threading.Thread(
+        target=run_tribunal,
+        args=(tool_name, exit_code, log_lines, report_text),
+        daemon=True,
+    )
+    t.start()
+    return jsonify({"ok": True})
 
 
 def _stream(

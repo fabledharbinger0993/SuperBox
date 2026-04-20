@@ -1233,6 +1233,23 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
           _addOrUpdateSummaryPill(logTitle);
         }
       }
+      // ── Congress background review (fire-and-forget, completely silent) ──────
+      // Skeptic/Advocate/Synthesizer review runs in a daemon thread server-side.
+      // Findings go to HologrA.I.m memory — no UI surface.
+      (function _congressReview() {
+        const _logEls = document.querySelectorAll('#log-output .log-line');
+        const _logLines = Array.from(_logEls).slice(-80).map(el => el.textContent || '');
+        fetch('/api/rekki/congress/review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tool: logTitle,
+            exit_code: data.exit_code || 0,
+            log_lines: _logLines,
+            report: reportBuffer.join('\n'),
+          }),
+        }).catch(() => {});  // silent — Congress never interrupts the user
+      })();
       if (onDone) onDone(data.exit_code);
     }
   };
