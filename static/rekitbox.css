@@ -26,8 +26,9 @@
   --danger-dim:    rgba(248,113,113,.1);
   --danger-border: rgba(248,113,113,.25);
 
-  --accent:        #ff6600;
-  --accent-dim:    rgba(255,102,0,.1);
+  --accent:        #6db8d4;
+  --accent-dim:    rgba(109,184,212,.1);
+  --accent-rgb:    109, 184, 212;
   --accent2:       #7b2fff;
   --accent2-dim:   rgba(123,47,255,.1);
 
@@ -263,11 +264,11 @@ main { max-width: 1080px; margin: 0 auto; padding: 32px 28px; }
 }
 .card-icon img {
   width: 40px; height: 40px; object-fit: contain;
-  filter: drop-shadow(0 0 6px rgba(255,102,0,0.35));
+  filter: hue-rotate(160deg) saturate(0.85) brightness(1.1) drop-shadow(0 1px 4px rgba(0,0,0,0.4));
   transition: filter .2s ease;
 }
 .card:hover .card-icon img {
-  filter: drop-shadow(0 0 12px rgba(255,102,0,0.75));
+  filter: hue-rotate(160deg) saturate(0.9) brightness(1.25) drop-shadow(0 2px 8px rgba(0,0,0,0.5));
 }
 
 .card-meta { flex: 1; }
@@ -476,24 +477,19 @@ details[open] > summary { color: var(--text); }
   border: none; border-radius: 6px;
   padding: 8px 16px;
   font-size: .83rem; font-weight: 700;
-  color: #000;
-  box-shadow:
-    inset 0 1px 3px rgba(255,255,255,0.07),
-    inset 0 -3px 6px rgba(0,0,0,0.5),
-    0 4px 8px rgba(0,0,0,0.35);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   transition: opacity .15s, transform .1s, box-shadow .1s;
 }
-.btn:hover:not(:disabled) { opacity: .85; }
+.btn:hover:not(:disabled) { opacity: .88; }
 .btn:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow:
-    inset 0 3px 6px rgba(0,0,0,0.7),
-    0 1px 3px rgba(0,0,0,0.3);
+  transform: translateY(1px);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
 .btn:disabled { opacity: .35; cursor: not-allowed; }
 .btn-primary {
   background: var(--accent);
-  border: 1px solid rgba(255,102,0,.5);
+  border: 1px solid rgba(109,184,212,.5);
 }
 .btn-ghost {
   background: transparent;
@@ -505,23 +501,23 @@ details[open] > summary { color: var(--text); }
 /* Normalize, Find Duplicates — unified purple like btn-primary */
 .btn-danger-action {
   background: var(--accent);
-  border: 1px solid rgba(255,102,0,.5);
+  border: 1px solid rgba(109,184,212,.5);
 }
 /* Relocate step flow button — unified purple */
 .btn-warn-action {
   background: var(--accent);
-  border: 1px solid rgba(255,102,0,.5);
+  border: 1px solid rgba(109,184,212,.5);
 }
 /* Neon variant — Convert & Relocate primary actions */
 .btn-neon {
   background: var(--accent);
-  border: 1px solid rgba(255,102,0,.5);
-  box-shadow: 0 0 6px rgba(255,102,0,.25);
+  border: 1px solid rgba(109,184,212,.5);
+  box-shadow: 0 0 6px rgba(109,184,212,.25);
   transition: opacity .15s, transform .1s, box-shadow .2s;
 }
 .btn-neon:hover:not(:disabled) {
   opacity: 1;
-  box-shadow: 0 0 10px rgba(255,102,0,.35);
+  box-shadow: 0 0 10px rgba(109,184,212,.35);
 }
 /* Keep prune danger buttons visually distinct — safety signal */
 .btn-prune-danger {
@@ -653,7 +649,6 @@ body.log-open #scan-bar { bottom: var(--log-h); }
   display: flex; flex-direction: column;
   transform: translateY(100%);
   transition: transform .25s cubic-bezier(.4,0,.2,1);
-  box-shadow: inset 0 0 60px rgba(255,102,0,0.04);
 }
 #log-panel.open { transform: translateY(0); }
 .log-bar {
@@ -877,7 +872,7 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
   font-size:.65rem; font-weight:700; padding:1px 5px; border-radius:3px;
   flex-shrink:0; letter-spacing:.03em;
 }
-.rank-pn  { background:rgba(255,102,0,.12); color:var(--accent); }
+.rank-pn  { background:rgba(109,184,212,.12); color:var(--accent); }
 .rank-mik { background:rgba(251,191,36,.1);   color:var(--caution); }
 .rank-raw { background:var(--border);          color:var(--text-dim); }
 .prune-indb { font-size:.65rem; color:var(--accent); background:var(--accent-dim);
@@ -1184,13 +1179,13 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
 .tool-btn:hover {
   background: var(--accent-dim);
   border-color: var(--accent);
-  box-shadow: 0 4px 14px rgba(255,102,0,.18);
+  box-shadow: 0 4px 14px rgba(109,184,212,.18);
 }
 
 .tool-btn.active {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: 0 4px 14px rgba(255,102,0,.18);
+  box-shadow: 0 4px 14px rgba(109,184,212,.18);
 }
 
 .tool-folder { display: none; }
@@ -1236,9 +1231,9 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
    Applied via JS: pulseModal(el) adds .modal-pulse-once, which auto-removes
    on animationend so the animation can fire again on a subsequent open.     */
 @keyframes modal-open-pulse {
-  0%   { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(255,102,0,.5); }
-  45%  { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0 36px 10px rgba(255,102,0,.18); }
-  100% { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(255,102,0,.0); }
+  0%   { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(109,184,212,.5); }
+  45%  { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0 36px 10px rgba(109,184,212,.18); }
+  100% { box-shadow: 0 24px 80px rgba(0,0,0,.85), 0 0  0   0   rgba(109,184,212,.0); }
 }
 .modal-pulse-once {
   animation: modal-open-pulse 650ms cubic-bezier(.22,1,.36,1) forwards;
@@ -1914,7 +1909,7 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
   to   { opacity:1; transform:scale(1)  translateY(0); }
 }
 .gls-card:hover { z-index: 9997 !important;
-                  border-color: rgba(255,102,0,.35); }
+                  border-color: rgba(109,184,212,.35); }
 .gls-card-head {
   display: flex; align-items: center; gap: 8px;
   padding: 9px 11px 8px;
@@ -2326,7 +2321,7 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
 /* ── Report modal: error actions panel ──────────────────────────────────────── */
 .rmod-error-actions {
   border-top: 1px solid var(--border-hi);
-  background: rgba(255,102,0,.04);
+  background: rgba(109,184,212,.04);
   padding: 14px 20px 12px;
   display: flex;
   flex-direction: column;
@@ -2372,7 +2367,7 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
 }
 .rmod-ea-btn.retry:hover {
   background: var(--accent-dim);
-  box-shadow: 0 0 8px rgba(255,102,0,.2);
+  box-shadow: 0 0 8px rgba(109,184,212,.2);
 }
 .rmod-ea-btn.convert {
   border-color: var(--accent2);
@@ -2599,8 +2594,8 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
 
 /* Step button added flash */
 @keyframes pipe-btn-flash {
-  0%   { background: var(--accent-dim); border-color: var(--accent); box-shadow: 0 0 0 0 rgba(255,102,0,.6); }
-  40%  { background: rgba(255,102,0,.25); border-color: var(--accent); box-shadow: 0 0 18px 4px rgba(255,102,0,.25); }
+  0%   { background: var(--accent-dim); border-color: var(--accent); box-shadow: 0 0 0 0 rgba(109,184,212,.6); }
+  40%  { background: rgba(109,184,212,.25); border-color: var(--accent); box-shadow: 0 0 18px 4px rgba(109,184,212,.25); }
   100% { background: var(--surface-hi); border-color: var(--border); box-shadow: none; }
 }
 .pipe-action-btn.pipe-added {
@@ -2666,18 +2661,15 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 130px;
-  border: 2px solid rgba(120, 50, 230, 0.52);
+  min-height: 68px;
+  border: 1.5px dashed rgba(120, 50, 230, 0.45);
   border-radius: 10px;
-  padding: 16px 14px 14px;
+  padding: 10px 12px;
   /* Dot-grid background — replicates the neon pegboard aesthetic */
-  background-color: rgba(70, 15, 150, 0.06);
-  background-image: radial-gradient(circle, rgba(140, 60, 255, 0.28) 1px, transparent 1px);
+  background-color: rgba(70, 15, 150, 0.04);
+  background-image: radial-gradient(circle, rgba(140, 60, 255, 0.18) 1px, transparent 1px);
   background-size: 20px 20px;
-  box-shadow:
-    0 0 10px 2px rgba(120, 50, 230, 0.22),
-    0 0 24px 5px rgba(120, 50, 230, 0.08),
-    inset 0 0 10px  rgba(120, 50, 230, 0.04);
+  box-shadow: none;
   transition: border-color .18s, box-shadow .18s, background-color .18s, transform .18s;
   cursor: default;
   width: 100%;
@@ -2685,19 +2677,16 @@ body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); 
   margin-inline: auto;
 }
 .folder-zone:hover {
-  border-color: rgba(130, 60, 240, 0.80);
-  box-shadow:
-    0 0 14px 4px rgba(120, 50, 230, 0.35),
-    0 0 32px 8px rgba(120, 50, 230, 0.12),
-    inset 0 0 12px  rgba(120, 50, 230, 0.06);
+  border-color: rgba(130, 60, 240, 0.70);
+  box-shadow: 0 0 10px 2px rgba(120, 50, 230, 0.12);
 }
 .folder-zone.drag-over {
   border-color: rgba(150, 70, 255, 1);
-  background-color: rgba(90, 25, 180, 0.14);
-  transform: scale(1.012);
+  background-color: rgba(90, 25, 180, 0.10);
+  transform: scale(1.008);
   box-shadow:
-    0 0 20px 8px  rgba(150, 70, 255, 0.60),
-    0 0 50px 16px rgba(120, 50, 230, 0.28),
+    0 0 14px 4px  rgba(150, 70, 255, 0.40),
+    0 0 30px 8px rgba(120, 50, 230, 0.16),
     inset 0 0 24px rgba(130, 60, 240, 0.10);
 }
 /* Change hint label text via CSS attr trick when zone is active */
@@ -3032,7 +3021,7 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 
 /* Compact drop zones inside the narrow side panel */
 #db-panel .folder-zone {
-  min-height: 100px;
+  min-height: 56px;
 }
 
 .db-panel-header {
@@ -3451,12 +3440,12 @@ body { padding-right: var(--db-rail-w); }
   -webkit-user-drag: element;
   transition: filter .2s ease, transform .2s ease;
 }
-#rekki-avatar:hover { filter: drop-shadow(0 0 8px rgba(255,102,0,.7)); transform: scale(1.06); }
+#rekki-avatar:hover { filter: drop-shadow(0 0 8px rgba(109,184,212,.55)); transform: scale(1.06); }
 
 /* returning animation */
 @keyframes rekki-return {
-  0%   { transform: scale(1.15); filter: drop-shadow(0 0 12px rgba(255,102,0,.9)); }
-  100% { transform: scale(1);    filter: drop-shadow(0 0 0px rgba(255,102,0,0)); }
+  0%   { transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(109,184,212,.7)); }
+  100% { transform: scale(1);    filter: drop-shadow(0 0 0px  rgba(109,184,212,0)); }
 }
 #rekki-avatar.returning { animation: rekki-return .45s ease forwards; }
 
@@ -3595,9 +3584,9 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 }
 .rekki-msg.user {
   align-self: flex-end;
-  background: rgba(255,102,0,.18);
-  border-color: rgba(255,102,0,.35);
-  color: #ffd3ad;
+  background: rgba(109,184,212,.15);
+  border-color: rgba(109,184,212,.32);
+  color: #c8e8f5;
 }
 .rekki-msg.rekki {
   align-self: flex-start;
