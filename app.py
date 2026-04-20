@@ -35,6 +35,15 @@ from flask import Flask, Response, jsonify, render_template, request, send_file
 from flask_sock import Sock
 from mutagen import File as MutagenFile
 
+# ── Rekki brain: Congress deliberation + HologrA.I.m memory ──────────────────
+try:
+    from rekki.recall import recall_memory, create_memory, format_recalled_memory
+    from rekki.db import get_memory_db
+    _REKKI_MEMORY_ENABLED = True
+except Exception as _rekki_import_err:  # pragma: no cover
+    _REKKI_MEMORY_ENABLED = False
+    print(f"[rekki] memory disabled — import failed: {_rekki_import_err}")
+
 # ── Resource root — handles both dev and PyInstaller bundle ──────────────────
 # When PyInstaller runs, sys._MEIPASS is the temp dir where everything lives.
 # REKITBOX_ROOT can also be set by main.py before importing this module.
@@ -491,11 +500,24 @@ def api_rekki_chat():
                 sanitized_history.append({"role": role, "content": content})
 
     context = _rekki_context_snapshot()
+
+    # ── HologrA.I.m: recall memory before every response ─────────────────────
+    memory_context_block = ""
+    if _REKKI_MEMORY_ENABLED:
+        try:
+            memory_context_block = format_recalled_memory(recall_memory())
+        except Exception as _mem_err:
+            memory_context_block = ""
+            print(f"[rekki] recall_memory failed: {_mem_err}")
+
     system_prompt = (
-        "You are Rekki, a read-only assistant for RekitBox. "
+        "You are Rekki, an AI agent piloting RekitBox — a DJ library management tool. "
         "Help the user understand app state and suggest safe next actions. "
         "Do not claim to have executed commands or modified files unless explicitly told by server context."
     )
+    if memory_context_block:
+        system_prompt += "\n\n### Memory Context\n" + memory_context_block
+
     user_payload = (
         "RekitBox runtime context (JSON):\n"
         f"{json.dumps(context, indent=2)}\n\n"
@@ -519,6 +541,22 @@ def api_rekki_chat():
         reply = str((data.get("message") or {}).get("content", "")).strip()
         if not reply:
             return jsonify({"ok": False, "error": "empty response from ollama"}), 502
+
+        # ── HologrA.I.m: persist chat + create memory after every response ───
+        if _REKKI_MEMORY_ENABLED:
+            try:
+                db = get_memory_db()
+                user_msg_id = db.insert_chat_message(role="user", content=user_message)
+                assistant_msg_id = db.insert_chat_message(role="assistant", content=reply)
+                create_memory(
+                    core_insight=reply[:200],
+                    confidence_score=0.7,
+                    tags=["chat"],
+                    congress_engaged=False,
+                )
+            except Exception as _persist_err:
+                print(f"[rekki] memory persistence failed: {_persist_err}")
+
         return jsonify({
             "ok": True,
             "name": "Rekki",
@@ -527,6 +565,7 @@ def api_rekki_chat():
             "requested_model": model,
             "reply": reply,
             "context": context,
+            "memory_enabled": _REKKI_MEMORY_ENABLED,
         })
     except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as exc:
         return jsonify({"ok": False, "error": str(exc)}), 502
