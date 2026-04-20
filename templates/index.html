@@ -35,7 +35,7 @@
 <header>
   <div class="brand">
     <img src="/static/rekitbox-header.png" alt="RekitBox"
-         style="height:72px;object-fit:contain;object-position:left;mix-blend-mode:screen;flex-shrink:0;">
+         style="height:36px;object-fit:contain;object-position:left;mix-blend-mode:screen;flex-shrink:0;">
     <div class="brand-sub"><strong>Guthrie Entertainment LLC</strong>rekordbox-toolkit</div>
   </div>
   <div class="status-bar">
@@ -60,9 +60,6 @@
     <button id="settings-btn" onclick="openSettings()" title="Archive &amp; Log Settings">
       ⚙ Settings
     </button>
-    <div id="rekki-home" title="Rekki — drag onto anything or click to chat">
-      <img id="rekki-avatar" src="/static/icon-rekki.png" alt="Rekki" draggable="true">
-    </div>
     <button id="quit-btn" onclick="quitRekitBox()"
       title="Shut down the RekitBox server">
       ⏻ Quit
@@ -1210,6 +1207,7 @@
 
 <!-- ══ File Browser Panel ═══════════════════════════════════════════════════ -->
 <div id="fb-panel">
+  <div class="sidebar-resize-handle"></div>
   <div id="fb-header">
     <div id="fb-breadcrumb-row">
       <button class="fb-nav-btn" id="fb-up-btn"   onclick="fbUp()"   title="Go up">↑</button>
@@ -1264,6 +1262,12 @@
   <button id="owl-btn" onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()" onclick="owlClick()" class="tool-btn" title="Glossary &amp; Concepts">
     <img src="/static/icon-site-key.png" class="tool-icon owl-icon" alt="Glossary">
   </button>
+
+  <div class="tools-divider" style="margin-top:auto;"></div>
+  <!-- Rekki avatar — draggable to any drop zone -->
+  <div id="rekki-home" title="Rekki — drag onto anything or click to chat" style="margin-bottom:8px;">
+    <img id="rekki-avatar" src="/static/icon-rekki.png" alt="Rekki" draggable="true">
+  </div>
 </div>
 
 <div id="owl-hover-panel"
@@ -1676,6 +1680,7 @@
 <!-- ══ DB Panel ══════════════════════════════════════════════════════════════
      Slide-in 400px panel. Only the active section is visible.               -->
 <div id="db-panel">
+  <div class="sidebar-resize-handle"></div>
   <div class="db-panel-header">
     <span id="db-panel-title">RekordBox DB Tools</span>
     <button class="db-panel-close" onclick="closeDbPanel()" title="Close">✕</button>

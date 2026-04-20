@@ -38,6 +38,11 @@
   --radius: 8px;
   --log-h: clamp(180px, 30vh, 400px);
   --scan-bar-h: 44px;
+
+  /* VS Code-style layout */
+  --activity-bar-w: 52px;
+  --header-h: 56px;
+  --sidebar-w: 260px;
 }
 
 /* ── Reset ─────────────────────────────────────────────────────────────── */
@@ -49,9 +54,15 @@ body {
   font-family: var(--sans);
   line-height: 1.6;
   min-height: 100vh;
+  padding-top: var(--header-h);
+  padding-left: var(--activity-bar-w);
   padding-bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px);
+  transition: padding-left .25s cubic-bezier(.4,0,.2,1);
 }
 body.scan-active { padding-bottom: calc(var(--log-h) + var(--scan-bar-h) * 2 + 4px); }
+body.sidebar-open {
+  padding-left: calc(var(--activity-bar-w) + var(--sidebar-w));
+}
 body::before {
   content: '';
   position: fixed;
@@ -95,13 +106,12 @@ label { display: block; color: var(--text-muted); font-size: .78rem;
 
 /* ── Header ────────────────────────────────────────────────────────────── */
 header {
-  position: sticky; top: 0; z-index: 100;
+  position: fixed; top: 0; left: var(--activity-bar-w); right: 0; z-index: 170;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 28px;
-  height: 96px;
-  overflow: hidden;
+  padding: 0 20px 0 16px;
+  height: var(--header-h);
 }
 .brand {
   display: flex; align-items: center; gap: 10px;
@@ -191,7 +201,7 @@ header {
 
 /* ── Workflow rail ─────────────────────────────────────────────────────── */
 .workflow-rail {
-  position: sticky; top: 96px; z-index: 90;
+  position: sticky; top: var(--header-h); z-index: 90;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 0 28px;
@@ -1152,53 +1162,59 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
 }
 
 /* ── Owl / Glossary key system ─────────────────────────────────────────── */
-/* ══ Tools Panel — unified right-side tool buttons ═════════════════════════ */
+/* ══ Activity Bar (VS Code-style left strip) ══════════════════════════════ */
 #tools-panel {
   position: fixed;
-  bottom: calc(var(--scan-bar-h) + 28px); right: 28px;
-  z-index: 9999;
+  left: 0; top: 0; bottom: 0;
+  width: var(--activity-bar-w);
+  z-index: 180;
   display: flex; flex-direction: column; align-items: center;
-  gap: 12px;
-  transition: bottom .25s;
+  gap: 6px;
+  padding: 8px 0 8px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
 }
-body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28px); }
 
 .tool-btn {
   position: relative;
   display: flex; align-items: center; justify-content: center;
-  width: 52px; height: 52px;
-  background: var(--surface-hi);
-  border: 1px solid var(--border-hi);
-  border-radius: 12px;
+  width: 44px; height: 44px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all .2s;
+  transition: all .15s;
   user-select: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,.55);
 }
 
 .tool-btn:hover {
   background: var(--accent-dim);
-  border-color: var(--accent);
-  box-shadow: 0 4px 14px rgba(109,184,212,.18);
+  border-color: rgba(109,184,212,.3);
 }
 
 .tool-btn.active {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-  box-shadow: 0 4px 14px rgba(109,184,212,.18);
 }
 
 .tool-folder { display: none; }
 
 .tool-icon {
-  width: 40px; height: 40px;
+  width: 28px; height: 28px;
   object-fit: contain;
   border-radius: 4px;
+  /* icon filter matches card-icon ice blue treatment */
+  filter: hue-rotate(160deg) saturate(0.7) brightness(1.05);
 }
 
 #tools-panel .db-tool-btn .tool-icon {
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
+  opacity: 0.75;
+  filter: grayscale(25%) brightness(0.9);
+}
+#tools-panel .db-tool-btn:hover .tool-icon,
+#tools-panel .db-tool-btn.active .tool-icon {
   opacity: 1;
   filter: none;
 }
@@ -1218,11 +1234,27 @@ body.log-open #tools-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 28p
 
 /* ── Horizontal glow divider between tool groups ─────────────────────────── */
 .tools-divider {
-  width: 32px; height: 1px;
+  width: 36px; height: 1px;
   background: linear-gradient(to right, transparent, var(--accent), transparent);
   box-shadow: 0 0 12px var(--accent);
   opacity: 0.5;
   margin: 4px 0;
+}
+
+/* ── Sidebar resize handle ──────────────────────────────────────────────── */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background .15s;
+}
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle.dragging {
+  background: var(--accent);
+  opacity: 0.4;
 }
 
 /* ── Modal open pulse ───────────────────────────────────────────────────── */
@@ -1586,7 +1618,7 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
 /* ── Session summary pills ──────────────────────────────────────────────── */
 #session-pills-container {
   position: fixed;
-  left: 28px;
+  left: calc(var(--activity-bar-w) + 16px);
   bottom: calc(var(--scan-bar-h) + 8px);
   z-index: 9998;
   display: flex;
@@ -2031,24 +2063,21 @@ body.log-open #session-pills-container     { bottom: calc(var(--log-h) + var(--s
 }
 /* log-open shift handled in the consolidated block above */
 
-/* ══ File Browser Panel ══════════════════════════════════════════════════════ */
+/* ══ File Browser Panel (left sidebar, overlaps db-panel slot) ══════════════ */
 #fb-panel {
   position: fixed;
-  top: 70px; right: -280px;
-  width: 260px;
-  bottom: calc(var(--scan-bar-h) + 4px);
+  left: var(--activity-bar-w);
+  top: 0; bottom: 0;
+  width: var(--sidebar-w);
   background: var(--surface);
-  border-left: 1px solid var(--border);
-  border-top:  1px solid var(--border);
-  border-radius: 10px 0 0 0;
-  z-index: 8500;
+  border-right: 1px solid var(--border-hi);
+  z-index: 158;
   display: flex; flex-direction: column;
   overflow: hidden;
-  transition: right .25s cubic-bezier(.4,0,.2,1);
-  box-shadow: -6px 0 28px rgba(0,0,0,.55);
+  transform: translateX(calc(-1 * (var(--sidebar-w) + var(--activity-bar-w))));
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
 }
-#fb-panel.fb-open { right: 0; }
-body.log-open #fb-panel { bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px); }
+#fb-panel.fb-open { transform: translateX(0); }
 
 #fb-header {
   padding: 10px 10px 8px;
@@ -3127,23 +3156,21 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 .db-tool-btn.permission-locked:hover img { opacity: .65; filter: grayscale(30%); }
 .db-rail-btn.permission-locked:hover .db-rail-label { opacity: 0; }
 
-/* Backdrop */
+/* Backdrop — kept as click-outside target but invisible (no dimming in VS Code style) */
 #db-panel-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.45);
-  z-index: 497;
+  background: transparent;
+  z-index: 159;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .2s;
 }
 #db-panel-backdrop.open {
-  opacity: 1;
   pointer-events: auto;
 }
 
-/* Shrink main content area to not hide under the rail */
-body { padding-right: var(--db-rail-w); }
+/* activity bar replaces old db-rail width push */
+/* (body padding-left already accounts for the activity bar) */
 
 /* ── Match mode card grid (Duplicate Tracks) ─────────────────────────────── */
 .match-mode-grid {

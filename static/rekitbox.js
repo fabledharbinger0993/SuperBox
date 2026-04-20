@@ -12,6 +12,7 @@ function toggleFileBrowser() {
   const btn   = document.getElementById('fb-toggle-btn');
   const isOpen = panel.classList.toggle('fb-open');
   btn.classList.toggle('active', isOpen);
+  document.body.classList.toggle('sidebar-open', isOpen);
   if (isOpen) fbNavigateTo(_fbCurrentPath);
 }
 
@@ -4128,6 +4129,7 @@ function openDbPanel(tool) {
 
   document.getElementById('db-panel').classList.add('open');
   document.getElementById('db-panel-backdrop').classList.add('open');
+  document.body.classList.add('sidebar-open');
   _dbPanelActive = tool;
 }
 
@@ -4136,6 +4138,10 @@ function closeDbPanel() {
   document.getElementById('db-panel-backdrop').classList.remove('open');
   document.querySelectorAll('.db-tool-btn').forEach(b => b.classList.remove('active'));
   _dbPanelActive = null;
+  // Only remove sidebar-open if file browser isn't also open
+  if (!document.getElementById('fb-panel').classList.contains('fb-open')) {
+    document.body.classList.remove('sidebar-open');
+  }
 }
 
 document.addEventListener('keydown', e => {
@@ -4862,4 +4868,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   _rekkiAvatarInit();
   _rekkiRefreshStatus();
+
+  // Sidebar resize handles
+  document.querySelectorAll('.sidebar-resize-handle').forEach(handle => {
+    let startX, startW;
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      startX = e.clientX;
+      startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'), 10) || 260;
+      handle.classList.add('dragging');
+      const onMove = ev => {
+        const newW = Math.min(Math.max(startW + (ev.clientX - startX), 180), 420);
+        document.documentElement.style.setProperty('--sidebar-w', newW + 'px');
+      };
+      const onUp = () => {
+        handle.classList.remove('dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
 });
