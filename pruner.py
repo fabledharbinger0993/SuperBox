@@ -206,93 +206,6 @@ class DupeGroup:
         return [e for e in self.entries if e.action == "REVIEW_REMOVE"]
 
 
-# ── Tag cleanup helper (Picard-inspired pattern) ───────────────────────────────
-# Adapted from Picard's loadasnat.py metadata.delete() pattern:
-# When duplicates are pruned, stale metadata can accumulate on the surviving copy.
-# For example, if the keeper is a single track from a compilation, keeping the
-# album/albumartist tags from the duplicate's context could lead to DB orphans
-# or folder structure confusion in future re-organization.
-#
-# This function clears album-related metadata on files after pruning, matching
-# Picard's "load as non-album track" cleanup strategy.
-
-def _cleanup_stale_album_tags(file_path: Path, emit_log=None) -> int:
-    """
-    Remove album-related tags from a file to prevent stale context after pruning.
-    Returns the count of tags removed.
-
-    Removes: albumartist, album, discnumber, totaldiscs, totaltracks, media,
-             barcode, catalognumber, releasestatus, releasetype, asin.
-
-    This is applied to the \"keeper\" file after prune completes, ensuring that
-    if the file later moves to a different context, it won't carry stale
-    album metadata that could confuse re-organization or import logic.
-    """
-    if not file_path.exists():
-        return 0
-
-    try:
-        from mutagen import File as MutagenFile
-        from mutagen.id3 import ID3
-
-        audio = MutagenFile(str(file_path), easy=False)
-        if audio is None or audio.tags is None:
-            return 0
-
-        tags = audio.tags
-        removed_count = 0
-
-        # ID3-style frame IDs (MP3, AIFF, WAV)
-        id3_frames_to_remove = ["TPE2", "TALB", "TPOS", "TXXX:TOTALDISCS", 
-                               "TXXX:TOTALTRACKS", "TXXX:MEDIA", "TXXX:BARCODE",
-                               "TXXX:CATALOGNUMBER", "TXXX:RELEASESTATUS", 
-                               "TXXX:RELEASETYPE", "TXXX:ASIN"]
-
-        # Vorbis-style keys (FLAC, OGG)
-        vorbis_keys_to_remove = {"albumartist", "album", "discnumber", 
-                               "totaldiscs", "totaltracks", "media", "barcode",
-                               "catalognumber", "releasestatus", "releasetype", "asin"}
-
-        # MP4-style atom keys
-        mp4_atoms_to_remove = {"©ART", "©alb", "disk"}
-
-        tag_type = type(tags).__name__
-        is_vorbis = "VCFLACDict" in tag_type or "VComment" in tag_type
-        is_mp4 = "MP4Tags" in tag_type or "MP4" in tag_type
-
-        # ID3 cleanup
-        if not (is_vorbis or is_mp4):
-            for frame_id in id3_frames_to_remove:
-                if frame_id in tags:
-                    del tags[frame_id]
-                    removed_count += 1
-
-        # Vorbis cleanup
-        if is_vorbis:
-            for key in vorbis_keys_to_remove:
-                if key in tags:
-                    del tags[key]
-                    removed_count += 1
-
-        # MP4 cleanup
-        if is_mp4:
-            for atom in mp4_atoms_to_remove:
-                if atom in tags:
-                    del tags[atom]
-                    removed_count += 1
-
-        if removed_count > 0:
-            audio.save()
-            if emit_log:
-                emit_log(f"      Cleaned {removed_count} stale tag(s) from {file_path.name}")
-
-        return removed_count
-    except Exception as exc:
-        if emit_log:
-            emit_log(f"      Warning: tag cleanup failed on {file_path.name}: {exc}")
-        return 0
-
-
 # ── Tag completeness helper ───────────────────────────────────────────────────
 
 def _count_tags(path: Path) -> int:
@@ -544,24 +457,6 @@ def prune_files(
         }
 
     emit("")
-
-    # ── Step 3: Cleanup stale tags on keeper files ─────────────────────────
-    # Inspired by Picard's loadasnat.py cleanup pattern: remove album-related
-    # tags from surviving files to prevent stale metadata from affecting
-    # future re-organization or DB consistency.
-    if keeper_map:
-        emit(f"  Cleaning stale tags on {len(keeper_map)} keeper file(s)…")
-        tags_cleaned = 0
-        for keep_path in keeper_map.values():
-            try:
-                p = Path(keep_path)
-                if p.exists():
-                    count = _cleanup_stale_album_tags(p, emit)
-                    tags_cleaned += count
-            except Exception as exc:
-                emit(f"      ✗  Tag cleanup error on {Path(keep_path).name}: {exc}")
-        emit(f"  Tag cleanup complete ({tags_cleaned} tag(s) removed across all keepers)")
-        emit("")
 
     # ── Step 2: Move/delete files ──────────────────────────────────────────
     action_label = "Permanently deleting" if permanent else "Moving files to recovery folder"

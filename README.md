@@ -167,6 +167,41 @@ Create a release with a notes file:
 - tag format validation (`vX.Y.Z`)
 - waits until `RekitBox.zip` is confirmed attached (or fails on timeout)
 
+### Private AI workflow (optional)
+
+Private repository automation can run from inside the RekitBox venv:
+
+```bash
+./scripts/agent_workflow.sh once
+./scripts/agent_workflow.sh start
+./scripts/agent_workflow.sh status
+./scripts/agent_workflow.sh stop
+```
+
+Mirror private changes into the public repo (AI files excluded):
+
+```bash
+./scripts/sync_public_repo.sh once
+```
+
+See `docs/agent-workflow.md` for full setup and safety switches.
+
+### Agent edition package (separate venv)
+
+RekitBox can now be packaged in two tracks:
+
+- `RekitBox.zip` -> regular runtime (`launch.sh`, `venv`)
+- `RekitBox-Agent.zip` -> agent runtime (`launch_agent.sh`, `venv-agent`)
+
+Build the agent package locally:
+
+```bash
+./build_agent_release.sh
+```
+
+The agent installer launches `launch_agent.sh` and provisions an isolated
+`venv-agent`, so your standard RekitBox environment remains untouched.
+
 ---
 
 ## Under the hood

@@ -1,0 +1,68 @@
+FabledClaw Snapshot Manifest
+source=/Users/cameronkelly/FabledHarbinger/Git Repos/Harbinger/FabledClaw-main
+generated_at=2026-04-19T09:10:46Z
+
+Top-level directories imported:
+- .pi
+- .vscode
+- auto-reply
+- context-engine
+- bindings
+- assets/chrome-extension
+- channels
+- commands
+- copilot-proxy
+- cron
+- diffs
+- flows
+- helpers
+- ollama
+- media
+- interactive
+- process
+- routing
+- sglang
+- signal
+- skills
+- slack
+- zai
+- apps/macos
+
+File count by imported directory:
+- .pi: 10
+- .vscode: 2
+- auto-reply: 365
+- context-engine: 7
+- bindings: 1
+- assets/chrome-extension: 11
+- channels: 192
+- commands: 432
+- copilot-proxy: 6
+- cron: 118
+- diffs: 26
+- flows: 11
+- helpers: 73
+- ollama: 16
+- media: 47
+- interactive: 2
+- process: 29
+- routing: 11
+- sglang: 9
+- signal: 61
+- skills: 76
+- slack: 172
+- zai: 14
+- apps/macos: 3
+
+Standalone files imported:
+- apps/macos/README.md
+- apps/macos/Package.swift
+- apps/macos/Package.resolved
+- .env.example
+- entry.respawn.test.ts
+- entry.version-fast-path.test.ts
+- library.test.ts
+- logging.ts
+- openclaw.podman.env
+- pnpm-workspace.yaml
+- channel-web.ts
