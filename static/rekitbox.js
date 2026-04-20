@@ -4506,17 +4506,23 @@ let _rekkiCtxTarget = null; // element the right-click menu was triggered on
 // ── Panel open/close ──────────────────────────────────────────────────────────
 
 function toggleRekkiPanel(ctx) {
-  const panel = document.getElementById('rekki-panel');
-  if (!panel) return;
+  const stage = document.getElementById('rekki-stage');
+  if (!stage) return;
   const opening = !_rekkiOpen;
   _rekkiOpen = opening;
-  panel.classList.toggle('open', opening);
   if (opening) {
+    stage.classList.remove('hidden');
     if (ctx) _rekkiLoadChip(ctx);
     _rekkiRefreshStatus();
+    _rekkiPlayClip('entrance', () => _rekkiPlayClip('chat', null, true));
     requestAnimationFrame(() => {
       const input = document.getElementById('rekki-input');
       if (input) input.focus();
+    });
+  } else {
+    _rekkiPlayClip('exit', () => {
+      stage.classList.add('hidden');
+      _rekkiHideAnim();
     });
   }
 }
@@ -4735,14 +4741,12 @@ function _rekkiAvatarInit() {
   avatar.addEventListener('dragstart', (e) => {
     e.dataTransfer.setData('application/rekki', '1');
     e.dataTransfer.effectAllowed = 'copy';
-    e.dataTransfer.setDragImage(avatar, 24, 24);
+    e.dataTransfer.setDragImage(avatar, avatar.naturalWidth ? 24 : 20, 24);
     document.body.classList.add('rekki-dragging');
-    _rekkiPlayClip('exit');
   });
 
   avatar.addEventListener('dragend', () => {
     document.body.classList.remove('rekki-dragging');
-    _rekkiPlayClip('entrance', () => _rekkiPlayClip('float', null, true));
     avatar.classList.add('returning');
     avatar.addEventListener('animationend', () => avatar.classList.remove('returning'), { once: true });
   });
@@ -4754,14 +4758,19 @@ function _rekkiAvatarInit() {
 }
 
 function _rekkiPlayClip(name, onended, loop) {
-  const video = document.getElementById('rekki-avatar');
-  if (!video) return;
-  const src = video.querySelector('source');
-  if (src) src.src = `/static/rekki-${name}.mp4`;
-  video.load();
-  video.loop = !!loop;
-  video.play().catch(() => {});
-  if (onended) video.addEventListener('ended', onended, { once: true });
+  const anim = document.getElementById('rekki-anim');
+  const src  = anim && anim.querySelector('source');
+  if (!anim || !src) return;
+  src.src = `/static/rekki-${name}.mp4`;
+  anim.load();
+  anim.loop = !!loop;
+  anim.play().catch(() => {});
+  if (onended) anim.addEventListener('ended', onended, { once: true });
+}
+
+function _rekkiHideAnim() {
+  const anim = document.getElementById('rekki-anim');
+  if (anim) { anim.pause(); anim.currentTime = 0; }
 }
 
 // ── Global drop target ────────────────────────────────────────────────────────

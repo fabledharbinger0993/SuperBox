@@ -61,9 +61,7 @@
       ⚙ Settings
     </button>
     <div id="rekki-home" title="Rekki — drag onto anything or click to chat">
-      <video id="rekki-avatar" draggable="true" autoplay loop muted playsinline>
-        <source src="/static/rekki-float.mp4" type="video/mp4">
-      </video>
+      <img id="rekki-avatar" src="/static/icon-rekki.png" alt="Rekki" draggable="true">
     </div>
     <button id="quit-btn" onclick="quitRekitBox()"
       title="Shut down the RekitBox server">
@@ -1976,31 +1974,28 @@
 
 </div>
 
-<!-- ══ Rekki Panel ═══════════════════════════════════════════════════════ -->
-<aside id="rekki-panel" aria-label="Rekki assistant panel">
-  <div class="rekki-head">
-    <div class="rekki-head-left">
-      <video id="rekki-panel-avatar" autoplay loop muted playsinline>
-        <source src="/static/rekki-float.mp4" type="video/mp4">
-      </video>
-      <div class="rekki-title">Rekki</div>
-      <div id="rekki-conn-dot" title="Ollama connection status"></div>
-    </div>
-    <button class="rekki-close" onclick="toggleRekkiPanel()" aria-label="Close">✕</button>
-  </div>
-  <div id="rekki-chat-log"></div>
-  <div id="rekki-compose">
-    <div id="rekki-ctx-chip" class="hidden">
-      <span id="rekki-ctx-chip-label"></span>
-      <button onclick="rekkiClearChip()" aria-label="Clear context">✕</button>
-    </div>
-    <textarea id="rekki-input" placeholder="Drop me on anything, or ask me something…"></textarea>
-    <div id="rekki-compose-foot">
-      <span id="rekki-status"></span>
-      <button id="rekki-send" onclick="rekkiSendMessage()">Send ↵</button>
+<!-- ══ Rekki Stage ════════════════════════════════════════════════════════ -->
+<div id="rekki-stage" class="hidden" aria-label="Rekki">
+  <video id="rekki-anim" muted playsinline>
+    <source id="rekki-anim-src" src="/static/rekki-entrance.mp4" type="video/mp4">
+  </video>
+  <button id="rekki-stage-close" onclick="toggleRekkiPanel()" aria-label="Close Rekki">✕</button>
+  <div id="rekki-chat-overlay">
+    <div id="rekki-chat-log"></div>
+    <div id="rekki-compose">
+      <div id="rekki-ctx-chip" class="hidden">
+        <span id="rekki-ctx-chip-label"></span>
+        <button onclick="rekkiClearChip()" aria-label="Clear context">✕</button>
+      </div>
+      <textarea id="rekki-input" placeholder="Drop me on anything, or ask me something…"></textarea>
+      <div id="rekki-compose-foot">
+        <span id="rekki-status"></span>
+        <div id="rekki-conn-dot" title="Ollama connection status"></div>
+        <button id="rekki-send" onclick="rekkiSendMessage()">Send ↵</button>
+      </div>
     </div>
   </div>
-</aside>
+</div>
 
 <!-- ══ Rekki right-click context menu ══════════════════════════════════ -->
 <div id="rekki-ctx-menu" class="hidden" role="menu">
