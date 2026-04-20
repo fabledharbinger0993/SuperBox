@@ -4496,21 +4496,28 @@ fetch('/api/connectivity')
   })
   .catch(() => {});
 
-// ── Rekki side panel (read-only Ollama helper) ─────────────────────────────
-let _rekkiOpen = false;
-let _rekkiHistory = [];
+// ── Rekki ─────────────────────────────────────────────────────────────────────
 
-function toggleRekkiPanel() {
+let _rekkiOpen    = false;
+let _rekkiHistory = [];
+let _rekkiChip    = null;   // { type, label, description, tool, raw } — current element context
+let _rekkiCtxTarget = null; // element the right-click menu was triggered on
+
+// ── Panel open/close ──────────────────────────────────────────────────────────
+
+function toggleRekkiPanel(ctx) {
   const panel = document.getElementById('rekki-panel');
-  const btn = document.getElementById('rekki-btn');
-  if (!panel || !btn) return;
-  _rekkiOpen = !_rekkiOpen;
-  panel.classList.toggle('open', _rekkiOpen);
-  btn.classList.toggle('active', _rekkiOpen);
-  if (_rekkiOpen) {
-    rekkiRefreshStatus();
-    const input = document.getElementById('rekki-input');
-    if (input) input.focus();
+  if (!panel) return;
+  const opening = !_rekkiOpen;
+  _rekkiOpen = opening;
+  panel.classList.toggle('open', opening);
+  if (opening) {
+    if (ctx) _rekkiLoadChip(ctx);
+    _rekkiRefreshStatus();
+    requestAnimationFrame(() => {
+      const input = document.getElementById('rekki-input');
+      if (input) input.focus();
+    });
   }
 }
 
@@ -4519,117 +4526,315 @@ function _rekkiSetStatus(text) {
   if (el) el.textContent = text;
 }
 
-function _rekkiAppend(role, content) {
+function _rekkiSetConn(online) {
+  const dot = document.getElementById('rekki-conn-dot');
+  if (!dot) return;
+  dot.classList.toggle('online', online);
+  dot.classList.toggle('offline', !online);
+}
+
+function _rekkiAppend(role, content, source) {
   const log = document.getElementById('rekki-chat-log');
   if (!log) return;
   const msg = document.createElement('div');
   msg.className = `rekki-msg ${role === 'user' ? 'user' : 'rekki'}`;
+  if (source) msg.dataset.source = source;
   msg.textContent = content;
   log.appendChild(msg);
   log.scrollTop = log.scrollHeight;
 }
 
-async function rekkiRefreshStatus() {
-  _rekkiSetStatus('Checking Ollama connection…');
+async function _rekkiRefreshStatus() {
   try {
     const r = await fetch('/api/rekki/status', { cache: 'no-store' });
     const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'status unavailable');
-    if (d.ollama_reachable) {
-      const availability = d.model_available === null
-        ? ''
-        : (d.model_available ? 'model ready' : 'model not found locally');
-      const resolved = d.model_resolved ? ` (using ${d.resolved_model})` : '';
-      _rekkiSetStatus(`Rekki · ${d.provider} · ${d.model}${resolved} · profile=${d.profile}${availability ? ` · ${availability}` : ''}`);
-      if (d.automation_status) {
-        _rekkiAppend('assistant', `Automation status:\n${d.automation_status}`);
-      }
+    if (d.ollama_reachable && d.model_available !== false) {
+      _rekkiSetConn(true);
+      _rekkiSetStatus(`${d.resolved_model || d.model}`);
     } else {
-      _rekkiSetStatus(`Rekki offline: ${d.error || 'could not reach Ollama'}`);
+      _rekkiSetConn(false);
+      _rekkiSetStatus(d.error || 'Ollama offline');
     }
-  } catch (err) {
-    _rekkiSetStatus(`Rekki status error: ${err.message || err}`);
+  } catch {
+    _rekkiSetConn(false);
+    _rekkiSetStatus('Rekki offline');
   }
 }
 
-async function rekkiAutomation(action) {
-  const send = document.getElementById('rekki-send');
-  if (send) send.disabled = true;
-  _rekkiSetStatus(`Rekki automation: ${action}…`);
-  try {
-    const r = await fetch('/api/rekki/automation', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action }),
-    });
-    const d = await r.json();
-    if (!r.ok || !d.ok) throw new Error(d.error || d.output || 'automation failed');
-    if (d.output) {
-      _rekkiAppend('assistant', `Automation ${action}:\n${d.output}`);
-    }
-    if (d.status_text) {
-      _rekkiAppend('assistant', `Automation status:\n${d.status_text}`);
-    }
-    _rekkiSetStatus(`Rekki automation ${action} complete`);
-  } catch (err) {
-    _rekkiAppend('assistant', `Automation error (${action}): ${err.message || err}`);
-    _rekkiSetStatus('Rekki automation unavailable');
-  } finally {
-    if (send) send.disabled = false;
-  }
+// ── Context chip ──────────────────────────────────────────────────────────────
+
+function _rekkiLoadChip(ctx) {
+  _rekkiChip = ctx;
+  const chip  = document.getElementById('rekki-ctx-chip');
+  const label = document.getElementById('rekki-ctx-chip-label');
+  if (!chip || !label) return;
+  const icon = ctx.type === 'error' ? '⚠ ' : ctx.type === 'tool-card' ? '⚙ ' : '◈ ';
+  label.textContent = icon + (ctx.label || ctx.type);
+  chip.classList.remove('hidden');
+  chip.title = ctx.description || '';
 }
 
-async function rekkiInjectContext() {
-  try {
-    const r = await fetch('/api/rekki/context', { cache: 'no-store' });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'context unavailable');
-    const input = document.getElementById('rekki-input');
-    if (!input) return;
-    const ctxText = `Context:\n${JSON.stringify(d, null, 2)}\n`;
-    input.value = input.value.trim() ? `${input.value.trim()}\n\n${ctxText}` : ctxText;
-    input.focus();
-  } catch (err) {
-    _rekkiAppend('assistant', `Could not fetch context: ${err.message || err}`);
-  }
+function rekkiClearChip() {
+  _rekkiChip = null;
+  const chip = document.getElementById('rekki-ctx-chip');
+  if (chip) chip.classList.add('hidden');
 }
+
+// ── Send message ──────────────────────────────────────────────────────────────
 
 async function rekkiSendMessage() {
   const input = document.getElementById('rekki-input');
-  const send = document.getElementById('rekki-send');
+  const send  = document.getElementById('rekki-send');
   if (!input || !send) return;
   const text = (input.value || '').trim();
   if (!text) return;
+
+  const chipCtx = _rekkiChip;
+  const source  = chipCtx ? chipCtx.label : null;
 
   _rekkiAppend('user', text);
   _rekkiHistory.push({ role: 'user', content: text });
   input.value = '';
   send.disabled = true;
-  _rekkiSetStatus('Rekki thinking…');
+  _rekkiSetStatus('Thinking…');
 
   try {
+    const body = { message: text, history: _rekkiHistory };
+    if (chipCtx) body.element_context = chipCtx;
+
     const r = await fetch('/api/rekki/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, history: _rekkiHistory }),
+      body: JSON.stringify(body),
     });
     const d = await r.json();
     if (!r.ok || !d.ok) throw new Error(d.error || 'chat failed');
-    _rekkiAppend('assistant', d.reply || '(no reply)');
+    _rekkiAppend('rekki', d.reply || '(no reply)', source);
     _rekkiHistory.push({ role: 'assistant', content: d.reply || '' });
-    _rekkiSetStatus(`Rekki · ${d.provider} · ${d.model}`);
+    _rekkiSetStatus(`${d.model}`);
   } catch (err) {
-    _rekkiAppend('assistant', `Rekki error: ${err.message || err}`);
-    _rekkiSetStatus('Rekki unavailable');
+    _rekkiAppend('rekki', `Error: ${err.message || err}`);
+    _rekkiSetStatus('Unavailable');
   } finally {
     send.disabled = false;
   }
 }
 
+// ── DOM scraper ───────────────────────────────────────────────────────────────
+
+function _rekkiScrape(el) {
+  const parentChain = [];
+  let node = el.parentElement;
+  for (let i = 0; i < 6 && node && node !== document.body; i++, node = node.parentElement) {
+    const t = (node.getAttribute('aria-label') || node.id || node.className || '').slice(0, 80);
+    if (t) parentChain.push(t);
+  }
+
+  const siblings = [];
+  const sibs = el.parentElement ? [...el.parentElement.children] : [];
+  for (const s of sibs) {
+    if (s !== el && s.textContent.trim()) siblings.push(s.textContent.trim().slice(0, 80));
+    if (siblings.length >= 5) break;
+  }
+
+  let sectionHeading = '';
+  let n = el;
+  while (n && n !== document.body) {
+    const h = n.querySelector('h2,h3,h4,label,.card-title,.panel-title');
+    if (h && h.textContent.trim()) { sectionHeading = h.textContent.trim().slice(0, 120); break; }
+    n = n.parentElement;
+  }
+
+  const toolPanel = document.querySelector('.card.active, [data-tool].active, section.active');
+  const logTail   = [...document.querySelectorAll('#log-content .log-line, .log-entry')]
+    .slice(-5).map(e => e.textContent.trim().slice(0, 100));
+
+  return {
+    elementText: el.textContent.trim().slice(0, 400),
+    elementTag: el.tagName.toLowerCase(),
+    parentChain,
+    siblings,
+    sectionHeading,
+    toolPanel: toolPanel ? (toolPanel.id || toolPanel.dataset.tool || toolPanel.className.slice(0, 60)) : '',
+    existingAttributes: Object.fromEntries(
+      [...el.attributes].filter(a => a.name !== 'style').map(a => [a.name, a.value.slice(0, 80)])
+    ),
+    pageState: {
+      activeTool: document.querySelector('[data-tool].active')?.dataset.tool || '',
+      lastRunStatus: document.querySelector('#scan-status, .last-status')?.textContent?.trim()?.slice(0, 60) || '',
+      logTail,
+    },
+  };
+}
+
+// ── Context resolution: drop or right-click ───────────────────────────────────
+
+async function _rekkiResolveContext(el) {
+  // 1. Element already has context — use it directly
+  const raw = el.dataset.rekkiContext;
+  if (raw) {
+    try { return JSON.parse(raw); } catch { /* fall through to inference */ }
+  }
+
+  // 2. Walk up to find annotated ancestor
+  let node = el.parentElement;
+  while (node && node !== document.body) {
+    if (node.dataset.rekkiContext) {
+      try { return JSON.parse(node.dataset.rekkiContext); } catch { break; }
+    }
+    node = node.parentElement;
+  }
+
+  // 3. Infer via Rekki — scrape DOM and call backend
+  _rekkiSetStatus('Reading context…');
+  try {
+    const scrape = _rekkiScrape(el);
+    const r = await fetch('/api/rekki/infer-context', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scrape }),
+    });
+    const d = await r.json();
+    if (d.ok && d.context) {
+      // Write inferred context back to the element so next drop is instant
+      el.dataset.rekkiContext = JSON.stringify(d.context);
+      return d.context;
+    }
+  } catch { /* fall through */ }
+
+  // 4. Fallback — generic context from text content
+  return {
+    type: 'generic',
+    label: el.textContent.trim().slice(0, 55) || el.tagName.toLowerCase(),
+    description: 'I was dropped on this element. Let me take a look.',
+    tool: null,
+    severity: null,
+  };
+}
+
+async function _rekkiEngageWith(el) {
+  const ctx = await _rekkiResolveContext(el);
+  if (!_rekkiOpen) toggleRekkiPanel(ctx);
+  else _rekkiLoadChip(ctx);
+
+  // Let Rekki open with an immediate oriented message if description exists
+  if (ctx.description) {
+    _rekkiSetStatus('');
+    _rekkiAppend('rekki', ctx.description, ctx.label || null);
+    _rekkiHistory.push({ role: 'assistant', content: ctx.description });
+  }
+}
+
+// ── Avatar drag: pickup, drop, auto-return ────────────────────────────────────
+
+function _rekkiAvatarInit() {
+  const avatar = document.getElementById('rekki-avatar');
+  const home   = document.getElementById('rekki-home');
+  if (!avatar || !home) return;
+
+  avatar.addEventListener('dragstart', (e) => {
+    e.dataTransfer.setData('application/rekki', '1');
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setDragImage(avatar, 24, 24);
+    document.body.classList.add('rekki-dragging');
+    _rekkiPlayClip('exit');
+  });
+
+  avatar.addEventListener('dragend', () => {
+    document.body.classList.remove('rekki-dragging');
+    _rekkiPlayClip('entrance', () => _rekkiPlayClip('float', null, true));
+    avatar.classList.add('returning');
+    avatar.addEventListener('animationend', () => avatar.classList.remove('returning'), { once: true });
+  });
+
+  // Make the home element itself clickable to toggle panel
+  home.addEventListener('click', (e) => {
+    if (e.target === avatar || e.target === home) toggleRekkiPanel();
+  });
+}
+
+function _rekkiPlayClip(name, onended, loop) {
+  const video = document.getElementById('rekki-avatar');
+  if (!video) return;
+  const src = video.querySelector('source');
+  if (src) src.src = `/static/rekki-${name}.mp4`;
+  video.load();
+  video.loop = !!loop;
+  video.play().catch(() => {});
+  if (onended) video.addEventListener('ended', onended, { once: true });
+}
+
+// ── Global drop target ────────────────────────────────────────────────────────
+
+document.addEventListener('dragover', (e) => {
+  if (!document.body.classList.contains('rekki-dragging')) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+});
+
+document.addEventListener('drop', async (e) => {
+  if (!document.body.classList.contains('rekki-dragging')) return;
+  if (!e.dataTransfer.getData('application/rekki')) return;
+  e.preventDefault();
+  const target = document.elementFromPoint(e.clientX, e.clientY);
+  if (!target || target === document.getElementById('rekki-avatar')) return;
+  await _rekkiEngageWith(target);
+});
+
+// ── Right-click context menu ──────────────────────────────────────────────────
+
+document.addEventListener('contextmenu', (e) => {
+  const menu = document.getElementById('rekki-ctx-menu');
+  if (!menu) return;
+
+  // Don't intercept clicks inside the Rekki panel itself
+  if (e.target.closest('#rekki-panel, #rekki-ctx-menu')) return;
+
+  e.preventDefault();
+  _rekkiCtxTarget = e.target;
+
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let x = e.clientX, y = e.clientY;
+  menu.classList.remove('hidden');
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  if (x + mw > vw) x = vw - mw - 6;
+  if (y + mh > vh) y = vh - mh - 6;
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+});
+
+document.addEventListener('click', () => {
+  const menu = document.getElementById('rekki-ctx-menu');
+  if (menu) menu.classList.add('hidden');
+});
+
+async function rekkiMenuExplain() {
+  document.getElementById('rekki-ctx-menu')?.classList.add('hidden');
+  if (!_rekkiCtxTarget) return;
+  await _rekkiEngageWith(_rekkiCtxTarget);
+}
+
+async function rekkiMenuTag() {
+  document.getElementById('rekki-ctx-menu')?.classList.add('hidden');
+  if (!_rekkiCtxTarget) return;
+
+  // Force inference even if context already exists, to allow re-tagging
+  delete _rekkiCtxTarget.dataset.rekkiContext;
+  const ctx = await _rekkiResolveContext(_rekkiCtxTarget);
+
+  // Write back and show chip only — don't open chat
+  _rekkiCtxTarget.dataset.rekkiContext = JSON.stringify(ctx);
+  if (_rekkiOpen) _rekkiLoadChip(ctx);
+  _rekkiSetStatus(`Tagged: ${ctx.label || ctx.type}`);
+}
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && _rekkiOpen) {
-    toggleRekkiPanel();
-    return;
+  if (e.key === 'Escape') {
+    const menu = document.getElementById('rekki-ctx-menu');
+    if (menu && !menu.classList.contains('hidden')) { menu.classList.add('hidden'); return; }
+    if (_rekkiOpen) { toggleRekkiPanel(); return; }
   }
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
     e.preventDefault();
@@ -4637,15 +4842,15 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// ── Boot ──────────────────────────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('rekki-input');
   if (input) {
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        rekkiSendMessage();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); rekkiSendMessage(); }
     });
   }
-  rekkiRefreshStatus();
+  _rekkiAvatarInit();
+  _rekkiRefreshStatus();
 });

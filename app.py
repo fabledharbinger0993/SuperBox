@@ -532,6 +532,78 @@ def api_rekki_chat():
         return jsonify({"ok": False, "error": str(exc)}), 502
 
 
+@app.route("/api/rekki/infer-context", methods=["POST"])
+def api_rekki_infer_context():
+    data = request.get_json(silent=True) or {}
+    scrape = data.get("scrape") or {}
+
+    element_text = str(scrape.get("elementText", "")).strip()[:500]
+    parent_chain = scrape.get("parentChain", [])
+    siblings = scrape.get("siblings", [])
+    section = str(scrape.get("sectionHeading", "")).strip()[:120]
+    tool_panel = str(scrape.get("toolPanel", "")).strip()[:80]
+    existing_attrs = scrape.get("existingAttributes", {})
+    page_state = scrape.get("pageState", {})
+
+    resolved_model, model_ok, model_error = _rekki_resolve_model(
+        os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)
+    )
+    if not model_ok:
+        return jsonify({"ok": False, "error": f"Ollama unavailable: {model_error}"}), 502
+
+    system_prompt = (
+        "You are Rekki, an AI agent embedded inside RekitBox — a local rekordbox music library "
+        "management tool. Your entire domain is rekordbox DJ library management: track metadata, "
+        "file paths, playlists, BPM/key analysis, duplicate detection, library organization, "
+        "database health, and the tools that operate on them (scanner, relocator, duplicate_detector, "
+        "pruner, audio_processor, library_organizer, audit, renamer, importer).\n\n"
+        "You have been dropped onto a UI element that has no context annotation yet. "
+        "Based on the DOM scrape provided, infer what this element represents and return a "
+        "JSON object with these fields:\n"
+        "  type: string (e.g. 'error', 'log-entry', 'tool-card', 'track-row', 'duplicate-group', "
+        "'db-path', 'scan-result', 'playlist', 'status-pill', 'button', 'generic')\n"
+        "  label: string — a short human-readable label for this element (max 60 chars)\n"
+        "  description: string — 1-2 sentences Rekki should open with when dropped here\n"
+        "  tool: string or null — which RekitBox tool this element belongs to\n"
+        "  severity: 'info'|'warn'|'error'|'safe' or null\n\n"
+        "Return ONLY valid JSON. No markdown fences, no explanation outside the JSON."
+    )
+
+    user_payload = (
+        f"Element text: {element_text!r}\n"
+        f"Section heading: {section!r}\n"
+        f"Tool panel: {tool_panel!r}\n"
+        f"Parent chain: {parent_chain}\n"
+        f"Siblings: {siblings[:6]}\n"
+        f"Existing attributes: {existing_attrs}\n"
+        f"Page state — active tool: {page_state.get('activeTool', '')!r}, "
+        f"last status: {page_state.get('lastRunStatus', '')!r}\n"
+        f"Recent log tail: {page_state.get('logTail', [])[:4]}"
+    )
+
+    payload = {
+        "model": resolved_model,
+        "stream": False,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_payload},
+        ],
+        "options": {"temperature": 0.1},
+    }
+
+    try:
+        result = _rekki_http_post_json(_rekki_chat_url(), payload, timeout=30)
+        raw = str((result.get("message") or {}).get("content", "")).strip()
+        if not raw:
+            return jsonify({"ok": False, "error": "empty inference response"}), 502
+        inferred = json.loads(raw)
+        return jsonify({"ok": True, "context": inferred})
+    except json.JSONDecodeError:
+        return jsonify({"ok": False, "error": "model returned non-JSON", "raw": raw[:300]}), 502
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 502
+
+
 @app.route("/api/rekki/automation", methods=["POST"])
 def api_rekki_automation():
     data = request.get_json(silent=True) or {}
