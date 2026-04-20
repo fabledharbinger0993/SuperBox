@@ -24,6 +24,11 @@ _setup_needed() {
   for formula in ffmpeg chromaprint; do
     _brew list --formula "$formula" &>/dev/null || return 0
   done
+  # Ollama missing?
+  command -v ollama &>/dev/null || return 0
+  # Default Rekki model not yet pulled?
+  local _model="${REKIT_AGENT_MODEL:-qwen2.5-coder:7b}"
+  ollama list 2>/dev/null | grep -q "^${_model}" || return 0
   # Python venv missing?
   [ ! -d "$VENV" ] && return 0
   # Sentinel not yet written by setup.sh?
@@ -46,6 +51,14 @@ fi
 
 # ── Silence all output — Automator treats any stdout as an error ──────────
 exec > /dev/null 2>&1
+
+# ── Ensure Ollama is running ─────────────────────────────────────────────
+# setup.sh starts it during first-run, but subsequent launches (including
+# after a reboot) need to restart it.  Non-blocking — Rekki shows a
+# friendly "connecting…" state if Ollama takes a moment to warm up.
+if command -v ollama &>/dev/null && ! pgrep -x ollama &>/dev/null; then
+  nohup ollama serve >> "$LOG" 2>&1 &
+fi
 
 # ── Activate venv ─────────────────────────────────────────────────────────
 source "$VENV/bin/activate"
