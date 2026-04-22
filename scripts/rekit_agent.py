@@ -42,7 +42,16 @@ def _repo_root() -> Path:
 
 
 def _default_prompt_profile_root() -> Path:
-    return _repo_root() / "agent_assets" / "fabledclaw_snapshot" / ".pi" / "prompts"
+    """Resolve the prompt profiles directory.
+
+    Resolution order:
+      1. REKKICLAW_ROOT env var — points at a RekkiClaw checkout for dev use
+      2. rekki/prompts/ inside RekitBox — bundled copy that ships to all users
+    """
+    env_override = os.environ.get("REKKICLAW_ROOT")
+    if env_override:
+        return Path(env_override).resolve() / ".pi" / "prompts"
+    return _repo_root() / "rekki" / "prompts"
 
 
 def _resolve_profile_prompt(profile: str, profile_root: Path) -> tuple[str, str, str]:
