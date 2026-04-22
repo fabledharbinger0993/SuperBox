@@ -8,5 +8,6 @@
 	"search.exclude": {
 		"**/.venv": true,
 		"**/venv": true
-	}
+	},
+	"github.copilot.chat.agentDebugLog.fileLogging.enabled": true
 }
