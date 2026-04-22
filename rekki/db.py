@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     role            TEXT NOT NULL,
     content         TEXT NOT NULL,
+    source          TEXT NOT NULL DEFAULT 'main',
     timestamp       TEXT NOT NULL DEFAULT (datetime('now')),
     logic_entry_id  INTEGER REFERENCES logic_entries(id),
     memory_entry_id INTEGER REFERENCES memory_entries(id),
@@ -180,6 +181,14 @@ class RekkiMemoryDB:
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.executescript(SCHEMA_SQL)
         self._conn.commit()
+        # ── Additive migrations (safe for existing databases) ─────────────────
+        try:
+            self._conn.execute(
+                "ALTER TABLE chat_messages ADD COLUMN source TEXT NOT NULL DEFAULT 'main'"
+            )
+            self._conn.commit()
+        except Exception:
+            pass  # column already present — nothing to do
 
     # ─── helpers ──────────────────────────────────────────────────────────────
 
@@ -393,6 +402,7 @@ class RekkiMemoryDB:
         self,
         role: str,
         content: str,
+        source: str = "main",
         logic_entry_id: Optional[int] = None,
         memory_entry_id: Optional[int] = None,
         tokens: int = 0,
@@ -401,17 +411,25 @@ class RekkiMemoryDB:
         cur = self._conn.execute(
             """
             INSERT INTO chat_messages
-                (role, content, logic_entry_id, memory_entry_id, tokens, is_typing)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (role, content, source, logic_entry_id, memory_entry_id, tokens, is_typing)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (role, content, logic_entry_id, memory_entry_id, tokens, 1 if is_typing else 0),
+            (role, content, source, logic_entry_id, memory_entry_id, tokens, 1 if is_typing else 0),
         )
         self._conn.commit()
         return cur.lastrowid  # type: ignore[return-value]
 
     def get_recent_chat_messages(self, limit: int = 50) -> list[dict]:
+        """Returns messages oldest-first, excluding in-progress typing indicators."""
         cur = self._conn.execute(
-            "SELECT * FROM chat_messages ORDER BY timestamp DESC LIMIT ?", (limit,)
+            """
+            SELECT id, role, content, source, timestamp
+            FROM chat_messages
+            WHERE is_typing = 0
+            ORDER BY id ASC
+            LIMIT ?
+            """,
+            (limit,),
         )
         return self._rows_to_list(cur.fetchall())
 

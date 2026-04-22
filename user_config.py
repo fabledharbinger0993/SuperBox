@@ -62,6 +62,7 @@ DEFAULTS: dict = {
     "custom_archive_dir":  "",
     "excluded_dirs":       [],   # extra folder names to skip when scanning music root
     "acoustid_api_key":    "",   # AcoustID API key for fingerprint lookup
+    "mode": "suburban",  # 'rural' (no AI) or 'suburban' (AI enabled)
 }
 
 # Smart defaults for the setup wizard (platform-aware where relevant)
@@ -139,9 +140,14 @@ def load_user_config() -> dict:
             f"  Run:  python3 cli.py setup"
         )
 
+
     # Apply defaults for optional keys not present in the file
     for key, default in DEFAULTS.items():
-        cfg.setdefault(key, default)
+        if key not in cfg:
+            cfg[key] = default
+    # Validate mode
+    if cfg.get("mode") not in ("rural", "suburban"):
+        cfg["mode"] = "suburban"
 
     return cfg
 
@@ -154,6 +160,9 @@ def save_user_config(cfg: dict) -> None:
     corrupt the existing config.
     """
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    # Ensure mode is valid before saving
+    if cfg.get("mode") not in ("rural", "suburban"):
+        cfg["mode"] = "suburban"
     content = json.dumps(cfg, indent=2) + "\n"  # POSIX: trailing newline
     fd, tmp_path = tempfile.mkstemp(dir=CONFIG_DIR, prefix=".config_tmp_", suffix=".json")
     try:
@@ -480,6 +489,17 @@ def interactive_setup(*, update: bool = False) -> dict:
         cfg["target_lufs"] = current_lufs
 
     cfg["lufs_tolerance"] = existing.get("lufs_tolerance", DEFAULTS["lufs_tolerance"])
+
+
+    # ── Mode selection ──
+    print()
+    print("  Select RekitBox mode:")
+    print("    1. Suburban (AI enabled, recommended)")
+    print("    2. Rural (no AI, pure toolkit)")
+    mode_choice = ""
+    while mode_choice not in ("1", "2", ""):  # default to 1
+        mode_choice = input("  → Enter 1 or 2 [1]: ").strip() or "1"
+    cfg["mode"] = "suburban" if mode_choice == "1" else "rural"
 
     # ── Save ──
     save_user_config(cfg)

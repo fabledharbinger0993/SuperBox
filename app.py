@@ -1,3 +1,239 @@
+# ── Rekordbox One Library Export ────────────────────────────────────────────
+
+@app.route("/api/export/rekordbox", methods=["POST"])
+def api_export_rekordbox():
+    """
+    Export playlists and tracks to Rekordbox One Library structure (playlist XML and folder structure).
+    Body: { "target": "/Volumes/USB" }
+    """
+    data = request.get_json(silent=True) or {}
+    target = data.get("target", "").strip()
+    if not target or not os.path.isdir(target):
+        return jsonify({"error": "Valid target folder required"}), 400
+    try:
+        from pyrekordbox import Rekordbox6Database
+        from config import DJMT_DB, MUSIC_ROOT
+        import shutil
+        import xml.etree.ElementTree as ET
+        # 1. Copy master.db to target (simulate export)
+        db_src = str(DJMT_DB)
+        db_dst = os.path.join(target, "PIONEER", "Master", "master.db")
+        os.makedirs(os.path.dirname(db_dst), exist_ok=True)
+        shutil.copy2(db_src, db_dst)
+        # 2. Generate playlist XML (minimal example)
+        with Rekordbox6Database(db_src) as db:
+            playlists = db.get_playlist().all()
+            root = ET.Element("DJ_PLAYLISTS")
+            for pl in playlists:
+                pl_el = ET.SubElement(root, "PLAYLIST", Name=pl.Name or "", Id=str(pl.ID))
+                songs = db.get_playlist_songs(PlaylistID=pl.ID).order_by("TrackNo").all()
+                for song in songs:
+                    t = song.Content
+                    if t is None:
+                        continue
+                    ET.SubElement(pl_el, "TRACK", Id=str(t.ID), Title=t.Title or "", FilePath=t.FolderPath or "")
+            tree = ET.ElementTree(root)
+            xml_path = os.path.join(target, "PIONEER", "playlists.xml")
+            tree.write(xml_path, encoding="utf-8", xml_declaration=True)
+        # 3. Copy audio files to Contents folder (flat, for demo)
+        contents_dir = os.path.join(target, "PIONEER", "Contents")
+        os.makedirs(contents_dir, exist_ok=True)
+        for pl in playlists:
+            songs = db.get_playlist_songs(PlaylistID=pl.ID).all()
+            for song in songs:
+                t = song.Content
+                if t and t.FolderPath and os.path.isfile(t.FolderPath):
+                    dest = os.path.join(contents_dir, os.path.basename(t.FolderPath))
+                    if not os.path.exists(dest):
+                        shutil.copy2(t.FolderPath, dest)
+        return jsonify({"ok": True, "db": db_dst, "xml": xml_path, "contents": contents_dir})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+import threading
+import sounddevice as sd
+import soundfile as sf
+
+# Singleton playback state
+_playback_lock = threading.Lock()
+_playback_thread = None
+_playback_stop_event = threading.Event()
+_playback_current_path = None
+
+# Helper: stop playback
+def _stop_playback():
+    global _playback_thread, _playback_stop_event, _playback_current_path
+    with _playback_lock:
+        if _playback_thread and _playback_thread.is_alive():
+            _playback_stop_event.set()
+            _playback_thread.join(timeout=2)
+        _playback_thread = None
+        _playback_current_path = None
+        _playback_stop_event.clear()
+
+# Helper: playback thread
+def _play_audio_file(path):
+    try:
+        with sf.SoundFile(path) as f:
+            for block in f.blocks(blocksize=1024, dtype='float32'):
+                if _playback_stop_event.is_set():
+                    break
+                sd.play(block, f.samplerate, blocking=True)
+    except Exception as exc:
+        print(f"Playback error: {exc}")
+
+# API: Start playback
+@app.route("/api/playback/start", methods=["POST"])
+def api_playback_start():
+    global _playback_thread, _playback_current_path
+    data = request.get_json(silent=True) or {}
+    file_path = data.get("file_path", "").strip()
+    if not file_path or not os.path.isfile(file_path):
+        return jsonify({"error": "File not found"}), 404
+    _stop_playback()
+    def _thread():
+        _play_audio_file(file_path)
+    with _playback_lock:
+        _playback_stop_event.clear()
+        _playback_thread = threading.Thread(target=_thread, daemon=True)
+        _playback_thread.start()
+        _playback_current_path = file_path
+    return jsonify({"status": "playing", "file_path": file_path})
+
+# API: Stop playback
+@app.route("/api/playback/stop", methods=["POST"])
+def api_playback_stop():
+    _stop_playback()
+    return jsonify({"status": "stopped"})
+# --- Mode and Model Exposure ---
+from config import REKITBOX_MODE
+# --- /api/config: Expose mode and model ---
+@app.route("/api/config")
+def api_config():
+    from user_config import load_user_config, CONFIG_PATH  # noqa: PLC0415
+    import json as _json
+    try:
+        cfg = load_user_config()
+        cfg.pop("mobile_token", None)
+        from config import REKITBOX_MODE
+        model = os.environ.get("REKIT_AGENT_MODEL", "") if REKITBOX_MODE == "suburban" else ""
+        cfg["mode"] = REKITBOX_MODE
+        cfg["rekki_model"] = model
+        return jsonify(cfg)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+# --- /api/settings: Allow mode update ---
+@app.route("/api/settings", methods=["POST"])
+def api_settings():
+    try:
+        from user_config import load_user_config, CONFIG_PATH  # noqa: PLC0415
+        import json as _json
+        data = request.get_json(force=True) or {}
+        cfg  = load_user_config()
+        if "archive_mode" in data:
+            cfg["archive_mode"] = data["archive_mode"]
+        if "custom_archive_dir" in data:
+            cfg["custom_archive_dir"] = data["custom_archive_dir"]
+        if "excluded_dirs" in data:
+            cfg["excluded_dirs"] = [d for d in data["excluded_dirs"] if isinstance(d, str) and d.strip()]
+        if "mode" in data and data["mode"] in ("rural", "suburban"):
+            cfg["mode"] = data["mode"]
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            _json.dump(cfg, f, indent=2)
+        return jsonify({"ok": True, "note": "Restart RekitBox for changes to take effect."})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+# --- Gate Rekki endpoints by mode ---
+@app.route("/api/rekki/chat", methods=["POST"])
+def api_rekki_chat():
+    if REKITBOX_MODE != "suburban":
+        return jsonify({"ok": False, "error": "Rekki is disabled in Rural mode."}), 403
+    data = request.get_json(silent=True) or {}
+    user_message = str(data.get("message", "")).strip()
+    history = data.get("history") or []
+    model = str(data.get("model") or os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)).strip()
+    source = str(data.get("source", "main")).strip() or "main"
+    if not user_message:
+        return jsonify({"ok": False, "error": "message is required"}), 400
+    if not model:
+        return jsonify({"ok": False, "error": "model is required"}), 400
+    resolved_model, model_ok, model_error = _rekki_resolve_model(model)
+    if not model_ok:
+        return jsonify({"ok": False, "error": f"Ollama unavailable: {model_error}"}), 502
+    sanitized_history = []
+    if isinstance(history, list):
+        for item in history[-8:]:
+            if not isinstance(item, dict):
+                continue
+            role = str(item.get("role", "")).strip()
+            content = str(item.get("content", "")).strip()
+            if role in {"user", "assistant"} and content:
+                sanitized_history.append({"role": role, "content": content})
+    context = _rekki_context_snapshot()
+    memory_context_block = ""
+    if _REKKI_MEMORY_ENABLED:
+        try:
+            memory_context_block = format_recalled_memory(recall_memory())
+        except Exception as _mem_err:
+            memory_context_block = ""
+            print(f"[rekki] recall_memory failed: {_mem_err}")
+    system_prompt = (
+        "You are Rekki, an AI agent piloting RekitBox — a DJ library management tool. "
+        "Help the user understand app state and suggest safe next actions. "
+        "Do not claim to have executed commands or modified files unless explicitly told by server context."
+    )
+    if memory_context_block:
+        system_prompt += "\n\n### Memory Context\n" + memory_context_block
+    user_payload = (
+        "RekitBox runtime context (JSON):\n"
+        f"{json.dumps(context, indent=2)}\n\n"
+        "User message:\n"
+        f"{user_message}"
+    )
+    payload = {
+        "model": resolved_model,
+        "stream": False,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            *sanitized_history,
+            {"role": "user", "content": user_payload},
+        ],
+        "options": {"temperature": 0.2},
+    }
+    try:
+        data = _rekki_http_post_json(_rekki_chat_url(), payload, timeout=90)
+        reply = str((data.get("message") or {}).get("content", "")).strip()
+        if not reply:
+            return jsonify({"ok": False, "error": "empty response from ollama"}), 502
+        if _REKKI_MEMORY_ENABLED:
+            try:
+                db = get_memory_db()
+                user_msg_id = db.insert_chat_message(role="user", content=user_message, source=source)
+                assistant_msg_id = db.insert_chat_message(role="assistant", content=reply, source=source)
+                create_memory(
+                    core_insight=reply[:200],
+                    confidence_score=0.7,
+                    tags=["chat"],
+                    congress_engaged=False,
+                )
+            except Exception as _persist_err:
+                print(f"[rekki] memory persistence failed: {_persist_err}")
+        return jsonify({
+            "ok": True,
+            "name": "Rekki",
+            "provider": "ollama",
+            "model": resolved_model,
+            "requested_model": model,
+            "reply": reply,
+            "context": context,
+            "memory_enabled": _REKKI_MEMORY_ENABLED,
+        })
+    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 502
+@app.route("/api/rekki/context")
+def api_rekki_context():
+    if REKITBOX_MODE != "suburban":
+        return jsonify({"error": "Rekki is disabled in Rural mode."}), 403
+    return jsonify(_rekki_context_snapshot())
 """
 RekitBox / app.py
 
@@ -31,11 +267,122 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, request, send_file
+from flask import Flask, Response, jsonify, render_template, request, send_file, send_from_directory
 from flask_sock import Sock
 from mutagen import File as MutagenFile
 
+import mimetypes
 # ── Rekki brain: Congress deliberation + HologrA.I.m memory ──────────────────
+# ── RekitBox Native Playlist/Track API ───────────────────────────────────────
+
+# List all playlists
+@app.route("/api/playlists")
+def api_playlists():
+    from db_connection import read_db
+    from config import DJMT_DB as _DB
+    try:
+        with read_db(_DB) as db:
+            rows = db.get_playlist().all()
+            result = []
+            for pl in rows:
+                if getattr(pl, "Attribute", 0) != 0:
+                    continue
+                songs = db.get_playlist_songs(PlaylistID=pl.ID).all()
+                result.append({
+                    "id": str(pl.ID),
+                    "name": pl.Name or "",
+                    "track_count": len(songs),
+                })
+            result.sort(key=lambda p: p["name"].lower())
+            return jsonify(result)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+# Get playlist details and tracks
+@app.route("/api/playlists/<playlist_id>")
+def api_playlist(playlist_id):
+    from db_connection import read_db
+    from config import DJMT_DB as _DB
+    try:
+        with read_db(_DB) as db:
+            pl = db.get_playlist(ID=playlist_id).one_or_none()
+            if pl is None:
+                return jsonify({"error": "Playlist not found"}), 404
+            songs = db.get_playlist_songs(PlaylistID=pl.ID).order_by("TrackNo").all()
+            tracks = []
+            for song in songs:
+                t = song.Content
+                if t is None:
+                    continue
+                tracks.append({
+                    "id": str(t.ID),
+                    "title": t.Title or "",
+                    "artist": t.Artist.Name if t.Artist else "",
+                    "bpm": round(t.BPM / 100, 1) if t.BPM else None,
+                    "key": t.Key.Name if t.Key else None,
+                    "file_path": t.FolderPath or "",
+                })
+            return jsonify({
+                "id": str(pl.ID),
+                "name": pl.Name or "",
+                "track_count": len(tracks),
+                "tracks": tracks,
+            })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+# List all tracks
+@app.route("/api/tracks")
+def api_tracks():
+    from db_connection import read_db
+    from config import DJMT_DB as _DB
+    try:
+        with read_db(_DB) as db:
+            rows = db.get_content().all()
+            result = []
+            for t in rows:
+                result.append({
+                    "id": str(t.ID),
+                    "title": t.Title or "",
+                    "artist": t.Artist.Name if t.Artist else "",
+                    "bpm": round(t.BPM / 100, 1) if t.BPM else None,
+                    "key": t.Key.Name if t.Key else None,
+                    "file_path": t.FolderPath or "",
+                })
+            return jsonify(result)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+# Get track details
+@app.route("/api/tracks/<track_id>")
+def api_track(track_id):
+    from db_connection import read_db
+    from config import DJMT_DB as _DB
+    try:
+        with read_db(_DB) as db:
+            t = db.get_content(ID=track_id).one_or_none()
+            if t is None:
+                return jsonify({"error": "Track not found"}), 404
+            return jsonify({
+                "id": str(t.ID),
+                "title": t.Title or "",
+                "artist": t.Artist.Name if t.Artist else "",
+                "bpm": round(t.BPM / 100, 1) if t.BPM else None,
+                "key": t.Key.Name if t.Key else None,
+                "file_path": t.FolderPath or "",
+            })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+# Serve audio file for playback
+@app.route("/audio/<path:audio_path>")
+def serve_audio(audio_path):
+    from config import MUSIC_ROOT
+    abs_path = os.path.join(str(MUSIC_ROOT), audio_path)
+    if not os.path.isfile(abs_path):
+        return jsonify({"error": "File not found"}), 404
+    mime, _ = mimetypes.guess_type(abs_path)
+    return send_file(abs_path, mimetype=mime or "audio/mpeg")
 try:
     from rekki.recall import recall_memory, create_memory, format_recalled_memory
     from rekki.db import get_memory_db
@@ -475,12 +822,133 @@ def api_rekki_db_health():
     return jsonify(_rekki_db_health_snapshot())
 
 
+@app.route("/api/rekki/history")
+def api_rekki_history():
+    """Return recent chat history for client hydration on page load.
+
+    The JS side calls this once on DOMContentLoaded to repopulate _rekkiHistory
+    and render past messages so every surface (main panel, wizard, card buttons)
+    shares a single continuous thread across sessions.
+    """
+    limit = min(int(request.args.get("limit", 30)), 100)
+    if not _REKKI_MEMORY_ENABLED:
+        return jsonify({"ok": True, "messages": [], "memory_enabled": False})
+    try:
+        db = get_memory_db()
+        # get_recent_chat_messages already returns oldest-first, typing excluded
+        rows = db.get_recent_chat_messages(limit)
+        messages = [
+            {
+                "role": r["role"],
+                "content": r["content"],
+                "source": r.get("source", "main"),
+                "timestamp": r.get("timestamp", ""),
+            }
+            for r in rows
+        ]
+        return jsonify({"ok": True, "messages": messages, "memory_enabled": True})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc), "messages": []}), 500
+
+
+@app.route("/api/rekki/discover-music")
+def api_rekki_discover_music():
+    """Walk a directory and return audio files not already in the scan index.
+
+    GET /api/rekki/discover-music?path=<dir>&limit=200
+
+    Returns:
+        {ok, discovered: [{path, size_mb, ext}], total, library_source}
+    """
+    _AUDIO_EXTS = {".mp3", ".wav", ".aif", ".aiff", ".flac", ".m4a", ".ogg", ".opus"}
+    raw_path = request.args.get("path", "").strip()
+    try:
+        limit = min(int(request.args.get("limit", 200)), 500)
+    except (ValueError, TypeError):
+        limit = 200
+
+    if not raw_path:
+        return jsonify({"ok": False, "error": "path parameter is required"}), 400
+
+    search_dir = os.path.realpath(raw_path)
+    if not os.path.isdir(search_dir):
+        return jsonify({"ok": False, "error": f"Not a directory: {search_dir}"}), 400
+
+    # Load known paths from scan_index.json if it exists
+    known_paths: set = set()
+    library_source = "none"
+    scan_index_path = os.path.join(os.path.dirname(__file__), "data", "scan_index.json")
+    if os.path.isfile(scan_index_path):
+        try:
+            with open(scan_index_path, encoding="utf-8") as _f:
+                _idx = json.load(_f)
+            if isinstance(_idx, dict):
+                known_paths = {os.path.realpath(p) for p in _idx.keys()}
+            elif isinstance(_idx, list):
+                known_paths = {os.path.realpath(str(p)) for p in _idx}
+            library_source = "scan_index.json"
+        except Exception:
+            pass
+
+    # Also load known paths from the Rekordbox DB (FolderPath column in djmdContent).
+    # This catches tracks that are in the library but haven't been scanned by RekitBox yet.
+    # Read-only connection — no write risk.
+    _rb_db = Path(DJMT_DB)
+    if _rb_db.exists():
+        try:
+            _conn = sqlite3.connect(f"file:{_rb_db}?mode=ro", uri=True, timeout=3)
+            try:
+                for (fp,) in _conn.execute(
+                    "SELECT FolderPath FROM djmdContent WHERE FolderPath IS NOT NULL"
+                ):
+                    known_paths.add(os.path.realpath(fp))
+            finally:
+                _conn.close()
+            library_source = "rekordbox + scan_index" if library_source != "none" else "rekordbox"
+        except Exception:
+            pass  # DB locked or unavailable — scan_index result is still valid
+
+    discovered = []
+    try:
+        for dirpath, _dirs, files in os.walk(search_dir):
+            for fname in files:
+                ext = os.path.splitext(fname)[1].lower()
+                if ext not in _AUDIO_EXTS:
+                    continue
+                full = os.path.realpath(os.path.join(dirpath, fname))
+                if full in known_paths:
+                    continue
+                try:
+                    size_bytes = os.path.getsize(full)
+                except OSError:
+                    size_bytes = 0
+                discovered.append({
+                    "path": full,
+                    "size_mb": round(size_bytes / (1024 * 1024), 2),
+                    "ext": ext,
+                })
+                if len(discovered) >= limit:
+                    break
+            if len(discovered) >= limit:
+                break
+    except PermissionError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 403
+
+    return jsonify({
+        "ok": True,
+        "discovered": discovered,
+        "total": len(discovered),
+        "library_source": library_source,
+    })
+
+
 @app.route("/api/rekki/chat", methods=["POST"])
 def api_rekki_chat():
     data = request.get_json(silent=True) or {}
     user_message = str(data.get("message", "")).strip()
     history = data.get("history") or []
     model = str(data.get("model") or os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)).strip()
+    source = str(data.get("source", "main")).strip() or "main"
 
     if not user_message:
         return jsonify({"ok": False, "error": "message is required"}), 400
@@ -548,8 +1016,8 @@ def api_rekki_chat():
         if _REKKI_MEMORY_ENABLED:
             try:
                 db = get_memory_db()
-                user_msg_id = db.insert_chat_message(role="user", content=user_message)
-                assistant_msg_id = db.insert_chat_message(role="assistant", content=reply)
+                user_msg_id = db.insert_chat_message(role="user", content=user_message, source=source)
+                assistant_msg_id = db.insert_chat_message(role="assistant", content=reply, source=source)
                 create_memory(
                     core_insight=reply[:200],
                     confidence_score=0.7,
