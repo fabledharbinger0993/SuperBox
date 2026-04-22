@@ -52,6 +52,12 @@ fi
 # ── Silence all output — Automator treats any stdout as an error ──────────
 exec > /dev/null 2>&1
 
+
+# ── Homebrew update/upgrade (silent, non-blocking) ───────────────────────
+if _brew --version &>/dev/null; then
+  (_brew update >/dev/null 2>&1 && _brew upgrade --formula >/dev/null 2>&1) &
+fi
+
 # ── Ensure Ollama is running ─────────────────────────────────────────────
 # setup.sh starts it during first-run, but subsequent launches (including
 # after a reboot) need to restart it.  Non-blocking — Rekki shows a
@@ -74,10 +80,9 @@ if command -v tailscale &>/dev/null; then
   tailscale up --accept-routes >> "$LOG" 2>&1 &
 fi
 
-# ── Launch native window (main.py handles "already running" gracefully) ──────
-# main.py detects whether port 5001 is occupied and reuses the existing server
-# rather than starting a second one — safe to call even if already open.
-nohup "$VENV/bin/python" "$SCRIPT_DIR/main.py" >> "$LOG" 2>&1 &
+# ── Launch splash animation, then main window ─────────────────────────────
+# splash_player.py plays the animation and then launches main.py
+nohup "$VENV/bin/python" "$SCRIPT_DIR/splash_player.py" >> "$LOG" 2>&1 &
 
 # ── Close Terminal window if launched interactively (not via Automator) ───
 # Automator runs via do shell script (no TTY), so this block is skipped there.
