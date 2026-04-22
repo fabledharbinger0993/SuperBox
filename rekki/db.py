@@ -11,6 +11,9 @@ Tables:
   epistemic_tensions — tracked belief contradictions requiring resolution
   chat_messages      — full conversation log linked to logic/memory entries
   incongruent_entries— Congress→Ego divergences for self-referential learning
+  library_state      — snapshots of RekitBox library health over time
+  error_history      — tool errors + resolution tracking
+  tool_decisions     — audit trail for every gate decision
 
 DB path: data/rekki-memory.db  (relative to RekitBox root)
 Enable WAL and foreign-keys on every connection.
