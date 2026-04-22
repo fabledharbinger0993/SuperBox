@@ -3,6 +3,7 @@
 This folder contains scripts to build a native Mac .app wrapper for RekitBox with a custom dock icon.
 
 ## Files
+
 - `RekitBoxLauncher.applescript`: AppleScript source for the launcher.
 - `build_applescript_app.sh`: Script to compile the .app and set the icon.
 - `rekitbox-app-icon.png`: Custom dock icon (must be present).
