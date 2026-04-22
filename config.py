@@ -24,11 +24,15 @@ if sys.version_info < (3, 12):
 # the codebase — callers use LOCAL_DB, DJMT_DB, MUSIC_ROOT, BACKUP_DIR,
 # TARGET_LUFS, and LUFS_TOLERANCE exactly as before.
 
+
 try:
     from user_config import NotConfiguredError, load_user_config
     _cfg = load_user_config()
 except NotConfiguredError as _exc:
     raise RuntimeError(str(_exc)) from _exc
+
+# RekitBox mode: 'rural' (no AI) or 'suburban' (AI enabled)
+REKITBOX_MODE = _cfg.get("mode", "suburban")
 
 # ─── Database and filesystem paths ───────────────────────────────────────────
 

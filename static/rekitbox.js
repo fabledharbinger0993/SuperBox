@@ -1,3 +1,16 @@
+// Show RekitBox mode and model in UI
+function showRekitBoxMode() {
+  fetch('/api/config').then(r => r.json()).then(cfg => {
+    const mode = cfg.mode || 'suburban';
+    const model = cfg.rekki_model || '';
+    const el = document.getElementById('rekki-mode-indicator');
+    if (!el) return;
+    el.textContent = mode === 'rural'
+      ? 'Rural (No AI)'
+      : `Suburban (AI: ${model || 'auto'})`;
+  });
+}
+document.addEventListener('DOMContentLoaded', showRekitBoxMode);
 /* ── State ─────────────────────────────────────────────────────────────────── */
 let activeSource = null;
 let isRunning    = false;
@@ -273,9 +286,13 @@ function openSettings() {
     document.getElementById('settings-custom-input').value = cfg.custom_archive || '';
     const excluded = Array.isArray(cfg.excluded_dirs) ? cfg.excluded_dirs : [];
     document.getElementById('settings-excluded-dirs').value = excluded.join('\n');
+    // Mode radio
+    const boxMode = cfg.mode || 'suburban';
+    document.querySelector(`input[name="rekitbox-mode"][value="${boxMode}"]`).checked = true;
     _settingsUpdateUI(mode);
   }).catch(() => {
     document.querySelector('input[name="archive-mode"][value="auto"]').checked = true;
+    document.querySelector('input[name="rekitbox-mode"][value="suburban"]').checked = true;
     _settingsUpdateUI('auto');
   });
   _sbFadeBd('settings-backdrop', true);
@@ -397,41 +414,43 @@ function _welcomeShowReady() {
   welcomeShowStep('ready');
 }
 
-async function completeSetup() {
-  const readVal  = _wReadGranted  ? 'granted' : 'denied';
-  const writeVal = _wWriteGranted ? 'granted' : 'denied';
-  // Mirror to localStorage as fast cache, but truth lives server-side
-  localStorage.setItem('rekitbox-db-read',        readVal);
-  localStorage.setItem('rekitbox-db-write',       writeVal);
-  localStorage.setItem('rekitbox-setup-complete', '1');
-  if (_wWriteGranted) {
-    localStorage.setItem('rekitbox-archive-permission', 'granted');
-    fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
+async function saveSettings() {
+  const mode   = document.querySelector('input[name="archive-mode"]:checked')?.value || 'auto';
+  const custom = document.getElementById('settings-custom-input').value.trim();
+  const boxMode = document.querySelector('input[name="rekitbox-mode"]:checked')?.value || 'suburban';
+  if (mode === 'custom' && !custom) {
+    alert('Please enter a folder path for the custom archive location.');
+    return;
   }
-  // Persist to ~/.rekordbox-toolkit/rekitbox-state.json so it survives
-  // across pywebview sessions even if WKWebView clears localStorage
-  await fetch('/api/setup-complete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ db_read: readVal, db_write: writeVal }),
-  }).catch(() => {});
-  applyPermissions();
-  closeWelcome();
-  if (_wReadGranted) {
-    setTimeout(runSilentAudit, 700);
-  } else {
-    setTimeout(() => document.getElementById('step-process')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 500);
+  const btn = document.querySelector('.settings-save');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const res  = await fetch('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        archive_mode: mode,
+        custom_archive_dir: custom,
+        excluded_dirs: document.getElementById('settings-excluded-dirs').value
+          .split('\n').map(s => s.trim()).filter(Boolean),
+        mode: boxMode,
+      }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      closeSettings();
+      // Restart the server to apply new config
+      await fetch('/api/quit', { method: 'POST' }).catch(() => {});
+      setTimeout(() => window.close(), 500);
+    } else {
+      alert('Save failed: ' + (data.error || 'unknown error'));
+    }
+  } catch(e) {
+    alert('Could not save settings.');
+  } finally {
+    btn.textContent = 'Save'; btn.disabled = false;
   }
 }
-
-/* ── Permission application ──────────────────────────────────────────────── */
-function applyPermissions() {
-  const readOk  = localStorage.getItem('rekitbox-db-read')  === 'granted';
-  const writeOk = localStorage.getItem('rekitbox-db-write') === 'granted';
-  // Main cards that require write permission
-  ['step-duplicates'].forEach(id =>
-    document.getElementById(id)?.classList.toggle('permission-locked', !writeOk));
   // Rail buttons that require write permission
   ['rail-btn-relocate','rail-btn-import','rail-btn-link'].forEach(id => {
     const btn = document.getElementById(id);
@@ -1592,6 +1611,7 @@ function openPipelineWizard() {
   document.getElementById('pipeline-wizard').classList.remove('wizard-wide');
   const _pwb = document.getElementById('pipeline-wizard');
   void _pwb.offsetWidth; _sbAnim(_pwb, 'sb-modal-in', '.28s');
+  _rekkiWizardMessage('p1', 'Building a pipeline? Tell me what you\u2019re trying to fix and I\u2019ll suggest the right steps.');
 }
 
 function closePipelineWizard() {
@@ -1675,6 +1695,9 @@ function pipeWizNext() {
       requestAnimationFrame(() => {
         p2.style.opacity = '1';
         setTimeout(() => { p2.style.transition = ''; p2.style.opacity = ''; }, 280);
+        const _nSteps = pipelineSteps.length;
+        _rekkiWizardMessage('p2',
+          `${_nSteps} step${_nSteps !== 1 ? 's' : ''} queued. Select each on the left to configure — I'll flag anything that needs attention.`);
       });
     });
   }, 220);
@@ -2231,6 +2254,8 @@ function pipelineAddStep(type) {
   }
   pipelineSteps.push({ id: ++pipeUid, type });
   pipelineRender();
+  const _wizNote = _REKKI_STEP_NOTES[type];
+  if (_wizNote) _rekkiWizardMessage('p1', _wizNote);
   // Flash the clicked button
   const btn = [...document.querySelectorAll('#pipe-wiz-p1 .pipe-action-btn')]
     .find(b => (b.getAttribute('onclick') || '').includes(`'${type}'`));
@@ -4560,6 +4585,45 @@ let _rekkiHistory = [];
 let _rekkiChip    = null;   // { type, label, description, tool, raw } — current element context
 let _rekkiCtxTarget = null; // element the right-click menu was triggered on
 
+// ── History hydration (restores thread across page reloads) ──────────────────
+
+async function _rekkiBootHistory() {
+  try {
+    const r = await fetch('/api/rekki/history?limit=30', { cache: 'no-store' });
+    const d = await r.json();
+    if (!d.ok || !d.messages || d.messages.length === 0) return;
+
+    const log = document.getElementById('rekki-chat-log');
+    if (log) {
+      const divider = document.createElement('div');
+      divider.className = 'rekki-history-divider';
+      divider.textContent = '— previous session —';
+      log.appendChild(divider);
+      d.messages.forEach(m => {
+        const el = document.createElement('div');
+        el.className = `rekki-msg ${m.role === 'user' ? 'user' : 'rekki'}`;
+        if (m.source && m.source !== 'main') el.dataset.source = m.source;
+        el.textContent = m.content;
+        log.appendChild(el);
+      });
+      // Slight visual break before new session messages
+      const gap = document.createElement('div');
+      gap.className = 'rekki-history-divider';
+      gap.textContent = '— now —';
+      log.appendChild(gap);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Seed _rekkiHistory with the tail so Rekki has conversational context
+    // (capped at 8 pairs — matches backend sanitized_history slice)
+    _rekkiHistory = d.messages
+      .slice(-16)
+      .map(m => ({ role: m.role, content: m.content }));
+  } catch {
+    // Non-fatal — continue without history
+  }
+}
+
 // ── Panel open/close ──────────────────────────────────────────────────────────
 
 function toggleRekkiPanel(ctx) {
@@ -4653,7 +4717,9 @@ async function rekkiSendMessage() {
   if (!text) return;
 
   const chipCtx = _rekkiChip;
-  const source  = chipCtx ? chipCtx.label : null;
+  const msgSource = chipCtx
+    ? (chipCtx.type === 'tool-card' ? `card-${(chipCtx.tool || chipCtx.label || 'unknown').replace(/\s+/g, '-').toLowerCase()}` : chipCtx.type || 'main')
+    : 'main';
 
   _rekkiAppend('user', text);
   _rekkiHistory.push({ role: 'user', content: text });
@@ -4662,7 +4728,7 @@ async function rekkiSendMessage() {
   _rekkiSetStatus('Thinking…');
 
   try {
-    const body = { message: text, history: _rekkiHistory };
+    const body = { message: text, history: _rekkiHistory, source: msgSource };
     if (chipCtx) body.element_context = chipCtx;
 
     const r = await fetch('/api/rekki/chat', {
@@ -4672,7 +4738,7 @@ async function rekkiSendMessage() {
     });
     const d = await r.json();
     if (!r.ok || !d.ok) throw new Error(d.error || 'chat failed');
-    _rekkiAppend('rekki', d.reply || '(no reply)', source);
+    _rekkiAppend('rekki', d.reply || '(no reply)', msgSource);
     _rekkiHistory.push({ role: 'assistant', content: d.reply || '' });
     _rekkiSetStatus(`${d.model}`);
   } catch (err) {
@@ -4788,7 +4854,90 @@ async function _rekkiEngageWith(el) {
   }
 }
 
-// ── Avatar drag: pickup, drop, auto-return ────────────────────────────────────
+// Called by the ✦ button embedded in each tool card header
+function _rekkiEngageWithCard(btn) {
+  const card = btn.closest('[data-rekki-context]');
+  if (card) _rekkiEngageWith(card);
+}
+
+// ── Pipeline wizard voice strip ───────────────────────────────────────────────
+
+const _REKKI_STEP_NOTES = {
+  tag:        "Tag runs BPM and key detection — the foundation everything else depends on. Do this first.",
+  duplicates: "Duplicate detection uses audio fingerprinting — thorough but slow. Review the report carefully before you prune anything.",
+  prune:      "Prune permanently deletes files. The dry-run preview is your safety net — read every line before unchecking it.",
+  relocate:   "Relocate rewrites broken DB paths. Safe for your library, but Rekordbox must be closed first.",
+  organize:   "Organize restructures your folder hierarchy. File paths in the DB will change — run Relocate after if needed.",
+  normalize:  "Normalize adjusts track loudness. Your originals are preserved unless you explicitly enable overwrite.",
+  scan:       "Scan indexes the filesystem — no writes, safe any time. Good first step.",
+  import:     "Import adds new files to the Rekordbox DB. Rekordbox must be closed. No file moves happen here.",
+  rename:     "Rename rewrites file names from tags. Preview the changes in dry-run before committing.",
+};
+
+function _rekkiWizardMessage(phase, text) {
+  const el = document.getElementById(`rekki-wiz-msg-${phase}`);
+  if (!el) return;
+  el.textContent = text;
+  el.style.opacity = '0';
+  el.style.transition = 'opacity .25s';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.transition = ''; }, 280);
+  }));
+}
+
+function _rekkiWizardOpenChat(phase) {
+  const ctx = {
+    type: 'wizard',
+    label: 'Pipeline Wizard',
+    description: phase === 'p1'
+      ? "I can help you plan your pipeline. What are you trying to fix in your library?"
+      : "What questions do you have about configuring these steps?",
+    source: 'wizard',
+    icon: '⚙️',
+  };
+  if (!_rekkiOpen) toggleRekkiPanel(ctx);
+  else _rekkiLoadChip(ctx);
+  if (ctx.description) {
+    _rekkiSetStatus('');
+    _rekkiAppend('rekki', ctx.description, ctx.label);
+    _rekkiHistory.push({ role: 'assistant', content: ctx.description });
+  }
+}
+
+// ── Hidden music discovery ─────────────────────────────────────────────────────
+
+async function rekkiDiscoverMusic(searchPath) {
+  if (!searchPath) return;
+  _rekkiAppend('rekki', `Scanning \`${searchPath}\` for audio files not in your library…`, 'Discovery');
+  _rekkiSetStatus('scanning…');
+  try {
+    const res = await fetch(`/api/rekki/discover-music?path=${encodeURIComponent(searchPath)}&limit=200`);
+    const data = await res.json();
+    if (!data.ok) {
+      _rekkiAppend('rekki', `Couldn't scan that path: ${data.error}`, 'Discovery');
+      _rekkiSetStatus('');
+      return;
+    }
+    const { discovered, total, library_source } = data;
+    if (total === 0) {
+      _rekkiAppend('rekki', `No unindexed audio files found in \`${searchPath}\`. Your library already covers everything here.`, 'Discovery');
+    } else {
+      const preview = discovered.slice(0, 10).map(f =>
+        `• ${f.path.split('/').slice(-2).join('/')}  (${f.size_mb} MB)`
+      ).join('\n');
+      const more = total > 10 ? `\n…and ${total - 10} more.` : '';
+      const src  = library_source !== 'none' ? ` (checked against ${library_source})` : '';
+      _rekkiAppend('rekki',
+        `Found **${total}** unindexed audio file${total !== 1 ? 's' : ''} in \`${searchPath}\`${src}:\n\n${preview}${more}\n\nWant me to help import these?`,
+        'Discovery'
+      );
+    }
+  } catch (err) {
+    _rekkiAppend('rekki', `Discovery failed: ${err.message}`, 'Discovery');
+  }
+  _rekkiSetStatus('');
+}
 
 function _rekkiAvatarInit() {
   const avatar = document.getElementById('rekki-avatar');
@@ -4919,6 +5068,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   _rekkiAvatarInit();
   _rekkiRefreshStatus();
+  _rekkiBootHistory();
 
   // Sidebar resize handles
   document.querySelectorAll('.sidebar-resize-handle').forEach(handle => {

@@ -11,6 +11,9 @@ Tables:
   epistemic_tensions — tracked belief contradictions requiring resolution
   chat_messages      — full conversation log linked to logic/memory entries
   incongruent_entries— Congress→Ego divergences for self-referential learning
+  library_state      — snapshots of RekitBox library health over time
+  error_history      — tool errors + resolution tracking
+  tool_decisions     — audit trail for every gate decision
 
 DB path: data/rekki-memory.db  (relative to RekitBox root)
 Enable WAL and foreign-keys on every connection.
@@ -88,6 +91,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     role            TEXT NOT NULL,
     content         TEXT NOT NULL,
+    source          TEXT NOT NULL DEFAULT 'main',
     timestamp       TEXT NOT NULL DEFAULT (datetime('now')),
     logic_entry_id  INTEGER REFERENCES logic_entries(id),
     memory_entry_id INTEGER REFERENCES memory_entries(id),
@@ -103,6 +107,50 @@ CREATE TABLE IF NOT EXISTS incongruent_entries (
     reasoning           TEXT NOT NULL,
     relational_context  TEXT NOT NULL,
     timestamp           TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS library_state (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    captured_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    track_count      INTEGER NOT NULL DEFAULT 0,
+    missing_count    INTEGER NOT NULL DEFAULT 0,
+    duplicate_count  INTEGER NOT NULL DEFAULT 0,
+    unanalyzed_count INTEGER NOT NULL DEFAULT 0,
+    playlist_count   INTEGER NOT NULL DEFAULT 0,
+    health_score     REAL NOT NULL DEFAULT 1.0,
+    scan_triggered_by TEXT NOT NULL DEFAULT 'manual',
+    notes            TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS error_history (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    occurred_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    tool_id          TEXT NOT NULL DEFAULT '',
+    error_code       TEXT NOT NULL DEFAULT '',
+    error_message    TEXT NOT NULL,
+    stack_trace      TEXT NOT NULL DEFAULT '',
+    diagnosed_cause  TEXT NOT NULL DEFAULT '',
+    resolution       TEXT NOT NULL DEFAULT '',
+    resolved         INTEGER NOT NULL DEFAULT 0,
+    resolved_at      TEXT,
+    write_gate_active INTEGER NOT NULL DEFAULT 0,
+    logic_entry_id   INTEGER REFERENCES logic_entries(id)
+);
+
+CREATE TABLE IF NOT EXISTS tool_decisions (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    decided_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    tool_id            TEXT NOT NULL,
+    task_type          TEXT NOT NULL DEFAULT '',
+    risk_level         TEXT NOT NULL DEFAULT '',
+    action             TEXT NOT NULL DEFAULT '',
+    write_gate_invoked INTEGER NOT NULL DEFAULT 0,
+    write_gate_stage   TEXT NOT NULL DEFAULT '',
+    reasoning          TEXT NOT NULL DEFAULT '',
+    outcome            TEXT NOT NULL DEFAULT '',
+    duration_ms        INTEGER NOT NULL DEFAULT 0,
+    logic_entry_id     INTEGER REFERENCES logic_entries(id),
+    error_history_id   INTEGER REFERENCES error_history(id)
 );
 """
 
@@ -133,6 +181,14 @@ class RekkiMemoryDB:
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.executescript(SCHEMA_SQL)
         self._conn.commit()
+        # ── Additive migrations (safe for existing databases) ─────────────────
+        try:
+            self._conn.execute(
+                "ALTER TABLE chat_messages ADD COLUMN source TEXT NOT NULL DEFAULT 'main'"
+            )
+            self._conn.commit()
+        except Exception:
+            pass  # column already present — nothing to do
 
     # ─── helpers ──────────────────────────────────────────────────────────────
 
@@ -346,6 +402,7 @@ class RekkiMemoryDB:
         self,
         role: str,
         content: str,
+        source: str = "main",
         logic_entry_id: Optional[int] = None,
         memory_entry_id: Optional[int] = None,
         tokens: int = 0,
@@ -354,17 +411,25 @@ class RekkiMemoryDB:
         cur = self._conn.execute(
             """
             INSERT INTO chat_messages
-                (role, content, logic_entry_id, memory_entry_id, tokens, is_typing)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (role, content, source, logic_entry_id, memory_entry_id, tokens, is_typing)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (role, content, logic_entry_id, memory_entry_id, tokens, 1 if is_typing else 0),
+            (role, content, source, logic_entry_id, memory_entry_id, tokens, 1 if is_typing else 0),
         )
         self._conn.commit()
         return cur.lastrowid  # type: ignore[return-value]
 
     def get_recent_chat_messages(self, limit: int = 50) -> list[dict]:
+        """Returns messages oldest-first, excluding in-progress typing indicators."""
         cur = self._conn.execute(
-            "SELECT * FROM chat_messages ORDER BY timestamp DESC LIMIT ?", (limit,)
+            """
+            SELECT id, role, content, source, timestamp
+            FROM chat_messages
+            WHERE is_typing = 0
+            ORDER BY id ASC
+            LIMIT ?
+            """,
+            (limit,),
         )
         return self._rows_to_list(cur.fetchall())
 
@@ -393,6 +458,161 @@ class RekkiMemoryDB:
         cur = self._conn.execute(
             "SELECT * FROM incongruent_entries ORDER BY timestamp DESC LIMIT ?", (limit,)
         )
+        return self._rows_to_list(cur.fetchall())
+
+    # ─── Library State ────────────────────────────────────────────────────────
+
+    def insert_library_state(
+        self,
+        track_count: int = 0,
+        missing_count: int = 0,
+        duplicate_count: int = 0,
+        unanalyzed_count: int = 0,
+        playlist_count: int = 0,
+        health_score: float = 1.0,
+        scan_triggered_by: str = "manual",
+        notes: str = "",
+    ) -> int:
+        cur = self._conn.execute(
+            """
+            INSERT INTO library_state
+                (track_count, missing_count, duplicate_count, unanalyzed_count,
+                 playlist_count, health_score, scan_triggered_by, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (track_count, missing_count, duplicate_count, unanalyzed_count,
+             playlist_count, health_score, scan_triggered_by, notes),
+        )
+        self._conn.commit()
+        return cur.lastrowid  # type: ignore[return-value]
+
+    def get_latest_library_state(self) -> Optional[dict]:
+        cur = self._conn.execute(
+            "SELECT * FROM library_state ORDER BY captured_at DESC LIMIT 1"
+        )
+        return self._row_to_dict(cur.fetchone())
+
+    def get_library_state_history(self, limit: int = 10) -> list[dict]:
+        cur = self._conn.execute(
+            "SELECT * FROM library_state ORDER BY captured_at DESC LIMIT ?", (limit,)
+        )
+        return self._rows_to_list(cur.fetchall())
+
+    # ─── Error History ────────────────────────────────────────────────────────
+
+    def insert_error(
+        self,
+        error_message: str,
+        tool_id: str = "",
+        error_code: str = "",
+        stack_trace: str = "",
+        diagnosed_cause: str = "",
+        write_gate_active: bool = False,
+        logic_entry_id: Optional[int] = None,
+    ) -> int:
+        cur = self._conn.execute(
+            """
+            INSERT INTO error_history
+                (tool_id, error_code, error_message, stack_trace,
+                 diagnosed_cause, write_gate_active, logic_entry_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (tool_id, error_code, error_message, stack_trace,
+             diagnosed_cause, 1 if write_gate_active else 0, logic_entry_id),
+        )
+        self._conn.commit()
+        return cur.lastrowid  # type: ignore[return-value]
+
+    def resolve_error(self, error_id: int, resolution: str) -> None:
+        self._conn.execute(
+            """
+            UPDATE error_history
+            SET resolved = 1, resolved_at = datetime('now'), resolution = ?
+            WHERE id = ?
+            """,
+            (resolution, error_id),
+        )
+        self._conn.commit()
+
+    def get_unresolved_errors(self, tool_id: Optional[str] = None) -> list[dict]:
+        if tool_id:
+            cur = self._conn.execute(
+                "SELECT * FROM error_history WHERE resolved = 0 AND tool_id = ? ORDER BY occurred_at DESC",
+                (tool_id,),
+            )
+        else:
+            cur = self._conn.execute(
+                "SELECT * FROM error_history WHERE resolved = 0 ORDER BY occurred_at DESC"
+            )
+        return self._rows_to_list(cur.fetchall())
+
+    def get_recent_errors(self, limit: int = 20) -> list[dict]:
+        cur = self._conn.execute(
+            "SELECT * FROM error_history ORDER BY occurred_at DESC LIMIT ?", (limit,)
+        )
+        return self._rows_to_list(cur.fetchall())
+
+    # ─── Tool Decisions ───────────────────────────────────────────────────────
+
+    def insert_tool_decision(
+        self,
+        tool_id: str,
+        action: str,
+        task_type: str = "",
+        risk_level: str = "",
+        write_gate_invoked: bool = False,
+        write_gate_stage: str = "",
+        reasoning: str = "",
+        outcome: str = "pending",
+        duration_ms: int = 0,
+        logic_entry_id: Optional[int] = None,
+        error_history_id: Optional[int] = None,
+    ) -> int:
+        cur = self._conn.execute(
+            """
+            INSERT INTO tool_decisions
+                (tool_id, task_type, risk_level, action, write_gate_invoked,
+                 write_gate_stage, reasoning, outcome, duration_ms,
+                 logic_entry_id, error_history_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (tool_id, task_type, risk_level, action,
+             1 if write_gate_invoked else 0, write_gate_stage,
+             reasoning, outcome, duration_ms,
+             logic_entry_id, error_history_id),
+        )
+        self._conn.commit()
+        return cur.lastrowid  # type: ignore[return-value]
+
+    def update_tool_decision_outcome(
+        self,
+        decision_id: int,
+        outcome: str,
+        duration_ms: int = 0,
+        error_history_id: Optional[int] = None,
+    ) -> None:
+        self._conn.execute(
+            """
+            UPDATE tool_decisions
+            SET outcome = ?, duration_ms = ?, error_history_id = COALESCE(?, error_history_id)
+            WHERE id = ?
+            """,
+            (outcome, duration_ms, error_history_id, decision_id),
+        )
+        self._conn.commit()
+
+    def get_tool_decision_history(
+        self, tool_id: Optional[str] = None, limit: int = 50
+    ) -> list[dict]:
+        if tool_id:
+            cur = self._conn.execute(
+                "SELECT * FROM tool_decisions WHERE tool_id = ? ORDER BY decided_at DESC LIMIT ?",
+                (tool_id, limit),
+            )
+        else:
+            cur = self._conn.execute(
+                "SELECT * FROM tool_decisions ORDER BY decided_at DESC LIMIT ?", (limit,)
+            )
         return self._rows_to_list(cur.fetchall())
 
     # ─── Lifecycle ────────────────────────────────────────────────────────────

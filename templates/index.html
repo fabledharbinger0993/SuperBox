@@ -1,3 +1,25 @@
+<div style="position:fixed;top:10px;right:20px;z-index:1000;font-size:.92rem;color:var(--accent);background:rgba(168,85,247,.07);padding:4px 12px;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.04);">
+  <span id="rekki-mode-indicator">RekitBox</span>
+</div>
+      <div class="settings-section">
+        <h3>RekitBox Mode</h3>
+        <div class="settings-radio-group">
+          <label class="settings-radio">
+            <input type="radio" name="rekitbox-mode" value="suburban">
+            <div>
+              <div class="settings-radio-label">🏙️ Suburban — AI enabled (recommended)</div>
+              <div class="settings-radio-desc">Rekki agent is enabled and will use the largest local Ollama model that fits in RAM. All AI features available.</div>
+            </div>
+          </label>
+          <label class="settings-radio">
+            <input type="radio" name="rekitbox-mode" value="rural">
+            <div>
+              <div class="settings-radio-label">🌾 Rural — No AI</div>
+              <div class="settings-radio-desc">All Rekki/AI features are disabled. RekitBox runs as a pure toolkit with intelligent report compounding.</div>
+            </div>
+          </label>
+        </div>
+      </div>
 <!DOCTYPE html>
 
 <html lang="en">
@@ -139,6 +161,7 @@
         <div class="card-blurb">Reads each audio file and writes BPM and musical key into the file's tags. Skips files that already have tags — won't overwrite your Mix In Key work unless you ask it to.</div>
       </div>
       <span class="risk-badge caution">Writes Tags</span>
+      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <div class="explainers">
@@ -229,6 +252,7 @@
         <div class="card-blurb">Acoustic fingerprinting finds identical recordings regardless of filename, format, or bitrate. Scan, review, and prune in one panel.</div>
       </div>
       <span class="risk-badge safe" id="dupes-risk-badge">Read-Only Scan</span>
+      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <!-- ── Phase 1: Scan config ────────────────────────────────────────── -->
@@ -459,6 +483,7 @@
         <div class="card-blurb">Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard. <strong>This rewrites the actual audio file.</strong></div>
       </div>
       <span class="risk-badge danger">Rewrites Audio</span>
+      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <div class="explainers">
@@ -557,6 +582,7 @@
         <div class="card-blurb">Convert one or more source folders to a different audio format. Supports MP3, WAV, AIFF, and FLAC. Metadata is preserved.</div>
       </div>
       <span class="risk-badge caution">Rewrites Files</span>
+      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <div class="explainers">
@@ -640,6 +666,7 @@
         <div class="card-blurb">Scans one or more folders (no matter how deeply nested) and moves or copies every track to the correct Artist / Album / Track location. Merges duplicate artist folders, creates missing folders, and prunes empty ones.</div>
       </div>
       <span class="risk-badge warn" id="organize-risk-badge">Moves Files</span>
+      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <div class="explainers">
@@ -805,6 +832,7 @@
         <div class="card-blurb">Scans a source drive for tracks that don't exist anywhere in your home library and copies every one of them across. When in doubt, it copies. Use this to safely rescue one-of-a-kind recordings from backup drives before anything gets lost.</div>
       </div>
       <span class="risk-badge safe">SAFE</span>
+      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
     <div class="explainers">
       <details>
@@ -882,6 +910,7 @@
         <div class="card-title">Rename Files</div>
         <div class="card-blurb">Clean up file names using metadata tags. Generates "Artist: Title" format, removes underscores, numbers, processing markers (PN, IDs) — keeps all metadata searchable in Rekordbox.</div>
       </div>
+      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
     <details class="explain-block">
       <summary>How it works</summary>
@@ -1075,6 +1104,13 @@
         <strong style="color:var(--text)">Why this order?</strong> Tag first so BPM/key are ready for duplicate detection. Find duplicates before deleting. Prune after reviewing. Relocate so DB paths are correct. Organize once clean. Normalize last.
       </div>
 
+      <!-- ── Rekki wizard voice strip ───────────────────────────────── -->
+      <div id="rekki-wiz-strip-p1" class="rekki-wiz-strip">
+        <img src="/static/rekki-avatar.png" class="rekki-wiz-avatar" alt="Rekki" onerror="this.style.display='none'">
+        <div id="rekki-wiz-msg-p1" class="rekki-wiz-msg">Building a pipeline? Tell me what you're trying to fix and I'll suggest the right steps.</div>
+        <button class="rekki-wiz-reply-btn" onclick="_rekkiWizardOpenChat('p1')" title="Chat with Rekki">Ask &rarr;</button>
+      </div>
+
       <div class="pipe-wiz-footer">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:500">
           <input type="checkbox" id="wiz-dry-run" checked style="width:15px;height:15px;accent-color:var(--accent)">
@@ -1131,6 +1167,13 @@
           <div id="wiz-progress-bar"
                style="height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width .3s;"></div>
         </div>
+      </div>
+
+      <!-- ── Rekki wizard voice strip ───────────────────────────────── -->
+      <div id="rekki-wiz-strip-p2" class="rekki-wiz-strip">
+        <img src="/static/rekki-avatar.png" class="rekki-wiz-avatar" alt="Rekki" onerror="this.style.display='none'">
+        <div id="rekki-wiz-msg-p2" class="rekki-wiz-msg">Select a step on the left to see what I know about it.</div>
+        <button class="rekki-wiz-reply-btn" onclick="_rekkiWizardOpenChat('p2')" title="Chat with Rekki">Ask &rarr;</button>
       </div>
 
       <div class="pipe-wiz-footer" style="position:relative;">
