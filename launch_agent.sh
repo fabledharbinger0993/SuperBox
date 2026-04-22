@@ -21,6 +21,10 @@ _setup_needed() {
   for formula in ffmpeg chromaprint; do
     _brew list --formula "$formula" &>/dev/null || return 0
   done
+  # Ollama required for Rekki inference
+  command -v ollama &>/dev/null || return 0
+  local _model="${REKIT_AGENT_MODEL:-qwen2.5-coder:7b}"
+  ollama list 2>/dev/null | grep -q "^${_model}" || return 0
   [ ! -d "$VENV" ] && return 0
   [ ! -f "$SENTINEL" ] && return 0
   return 1
@@ -34,6 +38,11 @@ if _setup_needed; then
 fi
 
 exec > /dev/null 2>&1
+
+# ── Ensure Ollama is running before starting Rekki ───────────────────────
+if command -v ollama &>/dev/null && ! pgrep -x ollama &>/dev/null; then
+  nohup ollama serve >> "$LOG" 2>&1 &
+fi
 
 source "$VENV/bin/activate"
 
