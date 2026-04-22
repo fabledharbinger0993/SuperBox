@@ -20,6 +20,7 @@ This folder contains scripts to build a native Mac .app wrapper for RekitBox wit
 3. The resulting `RekitBox.app` can be moved to `/Applications` or the Dock.
 
 ## Behavior
+
 - On launch, the app runs `launch.sh` from the repo root.
 - Homebrew and RekitBox update checks run silently; if offline, the current version opens.
 - Closing the window quits the app and venv.
