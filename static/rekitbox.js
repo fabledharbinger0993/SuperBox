@@ -398,6 +398,55 @@ function _welcomeShowReady() {
   welcomeShowStep('ready');
 }
 
+async function completeSetup() {
+  const readVal  = _wReadGranted  ? 'granted' : 'denied';
+  const writeVal = _wWriteGranted ? 'granted' : 'denied';
+  // Mirror to localStorage as fast cache, but truth lives server-side.
+  localStorage.setItem('rekitbox-db-read',        readVal);
+  localStorage.setItem('rekitbox-db-write',       writeVal);
+  localStorage.setItem('rekitbox-setup-complete', '1');
+  if (_wWriteGranted) {
+    localStorage.setItem('rekitbox-archive-permission', 'granted');
+    fetch('/api/setup-archive', { method: 'POST' }).catch(() => {});
+  }
+  // Persist to ~/.rekordbox-toolkit/rekitbox-state.json so it survives
+  // across pywebview sessions even if WKWebView clears localStorage.
+  await fetch('/api/setup-complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ db_read: readVal, db_write: writeVal }),
+  }).catch(() => {});
+  applyPermissions();
+  closeWelcome();
+  if (_wReadGranted) {
+    setTimeout(runSilentAudit, 700);
+  } else {
+    setTimeout(() => document.getElementById('step-process')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 500);
+  }
+}
+
+function applyPermissions() {
+  const readOk  = localStorage.getItem('rekitbox-db-read')  === 'granted';
+  const writeOk = localStorage.getItem('rekitbox-db-write') === 'granted';
+  // Main cards that require write permission.
+  ['step-duplicates'].forEach(id =>
+    document.getElementById(id)?.classList.toggle('permission-locked', !writeOk));
+  // Rail buttons that require write permission.
+  ['rail-btn-relocate','rail-btn-import','rail-btn-link'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.toggle('permission-locked', !writeOk);
+    btn.disabled = !writeOk;
+  });
+  // Audit rail button requires read permission.
+  const auditBtn = document.getElementById('rail-btn-audit');
+  if (auditBtn) {
+    auditBtn.classList.toggle('permission-locked', !readOk);
+    auditBtn.disabled = !readOk;
+  }
+}
+
 async function saveSettings() {
   const mode   = document.querySelector('input[name="archive-mode"]:checked')?.value || 'auto';
   const custom = document.getElementById('settings-custom-input').value.trim();
@@ -433,20 +482,6 @@ async function saveSettings() {
     alert('Could not save settings.');
   } finally {
     btn.textContent = 'Save'; btn.disabled = false;
-  }
-}
-  // Rail buttons that require write permission
-  ['rail-btn-relocate','rail-btn-import','rail-btn-link'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (!btn) return;
-    btn.classList.toggle('permission-locked', !writeOk);
-    btn.disabled = !writeOk;
-  });
-  // Audit rail button requires read permission
-  const auditBtn = document.getElementById('rail-btn-audit');
-  if (auditBtn) {
-    auditBtn.classList.toggle('permission-locked', !readOk);
-    auditBtn.disabled = !readOk;
   }
 }
 
