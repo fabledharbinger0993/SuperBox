@@ -3,6 +3,7 @@ Splash player for RekitBox
 Plays a short MP4 animation before launching the main app window.
 Falls back directly to main.py if the splash stack is unavailable.
 """
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -17,12 +18,21 @@ def play_splash_and_continue(video_path, main_entry):
         _handoff_to_main(main_entry)
 
     try:
-        from PyQt5.QtCore import QTimer, QUrl
-        from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
-        from PyQt5.QtMultimediaWidgets import QVideoWidget
-        from PyQt5.QtWidgets import QApplication, QVBoxLayout, QWidget
+        qt_core = importlib.import_module("PyQt5.QtCore")
+        qt_multimedia = importlib.import_module("PyQt5.QtMultimedia")
+        qt_multimedia_widgets = importlib.import_module("PyQt5.QtMultimediaWidgets")
+        qt_widgets = importlib.import_module("PyQt5.QtWidgets")
     except ImportError:
         _handoff_to_main(main_entry)
+
+    QTimer = qt_core.QTimer
+    QUrl = qt_core.QUrl
+    QMediaContent = qt_multimedia.QMediaContent
+    QMediaPlayer = qt_multimedia.QMediaPlayer
+    QVideoWidget = qt_multimedia_widgets.QVideoWidget
+    QApplication = qt_widgets.QApplication
+    QVBoxLayout = qt_widgets.QVBoxLayout
+    QWidget = qt_widgets.QWidget
 
     class SplashWindow(QWidget):
         def __init__(self, splash_path, on_finish):
