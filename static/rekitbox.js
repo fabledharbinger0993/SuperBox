@@ -4586,6 +4586,7 @@ async function leAddSelectionToActivePlaylist() {
     showToast('Select a playlist first.', 'error');
     return;
   }
+  const playlistId = _leActivePlaylistId;
   const trackIds = [..._leSelectedTrackIds];
   if (!trackIds.length) {
     showToast('Select at least one track first.', 'error');
@@ -4603,11 +4604,11 @@ async function leAddSelectionToActivePlaylist() {
       return;
     }
     showToast(`Added ${data.added || trackIds.length} track${(data.added || trackIds.length) === 1 ? '' : 's'} to playlist.`, 'success');
-    const activeButton = document.querySelector(`.le-tree-item[data-id="${_leActivePlaylistId}"]`);
+    const activeButton = document.querySelector(`.le-tree-item[data-id="${playlistId}"]`);
     const activeLabel = activeButton?.querySelector('.le-tree-label')?.textContent || 'Playlist';
     await leLoadLibrary();
     if (activeButton) {
-      await leSelectPlaylist({ id: _leActivePlaylistId, type: 'playlist', name: activeLabel }, document.querySelector(`.le-tree-item[data-id="${_leActivePlaylistId}"]`));
+      await leSelectPlaylist({ id: playlistId, type: 'playlist', name: activeLabel }, document.querySelector(`.le-tree-item[data-id="${playlistId}"]`));
     }
   } catch (_) {
     showToast('Could not add tracks to playlist.', 'error');
