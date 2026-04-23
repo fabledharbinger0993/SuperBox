@@ -529,12 +529,20 @@ details[open] > summary { color: var(--text); }
 .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--text-muted); }
 .btn-xs { font-size: .72rem; padding: 3px 9px; }
 .btn-danger-action {
-  background: var(--accent);
-  border: 1px solid rgba(109,184,212,.5);
+  background: var(--danger-dim);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+}
+.btn-danger-action:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.25);
 }
 .btn-warn-action {
-  background: var(--accent);
-  border: 1px solid rgba(109,184,212,.5);
+  background: var(--warn-dim);
+  border: 1px solid var(--warn-border);
+  color: var(--warn);
+}
+.btn-warn-action:hover:not(:disabled) {
+  background: rgba(217, 119, 6, 0.25);
 }
 .btn-neon {
   background: var(--accent);
