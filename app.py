@@ -535,6 +535,167 @@ def api_library_add_tracks_to_playlist(playlist_id):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
+
+@app.route("/api/library/playlists/<playlist_id>", methods=["PUT"])
+def api_library_rename_playlist(playlist_id):
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", "")).strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+
+    try:
+        with write_db(_DB) as db:
+            playlist = db.get_playlist(ID=playlist_id).one_or_none()
+            if playlist is None:
+                return jsonify({"error": "Playlist not found"}), 404
+            db.rename_playlist(playlist, name)
+            db.commit()
+            return jsonify({"ok": True, "id": str(playlist.ID), "name": name})
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/playlists/<playlist_id>", methods=["DELETE"])
+def api_library_delete_playlist(playlist_id):
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        with write_db(_DB) as db:
+            playlist = db.get_playlist(ID=playlist_id).one_or_none()
+            if playlist is None:
+                return jsonify({"error": "Playlist not found"}), 404
+            db.delete_playlist(playlist)
+            db.commit()
+            return jsonify({"ok": True, "id": str(playlist_id), "status": "deleted"})
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/playlists/<playlist_id>/tracks/<track_id>", methods=["DELETE"])
+def api_library_remove_track_from_playlist(playlist_id, track_id):
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        with write_db(_DB) as db:
+            song = db.get_playlist_songs(PlaylistID=playlist_id, ContentID=track_id).one_or_none()
+            if song is None:
+                return jsonify({"error": "Track not in playlist"}), 404
+            db.remove_from_playlist(playlist_id, song.ID)
+            db.commit()
+            return jsonify({"ok": True, "status": "removed"})
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/tracks/<track_id>", methods=["PATCH"])
+def api_library_patch_track(track_id):
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    data = request.get_json(silent=True) or {}
+    if "title" not in data:
+        return jsonify({"error": "title field required"}), 400
+
+    new_title = str(data.get("title", "")).strip()
+    if not new_title:
+        return jsonify({"error": "title cannot be empty"}), 400
+
+    try:
+        with write_db(_DB) as db:
+            track = db.get_content(ID=track_id).one_or_none()
+            if track is None:
+                return jsonify({"error": "Track not found"}), 404
+            track.Title = new_title
+            db.commit()
+            return jsonify({"ok": True, "track": _library_track_payload(track)})
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/export/drives")
+def api_library_export_drives():
+    try:
+        import psutil  # noqa: PLC0415
+        drives = []
+        for part in psutil.disk_partitions():
+            mountpoint = part.mountpoint
+            if not mountpoint.startswith("/Volumes"):
+                continue
+            try:
+                usage = psutil.disk_usage(mountpoint)
+                pioneer_db = Path(mountpoint) / "PIONEER" / "Master" / "master.db"
+                drives.append({
+                    "path": mountpoint,
+                    "name": Path(mountpoint).name,
+                    "free_bytes": usage.free,
+                    "total_bytes": usage.total,
+                    "pioneer": pioneer_db.exists(),
+                })
+            except (PermissionError, OSError):
+                continue
+        return jsonify(drives)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/export", methods=["POST"])
+def api_library_export_start():
+    data = request.get_json(silent=True) or {}
+    playlist_ids = data.get("playlist_ids") or []
+    drive_path = str(data.get("drive_path") or "").strip()
+
+    if not playlist_ids:
+        return jsonify({"error": "playlist_ids required"}), 400
+    if not drive_path:
+        return jsonify({"error": "drive_path required"}), 400
+
+    usb_db = Path(drive_path) / "PIONEER" / "Master" / "master.db"
+    if not usb_db.exists():
+        return jsonify({"error": f"No PIONEER/Master/master.db on {drive_path}"}), 400
+
+    job_id = str(uuid.uuid4())
+    with _EXPORT_LOCK:
+        _evict_old_jobs(_EXPORT_JOBS, _MAX_EXPORT_JOBS)
+        _EXPORT_JOBS[job_id] = {
+            "job_id": job_id,
+            "status": "running",
+            "tracks_total": 0,
+            "tracks_done": 0,
+            "current_track": "",
+            "errors": [],
+        }
+
+    threading.Thread(
+        target=_run_export,
+        args=(job_id, [str(pid) for pid in playlist_ids], drive_path),
+        daemon=True,
+        name=f"library-export-{job_id[:8]}",
+    ).start()
+
+    return jsonify({"job_id": job_id}), 202
+
+
+@app.route("/api/library/export/<job_id>")
+def api_library_export_status(job_id):
+    with _EXPORT_LOCK:
+        job = _EXPORT_JOBS.get(job_id)
+    if job is None:
+        return jsonify({"error": "Job not found"}), 404
+    return jsonify(job)
+
 # List all playlists
 @app.route("/api/playlists")
 def api_playlists():

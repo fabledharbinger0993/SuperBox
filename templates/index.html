@@ -1925,6 +1925,9 @@
       <div class="le-header-right">
         <button class="le-header-btn" onclick="leStartCreate('playlist')" title="New Playlist">＋ Playlist</button>
         <button class="le-header-btn" onclick="leStartCreate('folder')" title="New Folder">＋ Folder</button>
+        <button class="le-header-btn" id="le-rename-btn" onclick="leRenameActivePlaylist()" title="Rename selected playlist" disabled>Rename</button>
+        <button class="le-header-btn" id="le-delete-btn" onclick="leDeleteActivePlaylist()" title="Delete selected playlist" disabled>Delete</button>
+        <button class="le-header-btn le-export-btn" onclick="leOpenExportModal()" title="Export playlists to Pioneer USB drive">⬆ Export to USB</button>
         <button class="le-close-btn" onclick="closeLibraryEditor()" title="Close">✕</button>
       </div>
     </div>
@@ -1980,12 +1983,62 @@
         </div>
         <div class="le-status-bar" id="le-status-bar">
           <span id="le-status-text">No library loaded</span>
+          <button class="le-load-btn" id="le-remove-btn" onclick="leRemoveSelectionFromActivePlaylist()" disabled>Remove Selected</button>
           <button class="le-load-btn le-add-btn" id="le-add-btn" onclick="leAddSelectionToActivePlaylist()" disabled>Add Selected</button>
           <button class="le-load-btn" onclick="leLoadLibrary()">Load Library</button>
         </div>
       </div>
 
     </div>
+  </div>
+</div>
+
+<!-- ══ USB Export modal ════════════════════════════════════════════════════ -->
+<div id="le-export-backdrop" class="hidden" onclick="if(event.target===this)leCloseExportModal()"></div>
+<div id="le-export-modal" class="hidden">
+  <div class="le-export-header">
+    <span class="le-export-title">Export to Pioneer USB</span>
+    <button class="le-close-btn" onclick="leCloseExportModal()">✕</button>
+  </div>
+
+  <div id="le-export-body">
+    <!-- Drive picker -->
+    <div class="le-export-section">
+      <div class="le-export-section-label">Target Drive</div>
+      <div id="le-export-drives" class="le-export-drives">
+        <div class="le-export-loading">Scanning drives…</div>
+      </div>
+    </div>
+
+    <!-- Playlist picker -->
+    <div class="le-export-section">
+      <div class="le-export-section-label">
+        Playlists
+        <span class="le-export-sel-actions">
+          <button onclick="leExportSelectAll()" class="le-export-sel-btn">All</button>
+          <button onclick="leExportSelectNone()" class="le-export-sel-btn">None</button>
+        </span>
+      </div>
+      <div id="le-export-playlists" class="le-export-playlist-list">
+        <div class="le-export-loading">Load your library first.</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="le-export-progress" class="le-export-progress hidden">
+      <div class="le-export-progress-bar-wrap">
+        <div id="le-export-progress-bar" class="le-export-progress-bar" style="width:0%"></div>
+      </div>
+      <div id="le-export-progress-label" class="le-export-progress-label">Starting…</div>
+    </div>
+
+    <!-- Errors -->
+    <div id="le-export-errors" class="le-export-errors hidden"></div>
+  </div>
+
+  <div class="le-export-footer">
+    <button id="le-export-submit" class="le-create-submit" onclick="leStartExport()" disabled>Export</button>
+    <button class="le-create-cancel" onclick="leCloseExportModal()">Cancel</button>
   </div>
 </div>
 

@@ -4305,6 +4305,7 @@ let _leSearchQuery = '';
 let _leSortCol = 'title';
 let _leSortAsc = true;
 let _leActivePlaylistId = null;
+let _leActivePlaylistName = '';
 let _leCreateType = 'playlist';
 let _leStatusLabel = 'No library loaded';
 let _leSelectedTrackIds = new Set();
@@ -4365,9 +4366,26 @@ function leRefreshTrackView() {
 
 function leUpdateActionState() {
   const addBtn = document.getElementById('le-add-btn');
+  const removeBtn = document.getElementById('le-remove-btn');
+  const renameBtn = document.getElementById('le-rename-btn');
+  const deleteBtn = document.getElementById('le-delete-btn');
   if (!addBtn) return;
   const canAdd = !!_leActivePlaylistId && _leSelectedTrackIds.size > 0;
   addBtn.disabled = !canAdd;
+  if (removeBtn) {
+    removeBtn.disabled = !canAdd;
+    if (!_leActivePlaylistId) {
+      removeBtn.textContent = 'Select Playlist';
+    } else if (_leSelectedTrackIds.size === 0) {
+      removeBtn.textContent = 'Remove Selected';
+    } else if (_leSelectedTrackIds.size === 1) {
+      removeBtn.textContent = 'Remove 1 Track';
+    } else {
+      removeBtn.textContent = `Remove ${_leSelectedTrackIds.size} Tracks`;
+    }
+  }
+  if (renameBtn) renameBtn.disabled = !_leActivePlaylistId;
+  if (deleteBtn) deleteBtn.disabled = !_leActivePlaylistId;
   if (!_leActivePlaylistId) {
     addBtn.textContent = 'Select Playlist';
   } else if (_leSelectedTrackIds.size === 0) {
@@ -4499,6 +4517,7 @@ function leRenderPlaylistTree(nodes, parentEl, depth) {
 
 function leSelectAll() {
   _leActivePlaylistId = null;
+  _leActivePlaylistName = '';
   document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
   document.querySelector('.le-tree-all')?.classList.add('active');
   leSetTrackView(_leAllTracks, 'All Tracks');
@@ -4508,6 +4527,7 @@ function leSelectAll() {
 async function leSelectPlaylist(node, buttonEl) {
   if (node.type === 'folder') return;
   _leActivePlaylistId = node.id;
+  _leActivePlaylistName = node.name || 'Playlist';
   document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
   buttonEl?.classList.add('active');
   try {
@@ -4522,6 +4542,7 @@ async function leSelectPlaylist(node, buttonEl) {
 
 function leSelectHistory(buttonEl) {
   _leActivePlaylistId = null;
+  _leActivePlaylistName = '';
   document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
   buttonEl?.classList.add('active');
   const sorted = [..._leAllTracks].sort((a, b) => (b.date_added || '').localeCompare(a.date_added || ''));
@@ -4678,6 +4699,240 @@ async function leAddSelectionToActivePlaylist() {
   } catch (_) {
     showToast('Could not add tracks to playlist.', 'error');
   }
+}
+
+async function leRenameActivePlaylist() {
+  if (!_leActivePlaylistId) {
+    showToast('Select a playlist first.', 'error');
+    return;
+  }
+  const nextName = prompt('Rename playlist:', _leActivePlaylistName || '');
+  if (nextName === null) return;
+  const trimmed = nextName.trim();
+  if (!trimmed) {
+    showToast('Playlist name cannot be empty.', 'error');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/library/playlists/${encodeURIComponent(_leActivePlaylistId)}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name: trimmed }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || 'Could not rename playlist.', 'error');
+      return;
+    }
+    showToast('Playlist renamed.', 'success');
+    _leActivePlaylistName = trimmed;
+    await leLoadLibrary();
+    const activeBtn = document.querySelector(`.le-tree-item[data-id="${_leActivePlaylistId}"]`);
+    if (activeBtn) {
+      await leSelectPlaylist({ id: _leActivePlaylistId, type: 'playlist', name: trimmed }, activeBtn);
+    }
+  } catch (_) {
+    showToast('Could not rename playlist.', 'error');
+  }
+}
+
+async function leDeleteActivePlaylist() {
+  if (!_leActivePlaylistId) {
+    showToast('Select a playlist first.', 'error');
+    return;
+  }
+  const label = _leActivePlaylistName || 'this playlist';
+  const ok = confirm(`Delete playlist "${label}"?\n\nTracks will remain in your library.`);
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/library/playlists/${encodeURIComponent(_leActivePlaylistId)}`, {
+      method: 'DELETE',
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || 'Could not delete playlist.', 'error');
+      return;
+    }
+    showToast('Playlist deleted.', 'success');
+    _leActivePlaylistId = null;
+    _leActivePlaylistName = '';
+    await leLoadLibrary();
+    leSelectAll();
+  } catch (_) {
+    showToast('Could not delete playlist.', 'error');
+  }
+}
+
+async function leRemoveSelectionFromActivePlaylist() {
+  if (!_leActivePlaylistId) {
+    showToast('Select a playlist first.', 'error');
+    return;
+  }
+  const trackIds = [..._leSelectedTrackIds];
+  if (!trackIds.length) {
+    showToast('Select at least one track first.', 'error');
+    return;
+  }
+  try {
+    let removed = 0;
+    for (const trackId of trackIds) {
+      const res = await fetch(`/api/library/playlists/${encodeURIComponent(_leActivePlaylistId)}/tracks/${encodeURIComponent(trackId)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) removed += 1;
+    }
+    if (!removed) {
+      showToast('No selected tracks were removed.', 'error');
+      return;
+    }
+    showToast(`Removed ${removed} track${removed === 1 ? '' : 's'} from playlist.`, 'success');
+    const activeBtn = document.querySelector(`.le-tree-item[data-id="${_leActivePlaylistId}"]`);
+    const activeLabel = activeBtn?.querySelector('.le-tree-label')?.textContent || _leActivePlaylistName || 'Playlist';
+    await leLoadLibrary();
+    if (activeBtn) {
+      await leSelectPlaylist({ id: _leActivePlaylistId, type: 'playlist', name: activeLabel }, document.querySelector(`.le-tree-item[data-id="${_leActivePlaylistId}"]`));
+    }
+  } catch (_) {
+    showToast('Could not remove selected tracks from playlist.', 'error');
+  }
+}
+
+/* ══ USB Export ════════════════════════════════════════════════════════════ */
+
+let _leExportDrivePath = null;
+let _leExportPollTimer = null;
+
+function _leExportGb(bytes) {
+  return (bytes / 1e9).toFixed(1) + ' GB';
+}
+
+async function leOpenExportModal() {
+  document.getElementById('le-export-backdrop').classList.remove('hidden');
+  document.getElementById('le-export-modal').classList.remove('hidden');
+  document.getElementById('le-export-progress').classList.add('hidden');
+  document.getElementById('le-export-errors').classList.add('hidden');
+  document.getElementById('le-export-submit').disabled = true;
+  _leExportDrivePath = null;
+
+  // Populate playlists from already-rendered tree
+  const plContainer = document.getElementById('le-export-playlists');
+  const treeItems = [...document.querySelectorAll('#le-playlist-tree .le-tree-item[data-type="playlist"]')];
+  if (treeItems.length) {
+    plContainer.innerHTML = treeItems.map(btn => {
+      const id = btn.dataset.id;
+      const name = btn.querySelector('.le-tree-label')?.textContent || '';
+      const count = btn.querySelector('.le-tree-count')?.textContent || '';
+      return `<label class="le-export-pl-row">
+        <input type="checkbox" class="le-export-pl-cb" value="${id}" checked onchange="_leExportUpdateSubmit()">
+        <span class="le-export-pl-name">${_leEsc(name)}</span>
+        <span class="le-export-pl-count">${_leEsc(count)}</span>
+      </label>`;
+    }).join('');
+  } else {
+    plContainer.innerHTML = '<div class="le-export-loading">Load your library first, then reopen Export.</div>';
+  }
+
+  // Fetch drives
+  const driveContainer = document.getElementById('le-export-drives');
+  driveContainer.innerHTML = '<div class="le-export-loading">Scanning drives…</div>';
+  try {
+    const res = await fetch('/api/library/export/drives');
+    const drives = await res.json();
+    const pioneer = drives.filter(d => d.pioneer);
+    if (!pioneer.length) {
+      driveContainer.innerHTML = '<div class="le-export-no-drives">No Pioneer USB drives found. Insert a drive that Rekordbox has exported to at least once.</div>';
+    } else {
+      driveContainer.innerHTML = pioneer.map((d, i) => `
+        <label class="le-export-drive">
+          <input type="radio" name="le-export-drive" value="${_leEsc(d.path)}" ${i === 0 ? 'checked' : ''} onchange="_leExportDrivePath=this.value;_leExportUpdateSubmit()">
+          <span class="le-export-drive-pioneer">Pioneer</span>
+          <span class="le-export-drive-name">${_leEsc(d.name)}</span>
+          <span class="le-export-drive-meta">${_leExportGb(d.free_bytes)} free / ${_leExportGb(d.total_bytes)}</span>
+        </label>`).join('');
+      _leExportDrivePath = pioneer[0].path;
+    }
+  } catch (_) {
+    driveContainer.innerHTML = '<div class="le-export-no-drives">Could not scan drives.</div>';
+  }
+  _leExportUpdateSubmit();
+}
+
+function leCloseExportModal() {
+  if (_leExportPollTimer) { clearInterval(_leExportPollTimer); _leExportPollTimer = null; }
+  document.getElementById('le-export-backdrop').classList.add('hidden');
+  document.getElementById('le-export-modal').classList.add('hidden');
+}
+
+function leExportSelectAll()  { document.querySelectorAll('.le-export-pl-cb').forEach(cb => cb.checked = true);  _leExportUpdateSubmit(); }
+function leExportSelectNone() { document.querySelectorAll('.le-export-pl-cb').forEach(cb => cb.checked = false); _leExportUpdateSubmit(); }
+
+function _leExportUpdateSubmit() {
+  const hasDrive = !!_leExportDrivePath;
+  const hasPlaylists = [...document.querySelectorAll('.le-export-pl-cb')].some(cb => cb.checked);
+  document.getElementById('le-export-submit').disabled = !(hasDrive && hasPlaylists);
+}
+
+async function leStartExport() {
+  const selectedIds = [...document.querySelectorAll('.le-export-pl-cb:checked')].map(cb => cb.value);
+  if (!selectedIds.length || !_leExportDrivePath) return;
+
+  document.getElementById('le-export-submit').disabled = true;
+  document.getElementById('le-export-errors').classList.add('hidden');
+  const prog = document.getElementById('le-export-progress');
+  prog.classList.remove('hidden');
+  document.getElementById('le-export-progress-bar').style.width = '0%';
+  document.getElementById('le-export-progress-label').textContent = 'Starting export…';
+
+  try {
+    const res = await fetch('/api/library/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playlist_ids: selectedIds, drive_path: _leExportDrivePath }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      _leExportShowErrors([data.error || 'Export failed to start.']);
+      document.getElementById('le-export-submit').disabled = false;
+      return;
+    }
+    _leExportPoll(data.job_id);
+  } catch (_) {
+    _leExportShowErrors(['Could not reach server.']);
+    document.getElementById('le-export-submit').disabled = false;
+  }
+}
+
+function _leExportPoll(jobId) {
+  if (_leExportPollTimer) clearInterval(_leExportPollTimer);
+  _leExportPollTimer = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/library/export/${jobId}`);
+      const job = await res.json().catch(() => ({}));
+      const total = job.tracks_total || 0;
+      const done  = job.tracks_done  || 0;
+      const pct   = total > 0 ? Math.round((done / total) * 100) : (job.status === 'complete' ? 100 : 0);
+      document.getElementById('le-export-progress-bar').style.width = pct + '%';
+      const track = job.current_track ? ` — ${job.current_track}` : '';
+      document.getElementById('le-export-progress-label').textContent =
+        job.status === 'complete' ? `Done — ${done} track${done === 1 ? '' : 's'} exported.` :
+        job.status === 'failed'   ? 'Export failed.' :
+        `${done} / ${total}${track}`;
+
+      if (job.status === 'complete' || job.status === 'failed') {
+        clearInterval(_leExportPollTimer);
+        _leExportPollTimer = null;
+        if (job.errors && job.errors.length) _leExportShowErrors(job.errors);
+        if (job.status === 'complete') showToast(`Export complete — ${done} track${done === 1 ? '' : 's'} on drive.`, 'success');
+        document.getElementById('le-export-submit').disabled = false;
+      }
+    } catch (_) { /* keep polling */ }
+  }, 1000);
+}
+
+function _leExportShowErrors(errors) {
+  const el = document.getElementById('le-export-errors');
+  el.innerHTML = errors.map(e => `<div>${_leEsc(String(e))}</div>`).join('');
+  el.classList.remove('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
