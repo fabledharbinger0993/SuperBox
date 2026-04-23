@@ -3768,8 +3768,10 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   align-items: center;
   padding: 0 14px;
   height: 32px;
-  background: rgba(16, 8, 28, 0.9);
-  border-bottom: 1px solid rgba(160, 30, 200, 0.22);
+  background: rgba(10, 4, 20, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(160, 30, 200, 0.18);
   flex-shrink: 0;
   font-size: .66rem;
   font-weight: 700;
