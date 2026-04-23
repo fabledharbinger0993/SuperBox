@@ -5001,30 +5001,58 @@ function rekkiClearChip() {
 
 // ── Send message ──────────────────────────────────────────────────────────────
 
-async function rekkiSendMessage() {
+function _rekkiSourceFor(chipCtx) {
+  if (!chipCtx) return 'main';
+  if (chipCtx.type === 'tool-card') {
+    return `card-${(chipCtx.tool || chipCtx.label || 'unknown').replace(/\s+/g, '-').toLowerCase()}`;
+  }
+  return chipCtx.type || 'main';
+}
+
+function _rekkiContextHistoryMessage(chipCtx) {
+  if (!chipCtx) return null;
+  const parts = [
+    `Active Rekki context: ${chipCtx.label || chipCtx.type || 'unknown item'}`,
+    chipCtx.type ? `Type: ${chipCtx.type}` : '',
+    chipCtx.tool ? `Tool: ${chipCtx.tool}` : '',
+    chipCtx.severity ? `Severity: ${chipCtx.severity}` : '',
+    chipCtx.description ? `What Rekki already knows: ${chipCtx.description}` : '',
+    'Answer the next user message about this context unless they clearly switch topics.',
+  ].filter(Boolean);
+  return { role: 'assistant', content: parts.join('\n') };
+}
+
+function _rekkiBuildRequestHistory(chipCtx) {
+  const base = _rekkiHistory.slice(-15);
+  const ctxMsg = _rekkiContextHistoryMessage(chipCtx);
+  return ctxMsg ? [...base, ctxMsg] : base;
+}
+
+async function _rekkiDispatchMessage(text, options = {}) {
   if (!_rekkiEnabled()) {
     _showRekkiDisabledToast();
     return;
   }
-  const input = document.getElementById('rekki-input');
-  const send  = document.getElementById('rekki-send');
-  if (!input || !send) return;
-  const text = (input.value || '').trim();
-  if (!text) return;
+  const chipCtx = options.chipCtx === undefined ? _rekkiChip : options.chipCtx;
+  const displayText = (options.displayText || text || '').trim();
+  const rawText = (text || '').trim();
+  const send = document.getElementById('rekki-send');
+  if (!rawText || !send) return;
 
-  const chipCtx = _rekkiChip;
-  const msgSource = chipCtx
-    ? (chipCtx.type === 'tool-card' ? `card-${(chipCtx.tool || chipCtx.label || 'unknown').replace(/\s+/g, '-').toLowerCase()}` : chipCtx.type || 'main')
-    : 'main';
-
-  _rekkiAppend('user', text);
-  _rekkiHistory.push({ role: 'user', content: text });
-  input.value = '';
+  const msgSource = _rekkiSourceFor(chipCtx);
+  if (options.appendUser !== false) {
+    _rekkiAppend('user', displayText, msgSource);
+  }
+  _rekkiHistory.push({ role: 'user', content: displayText });
   send.disabled = true;
-  _rekkiSetStatus('Thinking…');
+  _rekkiSetStatus(options.pendingStatus || 'Thinking…');
 
   try {
-    const body = { message: text, history: _rekkiHistory, source: msgSource };
+    const body = {
+      message: rawText,
+      history: _rekkiBuildRequestHistory(chipCtx),
+      source: msgSource,
+    };
     if (chipCtx) body.element_context = chipCtx;
 
     const r = await fetch('/api/rekki/chat', {
@@ -5038,11 +5066,26 @@ async function rekkiSendMessage() {
     _rekkiHistory.push({ role: 'assistant', content: d.reply || '' });
     _rekkiSetStatus(`${d.model}`);
   } catch (err) {
-    _rekkiAppend('rekki', `Error: ${err.message || err}`);
-    _rekkiSetStatus('Unavailable');
+    if (options.fallbackReply) {
+      _rekkiAppend('rekki', options.fallbackReply, msgSource);
+      _rekkiHistory.push({ role: 'assistant', content: options.fallbackReply });
+      _rekkiSetStatus('Context ready');
+    } else {
+      _rekkiAppend('rekki', `Error: ${err.message || err}`);
+      _rekkiSetStatus('Unavailable');
+    }
   } finally {
     send.disabled = false;
   }
+}
+
+async function rekkiSendMessage() {
+  const input = document.getElementById('rekki-input');
+  if (!input) return;
+  const text = (input.value || '').trim();
+  if (!text) return;
+  input.value = '';
+  await _rekkiDispatchMessage(text, { chipCtx: _rekkiChip, displayText: text });
 }
 
 // ── DOM scraper ───────────────────────────────────────────────────────────────
@@ -5142,12 +5185,15 @@ async function _rekkiEngageWith(el) {
   if (!_rekkiOpen) toggleRekkiPanel(ctx);
   else _rekkiLoadChip(ctx);
 
-  // Let Rekki open with an immediate oriented message if description exists
-  if (ctx.description) {
-    _rekkiSetStatus('');
-    _rekkiAppend('rekki', ctx.description, ctx.label || null);
-    _rekkiHistory.push({ role: 'assistant', content: ctx.description });
-  }
+  const prompt = ctx.type === 'log-entry' || ctx.type === 'error'
+    ? 'Explain what happened here, why it matters, and the next safe step.'
+    : 'Explain what this is in RekitBox, what it does, and anything important I should know before using it.';
+  const displayText = ctx.label ? `Explain: ${ctx.label}` : 'Explain this item';
+  await _rekkiDispatchMessage(prompt, {
+    chipCtx: ctx,
+    displayText,
+    fallbackReply: ctx.description || 'I have this item selected and I am ready to talk about it.',
+  });
 }
 
 // Called by the ✦ button embedded in each tool card header
