@@ -11,26 +11,26 @@
   --text-dim:      #6200DF;
 
   --safe:          #1A8200;
-  --safe-dim:      #1A8200;
-  --safe-border:   #FFFFFF;
+  --safe-dim:      rgba(26, 130, 0, 0.15);
+  --safe-border:   rgba(26, 130, 0, 0.30);
 
-  --caution:       #1A8200;
-  --caution-dim:   #1A8200;
-  --caution-border:#FFFFFF;
+  --caution:       #AF6400;
+  --caution-dim:   rgba(175, 100, 0, 0.15);
+  --caution-border:rgba(175, 100, 0, 0.30);
 
-  --warn:          #1A8200;
-  --warn-dim:      #1A8200;
-  --warn-border:   #1A8200;
+  --warn:          #d97706;
+  --warn-dim:      rgba(217, 119, 6, 0.15);
+  --warn-border:   rgba(217, 119, 6, 0.30);
 
-  --danger:        #1A8200;
-  --danger-dim:    #1A8200;
-  --danger-border: #FFFFFF;
+  --danger:        #EF4444;
+  --danger-dim:    rgba(239, 68, 68, 0.15);
+  --danger-border: rgba(239, 68, 68, 0.30);
 
   --accent:        #6db8d4;
-  --accent-dim:    #1A8200;
-  --accent-rgb:    #1A8200;
+  --accent-dim:    rgba(109, 184, 212, 0.15);
+  --accent-rgb:    109, 184, 212;
   --accent2:       #5600C4;
-  --accent2-dim:   #5600C4;
+  --accent2-dim:   rgba(86, 0, 196, 0.15);
 
   --mono: 'JetBrains Mono','Fira Code','Cascadia Code',ui-monospace,monospace;
   --sans: system-ui,-apple-system,'Segoe UI',sans-serif;
