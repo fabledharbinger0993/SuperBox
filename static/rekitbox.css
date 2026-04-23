@@ -3607,10 +3607,12 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   gap: 14px;
   padding: 0 20px;
   height: 54px;
-  background: rgba(16, 8, 28, 0.96);
-  border-bottom: 1px solid rgba(180, 40, 210, 0.28);
+  background: rgba(10, 4, 20, 0.78);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  border-bottom: 1px solid rgba(200, 60, 240, 0.22);
   flex-shrink: 0;
-  box-shadow: 0 1px 0 rgba(220, 80, 255, 0.08);
+  box-shadow: 0 1px 0 rgba(220, 80, 255, 0.1);
 }
 .le-header-left  { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .le-header-center { flex: 1; max-width: 460px; }
