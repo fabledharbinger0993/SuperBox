@@ -72,7 +72,7 @@ body::before {
   transform: translate(-50%, -50%);
   width: min(60vw, 60vh);
   height: min(60vw, 60vh);
-  background: url('static/rekitbox-app-icon.png') center / contain no-repeat;
+  background: url('/static/RB_LOGO.png') center / contain no-repeat;
   opacity: 0.04;
   pointer-events: none;
   z-index: 0;
