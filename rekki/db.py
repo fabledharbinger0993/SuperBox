@@ -424,10 +424,14 @@ class RekkiMemoryDB:
         cur = self._conn.execute(
             """
             SELECT id, role, content, source, timestamp
-            FROM chat_messages
-            WHERE is_typing = 0
+            FROM (
+                SELECT id, role, content, source, timestamp
+                FROM chat_messages
+                WHERE is_typing = 0
+                ORDER BY id DESC
+                LIMIT ?
+            ) recent
             ORDER BY id ASC
-            LIMIT ?
             """,
             (limit,),
         )
