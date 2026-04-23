@@ -1,12 +1,4 @@
-Here's the fully corrected CSS as an artifact:
-
-<function_calls>
-<invoke name="artifacts">
-<parameter name="command">create</parameter>
-<parameter name="type">application/vnd.ant.code</parameter>
-<parameter name="language">css</parameter>
-<parameter name="title">SuperBox — styles.css (fixed)</parameter>
-<parameter name="content">/* ── Design tokens ─────────────────────────────────────────────────────── */
+/* ── Design tokens ─────────────────────────────────────────────────────── */
 :root {
   --bg:            #222128;
   --surface:       #004744;
@@ -3479,4 +3471,3 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 }
 #rekki-send:hover { background: rgba(168,85,247,.35); box-shadow: 0 0 7px rgba(168,85,247,.35); }
 #rekki-send:disabled { opacity: .4; cursor: not-allowed; }
-</parameter>
