@@ -4872,7 +4872,7 @@ let _rekkiCtxTarget = null; // element the right-click menu was triggered on
 
 async function _rekkiBootHistory() {
   try {
-    const r = await fetch('/api/rekki/history?limit=30', { cache: 'no-store' });
+    const r = await fetch('/api/rekki/history?limit=60', { cache: 'no-store' });
     const d = await r.json();
     if (!d.ok || !d.messages || d.messages.length === 0) return;
 
