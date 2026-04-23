@@ -275,6 +275,22 @@ from mutagen import File as MutagenFile
 
 import mimetypes
 
+_playback_import_errors = []
+try:
+    import sounddevice as _sounddevice
+except Exception as exc:  # pragma: no cover
+    _sounddevice = None
+    _playback_import_errors.append(f"sounddevice unavailable: {exc}")
+
+try:
+    import soundfile as _soundfile
+except Exception as exc:  # pragma: no cover
+    _soundfile = None
+    _playback_import_errors.append(f"soundfile unavailable: {exc}")
+
+_PLAYBACK_AVAILABLE = _sounddevice is not None and _soundfile is not None
+_PLAYBACK_IMPORT_ERROR = "; ".join(_playback_import_errors) or None
+
 # ── Resource root — handles both dev and PyInstaller bundle ──────────────────
 # When PyInstaller runs, sys._MEIPASS is the temp dir where everything lives.
 # REKITBOX_ROOT can also be set by main.py before importing this module.
@@ -451,6 +467,48 @@ def _backup_dir() -> Path:
         return BACKUP_DIR
     except Exception:
         return Path.home() / "rekordbox-toolkit" / "backups"
+
+
+def _current_rekitbox_mode() -> str:
+    try:
+        from config import REKITBOX_MODE  # noqa: PLC0415
+        return str(REKITBOX_MODE).strip() or "rural"
+    except Exception:
+        return "rural"
+
+
+def _rekki_enabled() -> bool:
+    return _current_rekitbox_mode() == "suburban"
+
+
+_playback_lock = threading.Lock()
+_playback_thread = None
+_playback_stop_event = threading.Event()
+_playback_current_path = None
+
+
+def _stop_playback():
+    global _playback_thread, _playback_current_path
+    with _playback_lock:
+        if _playback_thread and _playback_thread.is_alive():
+            _playback_stop_event.set()
+            _playback_thread.join(timeout=2)
+        _playback_thread = None
+        _playback_current_path = None
+        _playback_stop_event.clear()
+
+
+def _play_audio_file(path):
+    if not _PLAYBACK_AVAILABLE or _sounddevice is None or _soundfile is None:
+        return
+    try:
+        with _soundfile.SoundFile(path) as audio_file:
+            for block in audio_file.blocks(blocksize=1024, dtype="float32"):
+                if _playback_stop_event.is_set():
+                    break
+                _sounddevice.play(block, audio_file.samplerate, blocking=True)
+    except Exception as exc:
+        print(f"Playback error: {exc}")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -1489,6 +1547,96 @@ def api_status():
     })
 
 
+@app.route("/api/export/rekordbox", methods=["POST"])
+def api_export_rekordbox():
+    """Export playlists and tracks to a Rekordbox One Library structure."""
+    data = request.get_json(silent=True) or {}
+    target = data.get("target", "").strip()
+    if not target or not os.path.isdir(target):
+        return jsonify({"error": "Valid target folder required"}), 400
+
+    try:
+        import shutil
+        import xml.etree.ElementTree as ET
+
+        from config import DJMT_DB  # noqa: PLC0415
+        from pyrekordbox import Rekordbox6Database  # noqa: PLC0415
+
+        db_src = str(DJMT_DB)
+        db_dst = os.path.join(target, "PIONEER", "Master", "master.db")
+        xml_path = os.path.join(target, "PIONEER", "playlists.xml")
+        contents_dir = os.path.join(target, "PIONEER", "Contents")
+
+        os.makedirs(os.path.dirname(db_dst), exist_ok=True)
+        os.makedirs(contents_dir, exist_ok=True)
+        shutil.copy2(db_src, db_dst)
+
+        root = ET.Element("DJ_PLAYLISTS")
+        file_paths = set()
+        with Rekordbox6Database(db_src) as db:
+            playlists = db.get_playlist().all()
+            for pl in playlists:
+                pl_el = ET.SubElement(root, "PLAYLIST", Name=pl.Name or "", Id=str(pl.ID))
+                songs = db.get_playlist_songs(PlaylistID=pl.ID).order_by("TrackNo").all()
+                for song in songs:
+                    track = song.Content
+                    if track is None:
+                        continue
+                    file_path = track.FolderPath or ""
+                    if file_path and os.path.isfile(file_path):
+                        file_paths.add(file_path)
+                    ET.SubElement(
+                        pl_el,
+                        "TRACK",
+                        Id=str(track.ID),
+                        Title=track.Title or "",
+                        FilePath=file_path,
+                    )
+
+        tree = ET.ElementTree(root)
+        tree.write(xml_path, encoding="utf-8", xml_declaration=True)
+
+        for file_path in sorted(file_paths):
+            dest = os.path.join(contents_dir, os.path.basename(file_path))
+            if not os.path.exists(dest):
+                shutil.copy2(file_path, dest)
+
+        return jsonify({"ok": True, "db": db_dst, "xml": xml_path, "contents": contents_dir})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/playback/start", methods=["POST"])
+def api_playback_start():
+    global _playback_thread, _playback_current_path
+    if not _PLAYBACK_AVAILABLE:
+        detail = _PLAYBACK_IMPORT_ERROR or "audio playback backend is unavailable"
+        return jsonify({"error": f"Playback unavailable: {detail}"}), 503
+
+    data = request.get_json(silent=True) or {}
+    file_path = data.get("file_path", "").strip()
+    if not file_path or not os.path.isfile(file_path):
+        return jsonify({"error": "File not found"}), 404
+
+    _stop_playback()
+
+    def _thread():
+        _play_audio_file(file_path)
+
+    with _playback_lock:
+        _playback_stop_event.clear()
+        _playback_thread = threading.Thread(target=_thread, daemon=True)
+        _playback_thread.start()
+        _playback_current_path = file_path
+    return jsonify({"status": "playing", "file_path": file_path})
+
+
+@app.route("/api/playback/stop", methods=["POST"])
+def api_playback_stop():
+    _stop_playback()
+    return jsonify({"status": "stopped"})
+
+
 @app.route("/api/config")
 def api_config():
     """Expose the configured default paths so the UI can pre-fill forms."""
@@ -1500,6 +1648,7 @@ def api_config():
         )
         from user_config import load_user_config as _luc  # noqa: PLC0415
         _ucfg = _luc()
+        current_mode = _current_rekitbox_mode()
         return jsonify({
             "music_root":       str(MUSIC_ROOT),
             "djmt_db":          str(DJMT_DB),
@@ -1511,9 +1660,12 @@ def api_config():
             "custom_archive":   _custom_archive,
             "archive_enabled":  ARCHIVE_ENABLED,
             "excluded_dirs":    _ucfg.get("excluded_dirs", []),
+            "mode":             current_mode,
+            "rekki_model":      os.environ.get("REKIT_AGENT_MODEL", "") if current_mode == "suburban" else "",
             "configured":       True,
         })
     except Exception:
+        current_mode = _current_rekitbox_mode()
         return jsonify({
             "music_root":      "",
             "djmt_db":         "",
@@ -1524,6 +1676,8 @@ def api_config():
             "archive_mode":    "auto",
             "custom_archive":  "",
             "archive_enabled": True,
+            "mode":            current_mode,
+            "rekki_model":     os.environ.get("REKIT_AGENT_MODEL", "") if current_mode == "suburban" else "",
             "configured":      False,
         })
 
