@@ -148,15 +148,23 @@ fi
 step "Creating RekitBox.app launcher"
 
 APP_DEST="$HOME/Applications/RekitBox.app"
-LAUNCH_PATH="$SCRIPT_DIR/launch.sh"
+PACKAGED_APP="$SCRIPT_DIR/packaging/RekitBox.app"
 
 mkdir -p "$HOME/Applications"
 
-# Build a minimal AppleScript .app that calls launch.sh with the correct
-# local path. osacompile is included with macOS — no extra installs needed.
-osacompile -o "$APP_DEST" - 2>/dev/null <<APPLESCRIPT
+# Prefer the bundled shell-script launcher because Finder surfaces generic
+# "/bin/bash" alerts when the AppleScript do-shell-script wrapper fails.
+# The packaged .app already knows how to hand off to ~/RekitBox/RekitBox.
+rm -rf "$APP_DEST"
+if [ -d "$PACKAGED_APP" ]; then
+  cp -R "$PACKAGED_APP" "$APP_DEST"
+  chmod +x "$APP_DEST/Contents/MacOS/RekitBox" 2>/dev/null || true
+else
+  LAUNCH_PATH="$SCRIPT_DIR/launch.sh"
+  osacompile -o "$APP_DEST" - 2>/dev/null <<APPLESCRIPT
 do shell script "bash '$LAUNCH_PATH'"
 APPLESCRIPT
+fi
 
 if [ -d "$APP_DEST" ]; then
   ok "RekitBox.app created at ~/Applications/RekitBox.app"
