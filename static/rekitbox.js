@@ -286,13 +286,18 @@ function openSettings() {
     document.getElementById('settings-custom-input').value = cfg.custom_archive || '';
     const excluded = Array.isArray(cfg.excluded_dirs) ? cfg.excluded_dirs : [];
     document.getElementById('settings-excluded-dirs').value = excluded.join('\n');
-    // Mode radio
+    // Mode (saved in localStorage; welcome modal handles the radio)
     const boxMode = cfg.mode || 'suburban';
-    document.querySelector(`input[name="rekitbox-mode"][value="${boxMode}"]`).checked = true;
+    localStorage.setItem('rekitbox-mode', boxMode);
+    const modeRadio = document.querySelector(`input[name="rekitbox-mode"][value="${boxMode}"]`);
+    if (modeRadio) modeRadio.checked = true;
+    const modeBtn = document.getElementById('wbtn-' + boxMode);
+    if (modeBtn) { document.querySelectorAll('.wbtn-mode').forEach(b => b.classList.remove('selected')); modeBtn.classList.add('selected'); }
     _settingsUpdateUI(mode);
   }).catch(() => {
     document.querySelector('input[name="archive-mode"][value="auto"]').checked = true;
-    document.querySelector('input[name="rekitbox-mode"][value="suburban"]').checked = true;
+    const sr = document.querySelector('input[name="rekitbox-mode"][value="suburban"]');
+    if (sr) sr.checked = true;
     _settingsUpdateUI('auto');
   });
   _sbFadeBd('settings-backdrop', true);
