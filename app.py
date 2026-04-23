@@ -1,3 +1,4 @@
+'''
 # ── Rekordbox One Library Export ────────────────────────────────────────────
 
 @app.route("/api/export/rekordbox", methods=["POST"])
@@ -234,6 +235,7 @@ def api_rekki_context():
     if REKITBOX_MODE != "suburban":
         return jsonify({"error": "Rekki is disabled in Rural mode."}), 403
     return jsonify(_rekki_context_snapshot())
+'''
 """
 RekitBox / app.py
 
@@ -272,6 +274,25 @@ from flask_sock import Sock
 from mutagen import File as MutagenFile
 
 import mimetypes
+
+# ── Resource root — handles both dev and PyInstaller bundle ──────────────────
+# When PyInstaller runs, sys._MEIPASS is the temp dir where everything lives.
+# REKITBOX_ROOT can also be set by main.py before importing this module.
+_REPO_ROOT = Path(
+    os.environ.get('REKITBOX_ROOT')
+    or getattr(sys, '_MEIPASS', None)
+    or Path(__file__).parent.resolve()
+)
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+app = Flask(
+    __name__,
+    template_folder=str(_REPO_ROOT / 'templates'),
+    static_folder=str(_REPO_ROOT / 'static'),
+)
+sock = Sock(app)
+
 # ── Rekki brain: Congress deliberation + HologrA.I.m memory ──────────────────
 # ── RekitBox Native Playlist/Track API ───────────────────────────────────────
 
@@ -392,24 +413,6 @@ except Exception as _rekki_import_err:  # pragma: no cover
     _REKKI_MEMORY_ENABLED = False
     run_tribunal = None  # type: ignore[assignment]
     print(f"[rekki] memory disabled — import failed: {_rekki_import_err}")
-
-# ── Resource root — handles both dev and PyInstaller bundle ──────────────────
-# When PyInstaller runs, sys._MEIPASS is the temp dir where everything lives.
-# REKITBOX_ROOT can also be set by main.py before importing this module.
-_REPO_ROOT = Path(
-    os.environ.get('REKITBOX_ROOT')
-    or getattr(sys, '_MEIPASS', None)
-    or Path(__file__).parent.resolve()
-)
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-
-app = Flask(
-    __name__,
-    template_folder=str(_REPO_ROOT / 'templates'),
-    static_folder=str(_REPO_ROOT / 'static'),
-)
-sock = Sock(app)
 
 # ── Homebrew update checker (background, weekly) ──────────────────────────────
 from brew_updater import start_background_checker as _start_brew_checker, \
