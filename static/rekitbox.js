@@ -4201,7 +4201,218 @@ function closeDbPanel() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && _dbPanelActive) closeDbPanel();
+  if (e.key === 'Escape' && _leOpen) closeLibraryEditor();
 });
+
+/* ══ Library & Playlist Editor ════════════════════════════════════════════ */
+let _leOpen = false;
+let _leAllTracks = [];
+let _leSortCol = 'title';
+let _leSortAsc = true;
+let _leActivePlaylistId = null;
+
+function openLibraryEditor() {
+  _leOpen = true;
+  const overlay = document.getElementById('library-editor-overlay');
+  overlay.classList.remove('hidden');
+  void overlay.offsetWidth;
+  overlay.classList.add('le-visible');
+  document.getElementById('rail-btn-library').classList.add('active');
+  if (!_leAllTracks.length) leLoadLibrary();
+}
+
+function closeLibraryEditor() {
+  _leOpen = false;
+  const overlay = document.getElementById('library-editor-overlay');
+  overlay.classList.remove('le-visible');
+  document.getElementById('rail-btn-library').classList.remove('active');
+  setTimeout(() => overlay.classList.add('hidden'), 220);
+}
+
+async function leLoadLibrary() {
+  document.getElementById('le-status-text').textContent = 'Loading library…';
+  document.getElementById('le-empty-state').style.display = 'flex';
+  document.getElementById('le-empty-state').innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">⏳</div><div>Loading library…</div>';
+  try {
+    const [tracksRes, playlistsRes] = await Promise.all([
+      fetch('/api/library/tracks'),
+      fetch('/api/library/playlists')
+    ]);
+    if (tracksRes.ok) {
+      _leAllTracks = await tracksRes.json();
+      document.getElementById('le-all-count').textContent = _leAllTracks.length;
+    }
+    if (playlistsRes.ok) {
+      const playlists = await playlistsRes.json();
+      leRenderPlaylistTree(playlists);
+    }
+    leSelectAll();
+    document.getElementById('le-status-text').textContent = `${_leAllTracks.length} tracks`;
+  } catch (err) {
+    document.getElementById('le-status-text').textContent = 'Could not load library — is the database connected?';
+    document.getElementById('le-empty-state').innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">⚠</div><div>Failed to load library.</div>';
+  }
+}
+
+function leRenderPlaylistTree(nodes, parentEl, depth) {
+  const container = parentEl || document.getElementById('le-playlist-tree');
+  if (!parentEl) container.innerHTML = '';
+  depth = depth || 0;
+  (nodes || []).forEach(node => {
+    const item = document.createElement('button');
+    item.className = 'le-tree-item';
+    item.style.paddingLeft = (12 + depth * 16) + 'px';
+    item.dataset.id = node.id;
+    item.dataset.type = node.type;
+    const icon = node.type === 'folder' ? '▶ ' : '♫ ';
+    item.innerHTML = `<span class="le-tree-icon">${icon}</span><span class="le-tree-label">${_leEsc(node.name)}</span><span class="le-tree-count">${node.track_count ?? ''}</span>`;
+    item.onclick = () => leSelectPlaylist(node);
+    container.appendChild(item);
+    if (node.children && node.children.length) {
+      const sub = document.createElement('div');
+      sub.className = 'le-tree-children';
+      item.onclick = () => {
+        sub.classList.toggle('le-tree-children-open');
+        item.querySelector('.le-tree-icon').textContent = sub.classList.contains('le-tree-children-open') ? '▼ ' : '▶ ';
+      };
+      leRenderPlaylistTree(node.children, sub, depth + 1);
+      container.appendChild(sub);
+    }
+  });
+}
+
+function leSelectAll() {
+  _leActivePlaylistId = null;
+  document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
+  document.querySelector('.le-tree-all')?.classList.add('active');
+  leRenderTracks(_leAllTracks);
+}
+
+async function leSelectPlaylist(node) {
+  if (node.type === 'folder') return;
+  _leActivePlaylistId = node.id;
+  document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  try {
+    const res = await fetch(`/api/library/playlists/${node.id}/tracks`);
+    if (res.ok) {
+      const tracks = await res.json();
+      leRenderTracks(tracks);
+      document.getElementById('le-status-text').textContent = `${tracks.length} tracks — ${_leEsc(node.name)}`;
+    }
+  } catch (_) {}
+}
+
+function leSelectHistory() {
+  document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const sorted = [..._leAllTracks].sort((a, b) => (b.date_added || '').localeCompare(a.date_added || ''));
+  leRenderTracks(sorted.slice(0, 200));
+}
+
+function leRenderTracks(tracks) {
+  const list = document.getElementById('le-track-list');
+  const empty = document.getElementById('le-empty-state');
+  if (!tracks || !tracks.length) {
+    empty.style.display = 'flex';
+    empty.innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">♫</div><div>No tracks here.</div>';
+    return;
+  }
+  empty.style.display = 'none';
+  const sorted = leSorted(tracks);
+  list.innerHTML = '';
+  sorted.forEach((t, i) => {
+    const row = document.createElement('div');
+    row.className = 'le-track-row';
+    row.dataset.id = t.id;
+    const key = t.key ? `<span class="le-key-badge">${_leEsc(t.key)}</span>` : '—';
+    const bpm = t.bpm ? Math.round(t.bpm) : '—';
+    const dur = t.duration ? leFormatDur(t.duration) : '—';
+    const date = t.date_added ? t.date_added.slice(0, 10) : '—';
+    row.innerHTML = `
+      <div class="le-col le-col-num">${i + 1}</div>
+      <div class="le-col le-col-title le-editable" data-field="title" data-id="${t.id}">${_leEsc(t.title || '—')}</div>
+      <div class="le-col le-col-artist le-editable" data-field="artist" data-id="${t.id}">${_leEsc(t.artist || '—')}</div>
+      <div class="le-col le-col-album">${_leEsc(t.album || '—')}</div>
+      <div class="le-col le-col-bpm">${bpm}</div>
+      <div class="le-col le-col-key">${key}</div>
+      <div class="le-col le-col-dur">${dur}</div>
+      <div class="le-col le-col-date">${date}</div>`;
+    list.appendChild(row);
+  });
+  document.getElementById('le-status-text').textContent = `${tracks.length} tracks`;
+}
+
+function leSorted(tracks) {
+  return [...tracks].sort((a, b) => {
+    let va = a[_leSortCol] ?? '', vb = b[_leSortCol] ?? '';
+    if (typeof va === 'string') va = va.toLowerCase(); if (typeof vb === 'string') vb = vb.toLowerCase();
+    return _leSortAsc ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
+  });
+}
+
+function leSortBy(col) {
+  if (_leSortCol === col) _leSortAsc = !_leSortAsc; else { _leSortCol = col; _leSortAsc = true; }
+  document.querySelectorAll('.le-sort-arrow').forEach(el => {
+    el.textContent = el.dataset.col === col ? (_leSortAsc ? ' ↑' : ' ↓') : '';
+  });
+  const rows = document.querySelectorAll('.le-track-row');
+  if (rows.length) {
+    const tracks = [...rows].map(r => ({ id: r.dataset.id }));
+    leSelectAll();
+  }
+}
+
+function leFormatDur(secs) {
+  const m = Math.floor(secs / 60), s = Math.floor(secs % 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function leNewPlaylist() {
+  const name = prompt('Playlist name:');
+  if (!name) return;
+  fetch('/api/library/playlists', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name }) })
+    .then(r => r.ok && leLoadLibrary());
+}
+
+function leNewFolder() {
+  const name = prompt('Folder name:');
+  if (!name) return;
+  fetch('/api/library/playlists', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name, type: 'folder' }) })
+    .then(r => r.ok && leLoadLibrary());
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const search = document.getElementById('le-search');
+  if (search) search.addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    const filtered = q ? _leAllTracks.filter(t =>
+      (t.title||'').toLowerCase().includes(q) ||
+      (t.artist||'').toLowerCase().includes(q) ||
+      (t.album||'').toLowerCase().includes(q)
+    ) : _leAllTracks;
+    leRenderTracks(filtered);
+  });
+  const rh = document.getElementById('le-resize-handle');
+  if (rh) {
+    let dragging = false, startX, startW;
+    rh.addEventListener('mousedown', e => {
+      dragging = true; startX = e.clientX;
+      startW = document.getElementById('le-sidebar').offsetWidth;
+      document.body.style.cursor = 'col-resize';
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const w = Math.max(160, Math.min(400, startW + e.clientX - startX));
+      document.getElementById('le-sidebar').style.width = w + 'px';
+    });
+    document.addEventListener('mouseup', () => { dragging = false; document.body.style.cursor = ''; });
+  }
+});
+
+function _leEsc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 /* Wire all drop zones once the DOM is confirmed ready */
 document.addEventListener('DOMContentLoaded', () => {
