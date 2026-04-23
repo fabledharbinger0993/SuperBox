@@ -1891,6 +1891,77 @@
 <!-- backdrop -->
 <div id="db-panel-backdrop" onclick="closeDbPanel()"></div>
 
+<!-- ══ Library & Playlist Editor ═══════════════════════════════════════════ -->
+<div id="library-editor-overlay" class="hidden">
+  <div id="library-editor">
+
+    <!-- Header bar -->
+    <div class="le-header">
+      <div class="le-header-left">
+        <img src="/static/RB_LOGO.png" alt="" style="width:20px;height:20px;object-fit:contain;opacity:.5;mix-blend-mode:screen;">
+        <span class="le-title">Library &amp; Playlist Editor</span>
+      </div>
+      <div class="le-header-center">
+        <input type="text" id="le-search" placeholder="Search tracks…" autocomplete="off">
+      </div>
+      <div class="le-header-right">
+        <button class="le-header-btn" onclick="leNewPlaylist()" title="New Playlist">＋ Playlist</button>
+        <button class="le-header-btn" onclick="leNewFolder()" title="New Folder">＋ Folder</button>
+        <button class="le-close-btn" onclick="closeLibraryEditor()" title="Close">✕</button>
+      </div>
+    </div>
+
+    <!-- Two-pane body -->
+    <div class="le-body">
+
+      <!-- Left: Playlist tree -->
+      <div class="le-sidebar" id="le-sidebar">
+        <div class="le-sidebar-section">All Tracks</div>
+        <button class="le-tree-item le-tree-all active" onclick="leSelectAll()">
+          <span class="le-tree-icon">♫</span>
+          <span class="le-tree-label">All Tracks</span>
+          <span class="le-tree-count" id="le-all-count">—</span>
+        </button>
+        <div class="le-sidebar-section">Playlists</div>
+        <div id="le-playlist-tree"></div>
+        <div class="le-sidebar-section" style="margin-top:auto;">History</div>
+        <button class="le-tree-item" onclick="leSelectHistory()">
+          <span class="le-tree-icon">⏱</span>
+          <span class="le-tree-label">Recently Added</span>
+        </button>
+      </div>
+
+      <!-- Resize handle -->
+      <div class="le-resize-handle" id="le-resize-handle"></div>
+
+      <!-- Right: Track list -->
+      <div class="le-main" id="le-main">
+        <div class="le-track-header">
+          <div class="le-col le-col-num">#</div>
+          <div class="le-col le-col-title" onclick="leSortBy('title')">Title <span class="le-sort-arrow" data-col="title"></span></div>
+          <div class="le-col le-col-artist" onclick="leSortBy('artist')">Artist <span class="le-sort-arrow" data-col="artist"></span></div>
+          <div class="le-col le-col-album" onclick="leSortBy('album')">Album <span class="le-sort-arrow" data-col="album"></span></div>
+          <div class="le-col le-col-bpm" onclick="leSortBy('bpm')">BPM <span class="le-sort-arrow" data-col="bpm"></span></div>
+          <div class="le-col le-col-key" onclick="leSortBy('key')">Key <span class="le-sort-arrow" data-col="key"></span></div>
+          <div class="le-col le-col-dur" onclick="leSortBy('duration')">Time <span class="le-sort-arrow" data-col="duration"></span></div>
+          <div class="le-col le-col-date" onclick="leSortBy('date')">Added <span class="le-sort-arrow" data-col="date"></span></div>
+        </div>
+        <div class="le-track-list" id="le-track-list">
+          <div class="le-empty-state" id="le-empty-state">
+            <div style="font-size:2.5rem;margin-bottom:12px;">♫</div>
+            <div>Select a playlist or load your library to get started.</div>
+          </div>
+        </div>
+        <div class="le-status-bar" id="le-status-bar">
+          <span id="le-status-text">No library loaded</span>
+          <button class="le-load-btn" onclick="leLoadLibrary()">Load Library</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- ══ RekitGo walkthrough modal ════════════════════════════════════════════ -->
 <div id="rekitgo-backdrop" onclick="closeRekitGo()"></div>
 <div id="rekitgo-panel">
