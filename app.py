@@ -312,6 +312,163 @@ sock = Sock(app)
 # ── Rekki brain: Congress deliberation + HologrA.I.m memory ──────────────────
 # ── RekitBox Native Playlist/Track API ───────────────────────────────────────
 
+def _library_track_payload(track, *, track_no=None):
+    import datetime  # noqa: PLC0415
+
+    date_added = None
+    stock_date = getattr(track, "StockDate", None)
+    if stock_date and isinstance(stock_date, (datetime.date, datetime.datetime)):
+        try:
+            date_added = stock_date.isoformat()
+        except Exception:
+            date_added = None
+
+    return {
+        "id": str(track.ID),
+        "title": track.Title or "",
+        "artist": track.Artist.Name if track.Artist else "",
+        "album": track.Album.Name if getattr(track, "Album", None) else "",
+        "bpm": round(track.BPM / 100, 1) if track.BPM else None,
+        "key": track.Key.Name if track.Key else None,
+        "duration": track.Length if track.Length else None,
+        "date_added": date_added,
+        "file_path": track.FolderPath or "",
+        "track_no": track_no,
+    }
+
+
+def _playlist_tree_payload(db):
+    rows = db.get_playlist().all()
+    songs_by_playlist = {}
+    nodes_by_id = {}
+    roots = []
+
+    for song in db.get_playlist_songs().all():
+        playlist_id = str(song.PlaylistID)
+        songs_by_playlist[playlist_id] = songs_by_playlist.get(playlist_id, 0) + 1
+
+    for playlist in rows:
+        attribute = int(getattr(playlist, "Attribute", 0) or 0)
+        node = {
+            "id": str(playlist.ID),
+            "name": playlist.Name or "",
+            "type": "folder" if attribute == 1 else "playlist",
+            "track_count": songs_by_playlist.get(str(playlist.ID), 0),
+            "children": [],
+            "parent_id": str(getattr(playlist, "ParentID", "") or ""),
+            "seq": int(getattr(playlist, "Seq", 0) or 0),
+        }
+        nodes_by_id[node["id"]] = node
+
+    def _sort_key(node):
+        return (node.get("seq", 0), node["name"].lower())
+
+    for node in nodes_by_id.values():
+        parent_id = node.pop("parent_id")
+        if parent_id and parent_id in nodes_by_id:
+            nodes_by_id[parent_id]["children"].append(node)
+        else:
+            roots.append(node)
+
+    def _finalize(nodes):
+        ordered = sorted(nodes, key=_sort_key)
+        for node in ordered:
+            node["children"] = _finalize(node["children"])
+            node.pop("seq", None)
+        return ordered
+
+    return _finalize(roots)
+
+
+@app.route("/api/library/tracks")
+def api_library_tracks():
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        with read_db(_DB) as db:
+            tracks = [_library_track_payload(track) for track in db.get_content().all()]
+            return jsonify(tracks)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/playlists", methods=["GET"])
+def api_library_playlists():
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        with read_db(_DB) as db:
+            return jsonify(_playlist_tree_payload(db))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/playlists", methods=["POST"])
+def api_library_create_playlist():
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name", "")).strip()
+    node_type = str(data.get("type", "playlist")).strip().lower() or "playlist"
+    parent_id = str(data.get("parent_id", "")).strip()
+
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    if node_type not in {"playlist", "folder"}:
+        return jsonify({"error": "type must be playlist or folder"}), 400
+
+    try:
+        with write_db(_DB) as db:
+            parent = None
+            if parent_id:
+                parent = db.get_playlist(ID=parent_id).one_or_none()
+                if parent is None:
+                    return jsonify({"error": "parent playlist not found"}), 404
+
+            if node_type == "folder":
+                playlist = db.create_playlist_folder(name, parent=parent)
+            else:
+                playlist = db.create_playlist(name, parent=parent)
+            db.commit()
+            return jsonify({
+                "ok": True,
+                "id": str(playlist.ID),
+                "name": playlist.Name or name,
+                "type": node_type,
+            }), 201
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/playlists/<playlist_id>/tracks")
+def api_library_playlist_tracks(playlist_id):
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        with read_db(_DB) as db:
+            playlist = db.get_playlist(ID=playlist_id).one_or_none()
+            if playlist is None:
+                return jsonify({"error": "Playlist not found"}), 404
+            if int(getattr(playlist, "Attribute", 0) or 0) == 1:
+                return jsonify([])
+
+            songs = db.get_playlist_songs(PlaylistID=playlist.ID).order_by("TrackNo").all()
+            tracks = []
+            for song in songs:
+                track = song.Content
+                if track is None:
+                    continue
+                tracks.append(_library_track_payload(track, track_no=getattr(song, "TrackNo", None)))
+            return jsonify(tracks)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
 # List all playlists
 @app.route("/api/playlists")
 def api_playlists():
