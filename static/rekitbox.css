@@ -3479,3 +3479,291 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 }
 #rekki-send:hover { background: rgba(168,85,247,.35); box-shadow: 0 0 7px rgba(168,85,247,.35); }
 #rekki-send:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Welcome: Mode selection cards ─────────────────────────────────────── */
+.welcome-mode-cards {
+  display: flex;
+  gap: 14px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.wbtn-mode {
+  flex: 1; min-width: 180px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+  color: var(--text);
+}
+.wbtn-mode:hover {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.wbtn-mode.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.wbtn-mode-icon { font-size: 1.8rem; flex-shrink: 0; line-height: 1; }
+.wbtn-mode-name { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
+.wbtn-mode-desc { font-size: .78rem; color: var(--text-muted); line-height: 1.45; }
+
+/* ── Tool icon: consistent filter for all rail buttons ─────────────────── */
+/* Remove db-tool-btn grayscale treatment — use the same accent filter */
+#tools-panel .db-tool-btn .tool-icon {
+  width: 28px;
+  height: 28px;
+  opacity: 0.82;
+  filter: hue-rotate(160deg) saturate(0.6) brightness(0.95);
+}
+#tools-panel .db-tool-btn:hover .tool-icon,
+#tools-panel .db-tool-btn.active .tool-icon {
+  opacity: 1;
+  filter: hue-rotate(160deg) saturate(1.1) brightness(1.1);
+}
+
+/* ── Library & Playlist Editor overlay ─────────────────────────────────── */
+#library-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(4,2,14,.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  opacity: 0;
+  transition: opacity .22s;
+}
+#library-editor-overlay.le-visible { opacity: 1; }
+
+#library-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  margin: 0;
+  overflow: hidden;
+}
+
+.le-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.le-header-left  { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.le-header-center { flex: 1; max-width: 420px; }
+.le-header-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.le-title {
+  font-size: .88rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--text);
+}
+#le-search {
+  width: 100%;
+  background: color-mix(in srgb, var(--surface-hi) 40%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 6px 12px;
+  font-size: .82rem;
+}
+#le-search:focus { border-color: var(--accent); outline: none; }
+.le-header-btn {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+  border-radius: 7px;
+  padding: 5px 13px;
+  font-size: .78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+.le-header-btn:hover { background: var(--accent-dim); }
+.le-close-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 7px;
+  padding: 5px 11px;
+  font-size: .88rem;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.le-close-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+.le-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.le-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 8px 0;
+}
+.le-sidebar-section {
+  padding: 10px 16px 4px;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.le-tree-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 14px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: .82rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background .12s;
+}
+.le-tree-item:hover { background: var(--accent-dim); }
+.le-tree-item.active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.le-tree-icon { font-size: .75rem; flex-shrink: 0; }
+.le-tree-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.le-tree-count { font-size: .72rem; color: var(--text-dim); flex-shrink: 0; }
+.le-tree-children { display: none; }
+.le-tree-children.le-tree-children-open { display: block; }
+
+.le-resize-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.le-resize-handle:hover { background: var(--accent); }
+
+.le-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.le-track-header {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 34px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  user-select: none;
+}
+.le-track-list {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+.le-track-row {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 38px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  font-size: .82rem;
+  transition: background .1s;
+  cursor: default;
+}
+.le-track-row:hover { background: var(--accent-dim); }
+.le-track-row:nth-child(even) { background: color-mix(in srgb, var(--surface) 30%, transparent); }
+.le-track-row:nth-child(even):hover { background: var(--accent-dim); }
+
+.le-col { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
+.le-col-num   { width: 36px; flex-shrink: 0; color: var(--text-dim); font-size: .75rem; text-align: right; padding-right: 14px; }
+.le-col-title { flex: 3; min-width: 0; font-weight: 500; }
+.le-col-artist{ flex: 2; min-width: 0; color: var(--text-muted); }
+.le-col-album { flex: 2; min-width: 0; color: var(--text-dim); }
+.le-col-bpm   { width: 56px; flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.le-col-key   { width: 64px; flex-shrink: 0; }
+.le-col-dur   { width: 52px; flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.le-col-date  { width: 92px; flex-shrink: 0; color: var(--text-dim); font-size: .75rem; }
+.le-track-header .le-col { cursor: pointer; }
+.le-track-header .le-col:hover { color: var(--accent); }
+.le-sort-arrow { color: var(--accent); }
+
+.le-key-badge {
+  display: inline-block;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: .72rem;
+  color: var(--accent);
+  font-family: var(--mono);
+}
+
+.le-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-dim);
+  font-size: .88rem;
+  text-align: center;
+  gap: 6px;
+}
+
+.le-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: .78rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.le-load-btn {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 3px 12px;
+  font-size: .76rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: auto;
+}
+.le-load-btn:hover { background: var(--accent-dim); }
