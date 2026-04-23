@@ -311,40 +311,6 @@ function _settingsUpdateUI(mode) {
 document.addEventListener('change', e => {
   if (e.target.name === 'archive-mode') _settingsUpdateUI(e.target.value);
 });
-async function saveSettings() {
-  const mode   = document.querySelector('input[name="archive-mode"]:checked')?.value || 'auto';
-  const custom = document.getElementById('settings-custom-input').value.trim();
-  if (mode === 'custom' && !custom) {
-    alert('Please enter a folder path for the custom archive location.');
-    return;
-  }
-  const btn = document.querySelector('.settings-save');
-  btn.textContent = 'Saving…'; btn.disabled = true;
-  try {
-    const res  = await fetch('/api/settings', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        archive_mode: mode,
-        custom_archive_dir: custom,
-        excluded_dirs: document.getElementById('settings-excluded-dirs').value
-          .split('\n').map(s => s.trim()).filter(Boolean),
-      }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      closeSettings();
-      // Restart the server to apply new config
-      await fetch('/api/quit', { method: 'POST' }).catch(() => {});
-      setTimeout(() => window.close(), 500);
-    } else {
-      alert('Save failed: ' + (data.error || 'unknown error'));
-    }
-  } catch(e) {
-    alert('Could not save settings.');
-  }
-  btn.textContent = 'Save & Restart'; btn.disabled = false;
-}
 
 /* ── Welcome wizard ─────────────────────────────────────────────────────────
    Permission keys: rekitbox-db-read / rekitbox-db-write = 'granted'|'denied'
