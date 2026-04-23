@@ -53,6 +53,7 @@ function _applyRekkiModeUI(mode, model = '') {
 function showRekitBoxMode() {
   fetch('/api/config').then(r => r.json()).then(cfg => {
     _applyRekkiModeUI(cfg.mode || 'suburban', cfg.rekki_model || '');
+    if (typeof _rekkiRefreshStatus === 'function') _rekkiRefreshStatus();
   }).catch(() => {
     _applyRekkiModeUI(localStorage.getItem('rekitbox-mode') || 'suburban');
   });
