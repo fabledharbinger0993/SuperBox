@@ -1,16 +1,67 @@
-// Show RekitBox mode and model in UI
+let _rekkiMode = localStorage.getItem('rekitbox-mode') || 'suburban';
+
+function _rekkiEnabled() {
+  return _rekkiMode === 'suburban';
+}
+
+function _showRekkiDisabledToast() {
+  showToast('Rekki is disabled in Rural mode. Switch to Suburban to enable AI.', 'neutral');
+}
+
+function _applyRekkiModeUI(mode, model = '') {
+  _rekkiMode = mode || 'suburban';
+  localStorage.setItem('rekitbox-mode', _rekkiMode);
+
+  const enabled = _rekkiEnabled();
+  const home = document.getElementById('rekki-home');
+  const avatar = document.getElementById('rekki-avatar');
+  const stage = document.getElementById('rekki-stage');
+  const connDot = document.getElementById('rekki-conn-dot');
+  const status = document.getElementById('rekki-status');
+
+  if (home) {
+    home.classList.toggle('rekki-disabled', !enabled);
+    home.setAttribute('aria-disabled', String(!enabled));
+    home.dataset.rekkiModeLabel = enabled ? 'AI' : 'OFF';
+    home.title = enabled
+      ? `Rekki — ${model ? `AI: ${model}` : 'AI enabled'} · drag onto anything or click to chat`
+      : 'Rekki is disabled in Rural mode — switch to Suburban to enable AI';
+  }
+
+  if (avatar) {
+    avatar.draggable = enabled;
+    avatar.alt = enabled ? 'Rekki' : 'Rekki (disabled)';
+  }
+
+  if (!enabled) {
+    document.body.classList.remove('rekki-dragging');
+    if (_rekkiOpen && stage) {
+      _rekkiOpen = false;
+      stage.classList.add('hidden');
+      _rekkiHideAnim();
+    }
+    if (typeof rekkiClearChip === 'function') rekkiClearChip();
+    if (connDot) {
+      connDot.classList.remove('online');
+      connDot.classList.add('offline');
+    }
+    if (status) status.textContent = 'Rural mode — Rekki disabled';
+  }
+}
+
+// Sync the actual Rekki avatar/stage with the configured mode.
 function showRekitBoxMode() {
   fetch('/api/config').then(r => r.json()).then(cfg => {
-    const mode = cfg.mode || 'suburban';
-    const model = cfg.rekki_model || '';
-    const el = document.getElementById('rekki-mode-indicator');
-    if (!el) return;
-    el.textContent = mode === 'rural'
-      ? 'Rural (No AI)'
-      : `Suburban (AI: ${model || 'auto'})`;
+    _applyRekkiModeUI(cfg.mode || 'suburban', cfg.rekki_model || '');
+  }).catch(() => {
+    _applyRekkiModeUI(localStorage.getItem('rekitbox-mode') || 'suburban');
   });
 }
-document.addEventListener('DOMContentLoaded', showRekitBoxMode);
+
+document.addEventListener('DOMContentLoaded', () => {
+  _applyRekkiModeUI(localStorage.getItem('rekitbox-mode') || 'suburban');
+  showRekitBoxMode();
+});
 /* ── State ─────────────────────────────────────────────────────────────────── */
 let activeSource = null;
 let isRunning    = false;
@@ -293,11 +344,13 @@ function openSettings() {
     if (modeRadio) modeRadio.checked = true;
     const modeBtn = document.getElementById('wbtn-' + boxMode);
     if (modeBtn) { document.querySelectorAll('.wbtn-mode').forEach(b => b.classList.remove('selected')); modeBtn.classList.add('selected'); }
+    _applyRekkiModeUI(boxMode, cfg.rekki_model || '');
     _settingsUpdateUI(mode);
   }).catch(() => {
     document.querySelector('input[name="archive-mode"][value="auto"]').checked = true;
     const sr = document.querySelector('input[name="rekitbox-mode"][value="suburban"]');
     if (sr) sr.checked = true;
+    _applyRekkiModeUI('suburban');
     _settingsUpdateUI('auto');
   });
   _sbFadeBd('settings-backdrop', true);
@@ -372,8 +425,7 @@ function welcomeSelectMode(mode) {
   // Sync settings radio if it exists
   const radio = document.querySelector(`input[name="rekitbox-mode"][value="${mode}"]`);
   if (radio) radio.checked = true;
-  const indicator = document.getElementById('rekki-mode-indicator');
-  if (indicator) indicator.textContent = mode === 'rural' ? '🌾 Rural' : '🏙️ Suburban';
+  _applyRekkiModeUI(mode);
   setTimeout(() => _welcomeShowReady(), 220);
 }
 
@@ -4857,6 +4909,10 @@ async function _rekkiBootHistory() {
 // ── Panel open/close ──────────────────────────────────────────────────────────
 
 function toggleRekkiPanel(ctx) {
+  if (!_rekkiEnabled()) {
+    _showRekkiDisabledToast();
+    return;
+  }
   const stage = document.getElementById('rekki-stage');
   if (!stage) return;
   const opening = !_rekkiOpen;
@@ -4902,6 +4958,11 @@ function _rekkiAppend(role, content, source) {
 }
 
 async function _rekkiRefreshStatus() {
+  if (!_rekkiEnabled()) {
+    _rekkiSetConn(false);
+    _rekkiSetStatus('Rural mode — Rekki disabled');
+    return;
+  }
   try {
     const r = await fetch('/api/rekki/status', { cache: 'no-store' });
     const d = await r.json();
@@ -4940,6 +5001,10 @@ function rekkiClearChip() {
 // ── Send message ──────────────────────────────────────────────────────────────
 
 async function rekkiSendMessage() {
+  if (!_rekkiEnabled()) {
+    _showRekkiDisabledToast();
+    return;
+  }
   const input = document.getElementById('rekki-input');
   const send  = document.getElementById('rekki-send');
   if (!input || !send) return;
@@ -5175,6 +5240,11 @@ function _rekkiAvatarInit() {
   if (!avatar || !home) return;
 
   avatar.addEventListener('dragstart', (e) => {
+    if (!_rekkiEnabled()) {
+      e.preventDefault();
+      _showRekkiDisabledToast();
+      return;
+    }
     e.dataTransfer.setData('application/rekki', '1');
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setDragImage(avatar, avatar.naturalWidth ? 24 : 20, 24);
@@ -5189,7 +5259,12 @@ function _rekkiAvatarInit() {
 
   // Make the home element itself clickable to toggle panel
   home.addEventListener('click', (e) => {
-    if (e.target === avatar || e.target === home) toggleRekkiPanel();
+    if (e.target !== avatar && e.target !== home) return;
+    if (!_rekkiEnabled()) {
+      _showRekkiDisabledToast();
+      return;
+    }
+    toggleRekkiPanel();
   });
 }
 
@@ -5232,8 +5307,13 @@ document.addEventListener('contextmenu', (e) => {
   const menu = document.getElementById('rekki-ctx-menu');
   if (!menu) return;
 
+  if (!_rekkiEnabled()) {
+    menu.classList.add('hidden');
+    return;
+  }
+
   // Don't intercept clicks inside the Rekki panel itself
-  if (e.target.closest('#rekki-panel, #rekki-ctx-menu')) return;
+  if (e.target.closest('#rekki-stage, #rekki-ctx-menu')) return;
 
   e.preventDefault();
   _rekkiCtxTarget = e.target;
@@ -5255,12 +5335,14 @@ document.addEventListener('click', () => {
 
 async function rekkiMenuExplain() {
   document.getElementById('rekki-ctx-menu')?.classList.add('hidden');
+  if (!_rekkiEnabled()) return;
   if (!_rekkiCtxTarget) return;
   await _rekkiEngageWith(_rekkiCtxTarget);
 }
 
 async function rekkiMenuTag() {
   document.getElementById('rekki-ctx-menu')?.classList.add('hidden');
+  if (!_rekkiEnabled()) return;
   if (!_rekkiCtxTarget) return;
 
   // Force inference even if context already exists, to allow re-tagging
