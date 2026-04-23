@@ -5070,7 +5070,7 @@ function _rekkiScrape(el) {
   }
 
   const toolPanel = document.querySelector('.card.active, [data-tool].active, section.active');
-  const logTail   = [...document.querySelectorAll('#log-content .log-line, .log-entry')]
+  const logTail   = [...document.querySelectorAll('#log-output .log-line, #log-output .log-entry')]
     .slice(-5).map(e => e.textContent.trim().slice(0, 100));
 
   return {
