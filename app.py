@@ -956,6 +956,7 @@ def api_rekki_discover_music():
     # Also load known paths from the Rekordbox DB (FolderPath column in djmdContent).
     # This catches tracks that are in the library but haven't been scanned by RekitBox yet.
     # Read-only connection — no write risk.
+    from config import DJMT_DB  # noqa: PLC0415
     _rb_db = Path(DJMT_DB)
     if _rb_db.exists():
         try:
