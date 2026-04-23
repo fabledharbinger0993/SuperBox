@@ -3859,6 +3859,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 }
 .le-track-header .le-col { cursor: pointer; transition: color .12s; }
 .le-track-header .le-col:hover { color: #d946ef; }
+.le-track-header .le-col-play { cursor: default; }
+.le-track-header .le-col-play:hover { color: rgba(200, 130, 240, 0.5); }
 .le-sort-arrow { color: #d946ef; font-style: normal; }
 
 .le-track-list {
@@ -3897,6 +3899,14 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 
 /* ── Columns ────────────────────────────────────────────────────────────── */
 .le-col { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 12px; }
+.le-col-play  {
+  width: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 10px;
+}
 .le-col-num   { width: 36px; flex-shrink: 0; color: rgba(200,130,240,.3); font-size: .7rem; text-align: right; padding-right: 16px; font-variant-numeric: tabular-nums; }
 .le-col-title { flex: 3; min-width: 0; font-weight: 500; color: #ede4ff; }
 .le-col-artist{ flex: 2; min-width: 0; color: rgba(220,180,255,.65); }
@@ -3917,6 +3927,33 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   color: #e879f9;
   font-family: var(--mono);
   letter-spacing: .02em;
+}
+
+.le-play-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(89, 200, 214, 0.32);
+  background: rgba(89, 200, 214, 0.12);
+  color: #8fe6ef;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .72rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s, transform .15s;
+}
+.le-play-btn:hover {
+  background: rgba(89, 200, 214, 0.2);
+  border-color: rgba(89, 200, 214, 0.48);
+  color: #d5fbff;
+  transform: scale(1.05);
+}
+.le-play-btn.is-playing {
+  background: rgba(240, 180, 75, 0.16);
+  border-color: rgba(240, 180, 75, 0.46);
+  color: #f0b44b;
 }
 
 /* ── Empty / loading state ──────────────────────────────────────────────── */

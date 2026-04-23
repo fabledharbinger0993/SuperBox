@@ -393,6 +393,29 @@ def api_library_tracks():
         return jsonify({"error": str(exc)}), 500
 
 
+@app.route("/api/library/tracks/<track_id>/stream")
+def api_library_track_stream(track_id):
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        with read_db(_DB) as db:
+            track = db.get_content(ID=track_id).one_or_none()
+            if track is None:
+                return jsonify({"error": "Track not found"}), 404
+            file_path = str(getattr(track, "FolderPath", "") or "").strip()
+
+        if not file_path:
+            return jsonify({"error": "Track file path missing"}), 404
+        if not os.path.isfile(file_path):
+            return jsonify({"error": "Track file not found"}), 404
+
+        mime, _ = mimetypes.guess_type(file_path)
+        return send_file(file_path, mimetype=mime or "audio/mpeg", conditional=True)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
 @app.route("/api/library/playlists", methods=["GET"])
 def api_library_playlists():
     from db_connection import read_db  # noqa: PLC0415

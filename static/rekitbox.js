@@ -4308,6 +4308,8 @@ let _leActivePlaylistId = null;
 let _leCreateType = 'playlist';
 let _leStatusLabel = 'No library loaded';
 let _leSelectedTrackIds = new Set();
+let _lePlayer = null;
+let _lePlayingTrackId = null;
 
 function openLibraryEditor() {
   _leOpen = true;
@@ -4375,6 +4377,66 @@ function leUpdateActionState() {
   } else {
     addBtn.textContent = `Add ${_leSelectedTrackIds.size} Tracks`;
   }
+}
+
+function leEnsurePlayer() {
+  if (_lePlayer) return _lePlayer;
+  _lePlayer = new Audio();
+  _lePlayer.addEventListener('play', () => leRefreshPlaybackButtons());
+  _lePlayer.addEventListener('pause', () => leRefreshPlaybackButtons());
+  _lePlayer.addEventListener('ended', () => {
+    _lePlayingTrackId = null;
+    leRefreshPlaybackButtons();
+  });
+  _lePlayer.addEventListener('error', () => {
+    _lePlayingTrackId = null;
+    leRefreshPlaybackButtons();
+  });
+  return _lePlayer;
+}
+
+function lePlaybackStateFor(trackId) {
+  if (_lePlayingTrackId !== String(trackId) || !_lePlayer || _lePlayer.paused) return 'play';
+  return 'pause';
+}
+
+function leRefreshPlaybackButtons() {
+  document.querySelectorAll('.le-play-btn').forEach(btn => {
+    const state = lePlaybackStateFor(btn.dataset.trackId);
+    btn.textContent = state === 'pause' ? '❚❚' : '▶';
+    btn.setAttribute('aria-label', state === 'pause' ? 'Pause track' : 'Play track');
+    btn.classList.toggle('is-playing', state === 'pause');
+  });
+}
+
+async function leToggleTrackPlayback(trackId, event) {
+  event?.stopPropagation();
+  const player = leEnsurePlayer();
+  const normalizedTrackId = String(trackId);
+  if (_lePlayingTrackId === normalizedTrackId) {
+    if (player.paused) {
+      try {
+        await player.play();
+      } catch (_) {
+        showToast('Could not play track.', 'error');
+      }
+    } else {
+      player.pause();
+    }
+    leRefreshPlaybackButtons();
+    return;
+  }
+
+  _lePlayingTrackId = normalizedTrackId;
+  player.src = `/api/library/tracks/${encodeURIComponent(normalizedTrackId)}/stream`;
+  player.load();
+  try {
+    await player.play();
+  } catch (_) {
+    _lePlayingTrackId = null;
+    showToast('Could not play track.', 'error');
+  }
+  leRefreshPlaybackButtons();
 }
 
 async function leLoadLibrary() {
@@ -4483,11 +4545,13 @@ function leRenderTracks(tracks) {
     row.className = 'le-track-row';
     row.dataset.id = t.id;
     if (_leSelectedTrackIds.has(String(t.id))) row.classList.add('selected');
+    const playbackState = lePlaybackStateFor(t.id);
     const key = t.key ? `<span class="le-key-badge">${_leEsc(t.key)}</span>` : '—';
     const bpm = t.bpm ? Math.round(t.bpm) : '—';
     const dur = t.duration ? leFormatDur(t.duration) : '—';
     const date = t.date_added ? t.date_added.slice(0, 10) : '—';
     row.innerHTML = `
+      <div class="le-col le-col-play"><button class="le-play-btn${playbackState === 'pause' ? ' is-playing' : ''}" data-track-id="${t.id}" aria-label="${playbackState === 'pause' ? 'Pause track' : 'Play track'}">${playbackState === 'pause' ? '❚❚' : '▶'}</button></div>
       <div class="le-col le-col-num">${i + 1}</div>
       <div class="le-col le-col-title le-editable" data-field="title" data-id="${t.id}">${_leEsc(t.title || '—')}</div>
       <div class="le-col le-col-artist le-editable" data-field="artist" data-id="${t.id}">${_leEsc(t.artist || '—')}</div>
@@ -4496,6 +4560,7 @@ function leRenderTracks(tracks) {
       <div class="le-col le-col-key">${key}</div>
       <div class="le-col le-col-dur">${dur}</div>
       <div class="le-col le-col-date">${date}</div>`;
+    row.querySelector('.le-play-btn')?.addEventListener('click', evt => leToggleTrackPlayback(t.id, evt));
     row.addEventListener('click', evt => leToggleTrackSelection(String(t.id), evt));
     list.appendChild(row);
   });
