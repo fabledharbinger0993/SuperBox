@@ -3789,6 +3789,9 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(180, 40, 220, 0.25) transparent;
+  background: rgba(4, 1, 10, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .le-track-row {
