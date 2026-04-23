@@ -1476,7 +1476,31 @@
       </div>
     </div>
 
-    <!-- Step 4: Ready (content set dynamically) -->
+    <!-- Step 4: Mode selection — Rural vs Suburban -->
+    <div class="welcome-step" id="wstep-mode">
+      <div class="welcome-step-body">
+        <p class="welcome-step-title">Choose your RekitBox mode</p>
+        <p class="welcome-step-sub">Controls whether the Rekki AI agent is available. You can change this later in Settings.</p>
+        <div class="welcome-mode-cards">
+          <button class="wbtn-mode" id="wbtn-suburban" onclick="welcomeSelectMode('suburban')">
+            <span class="wbtn-mode-icon">🏙️</span>
+            <div>
+              <div class="wbtn-mode-name">Suburban</div>
+              <div class="wbtn-mode-desc">AI enabled — Rekki uses your largest local Ollama model. All features available.</div>
+            </div>
+          </button>
+          <button class="wbtn-mode" id="wbtn-rural" onclick="welcomeSelectMode('rural')">
+            <span class="wbtn-mode-icon">🌾</span>
+            <div>
+              <div class="wbtn-mode-name">Rural</div>
+              <div class="wbtn-mode-desc">No AI — pure toolkit mode with intelligent report compounding. Fastest, no Ollama required.</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: Ready (content set dynamically) -->
     <div class="welcome-step" id="wstep-ready">
       <div class="welcome-step-body" id="wstep-ready-body"></div>
       <div class="welcome-footer">
