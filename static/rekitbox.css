@@ -3182,6 +3182,32 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   cursor: grab;
 }
 #rekki-home:active { cursor: grabbing; }
+#rekki-home::after {
+  content: attr(data-rekki-mode-label);
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  min-width: 24px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(109,184,212,.15);
+  border: 1px solid rgba(109,184,212,.35);
+  color: #c8e8f5;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  line-height: 1.5;
+  text-align: center;
+  pointer-events: none;
+}
+#rekki-home.rekki-disabled {
+  cursor: not-allowed;
+}
+#rekki-home.rekki-disabled::after {
+  background: rgba(239,68,68,.12);
+  border-color: rgba(239,68,68,.35);
+  color: #fecaca;
+}
 
 #rekki-avatar {
   width: 48px; height: 48px;
@@ -3193,6 +3219,12 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   transition: filter .2s ease, transform .2s ease;
 }
 #rekki-avatar:hover { filter: drop-shadow(0 0 8px rgba(109,184,212,.55)); transform: scale(1.06); }
+#rekki-home.rekki-disabled #rekki-avatar,
+#rekki-home.rekki-disabled #rekki-avatar:hover {
+  filter: grayscale(1) brightness(.78);
+  opacity: .5;
+  transform: none;
+}
 
 @keyframes rekki-return {
   0%   { transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(109,184,212,.7)); }
