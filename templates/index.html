@@ -1387,6 +1387,27 @@
       </div>
     </div>
 
+    <!-- RekitBox Mode (mirrors welcome wizard choice) -->
+    <div class="settings-section" style="border-top:1px solid var(--border);margin-top:18px;padding-top:18px;">
+      <h3>RekitBox Mode</h3>
+      <div class="settings-radio-group">
+        <label class="settings-radio">
+          <input type="radio" name="rekitbox-mode" value="suburban">
+          <div>
+            <div class="settings-radio-label">🏙️ Suburban — AI enabled (recommended)</div>
+            <div class="settings-radio-desc">Rekki agent is enabled and will use the largest local Ollama model that fits in RAM. All AI features available.</div>
+          </div>
+        </label>
+        <label class="settings-radio">
+          <input type="radio" name="rekitbox-mode" value="rural">
+          <div>
+            <div class="settings-radio-label">🌾 Rural — No AI</div>
+            <div class="settings-radio-desc">All Rekki/AI features are disabled. RekitBox runs as a pure toolkit with intelligent report compounding.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+
     <!-- Footer -->
     <div class="settings-footer">
       <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
