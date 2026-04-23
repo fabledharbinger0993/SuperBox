@@ -875,6 +875,8 @@ def api_rekki_status():
 
 @app.route("/api/rekki/context")
 def api_rekki_context():
+    if not _rekki_enabled():
+        return jsonify({"error": "Rekki is disabled in Rural mode."}), 403
     return jsonify(_rekki_context_snapshot())
 
 
@@ -1005,6 +1007,9 @@ def api_rekki_discover_music():
 
 @app.route("/api/rekki/chat", methods=["POST"])
 def api_rekki_chat():
+    if not _rekki_enabled():
+        return jsonify({"ok": False, "error": "Rekki is disabled in Rural mode."}), 403
+
     data = request.get_json(silent=True) or {}
     user_message = str(data.get("message", "")).strip()
     history = data.get("history") or []
@@ -2721,6 +2726,8 @@ def api_settings():
             cfg["custom_archive_dir"] = data["custom_archive_dir"]
         if "excluded_dirs" in data:
             cfg["excluded_dirs"] = [d for d in data["excluded_dirs"] if isinstance(d, str) and d.strip()]
+        if "mode" in data and data["mode"] in ("rural", "suburban"):
+            cfg["mode"] = data["mode"]
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             _json.dump(cfg, f, indent=2)
         return jsonify({"ok": True, "note": "Restart RekitBox for changes to take effect."})
