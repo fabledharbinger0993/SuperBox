@@ -1923,10 +1923,17 @@
         <input type="text" id="le-search" placeholder="Search tracks…" autocomplete="off">
       </div>
       <div class="le-header-right">
-        <button class="le-header-btn" onclick="leNewPlaylist()" title="New Playlist">＋ Playlist</button>
-        <button class="le-header-btn" onclick="leNewFolder()" title="New Folder">＋ Folder</button>
+        <button class="le-header-btn" onclick="leStartCreate('playlist')" title="New Playlist">＋ Playlist</button>
+        <button class="le-header-btn" onclick="leStartCreate('folder')" title="New Folder">＋ Folder</button>
         <button class="le-close-btn" onclick="closeLibraryEditor()" title="Close">✕</button>
       </div>
+    </div>
+
+    <div class="le-create-bar" id="le-create-bar">
+      <span class="le-create-label" id="le-create-label">Create playlist</span>
+      <input type="text" id="le-create-input" class="le-create-input" placeholder="Playlist name" autocomplete="off">
+      <button class="le-create-submit" onclick="leSubmitCreate()">Create</button>
+      <button class="le-create-cancel" onclick="leCloseCreate()">Cancel</button>
     </div>
 
     <!-- Two-pane body -->

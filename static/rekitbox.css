@@ -3676,6 +3676,69 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   box-shadow: 0 0 10px rgba(217, 70, 239, 0.25);
 }
 
+.le-create-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: rgba(8, 3, 16, 0.84);
+  border-bottom: 1px solid rgba(160, 30, 200, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.le-create-bar.hidden { display: none; }
+.le-create-label {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(200, 130, 240, 0.58);
+  flex-shrink: 0;
+}
+.le-create-input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(180, 50, 220, 0.3);
+  border-radius: 8px;
+  color: #f0e6ff;
+  padding: 7px 12px;
+  font-size: .8rem;
+  font-family: var(--mono);
+}
+.le-create-input:focus {
+  outline: none;
+  border-color: rgba(217, 70, 239, 0.65);
+  box-shadow: 0 0 10px rgba(217, 70, 239, 0.2);
+}
+.le-create-submit,
+.le-create-cancel {
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: .76rem;
+  font-weight: 600;
+  letter-spacing: .03em;
+  cursor: pointer;
+}
+.le-create-submit {
+  background: rgba(240, 180, 75, 0.16);
+  border: 1px solid rgba(240, 180, 75, 0.45);
+  color: #f0b44b;
+}
+.le-create-submit:hover {
+  background: rgba(240, 180, 75, 0.24);
+  box-shadow: 0 0 10px rgba(240, 180, 75, 0.18);
+}
+.le-create-cancel {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.12);
+  color: rgba(220,200,255,.6);
+}
+.le-create-cancel:hover {
+  background: rgba(255,255,255,.05);
+  color: #f0e6ff;
+}
+
 .le-close-btn {
   background: transparent;
   border: 1px solid rgba(255,255,255,.1);
