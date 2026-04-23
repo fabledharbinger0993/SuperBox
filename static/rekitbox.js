@@ -352,11 +352,24 @@ function welcomeDenyRead() {
 }
 function welcomeGrantWrite() {
   _wWriteGranted = true;
-  _welcomeShowReady();
+  welcomeShowStep('mode');
 }
 function welcomeDenyWrite() {
   _wWriteGranted = false;
-  _welcomeShowReady();
+  welcomeShowStep('mode');
+}
+
+function welcomeSelectMode(mode) {
+  localStorage.setItem('rekitbox-mode', mode);
+  document.querySelectorAll('.wbtn-mode').forEach(b => b.classList.remove('selected'));
+  const btn = document.getElementById('wbtn-' + mode);
+  if (btn) btn.classList.add('selected');
+  // Sync settings radio if it exists
+  const radio = document.querySelector(`input[name="rekitbox-mode"][value="${mode}"]`);
+  if (radio) radio.checked = true;
+  const indicator = document.getElementById('rekki-mode-indicator');
+  if (indicator) indicator.textContent = mode === 'rural' ? '🌾 Rural' : '🏙️ Suburban';
+  setTimeout(() => _welcomeShowReady(), 220);
 }
 
 function _welcomeShowReady() {
