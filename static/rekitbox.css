@@ -3859,10 +3859,12 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   align-items: center;
   gap: 14px;
   padding: 5px 18px;
-  border-top: 1px solid rgba(160, 30, 200, 0.2);
-  background: rgba(12, 6, 22, 0.96);
+  border-top: 1px solid rgba(160, 30, 200, 0.18);
+  background: rgba(8, 3, 16, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   font-size: .74rem;
-  color: rgba(200, 130, 240, 0.45);
+  color: rgba(200, 130, 240, 0.5);
   flex-shrink: 0;
   letter-spacing: .02em;
 }
