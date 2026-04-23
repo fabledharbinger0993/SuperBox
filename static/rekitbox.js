@@ -4367,6 +4367,9 @@ async function leLoadLibrary() {
       fetch('/api/library/tracks'),
       fetch('/api/library/playlists')
     ]);
+    if (!tracksRes.ok || !playlistsRes.ok) {
+      throw new Error('library load failed');
+    }
     if (tracksRes.ok) {
       _leAllTracks = await tracksRes.json();
       document.getElementById('le-all-count').textContent = _leAllTracks.length;
