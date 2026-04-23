@@ -3689,8 +3689,10 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  background: rgba(12, 6, 22, 0.98);
-  border-right: 1px solid rgba(160, 30, 200, 0.22);
+  background: rgba(8, 3, 16, 0.82);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border-right: 1px solid rgba(160, 30, 200, 0.2);
   padding: 10px 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(180, 40, 220, 0.3) transparent;
