@@ -469,6 +469,49 @@ def api_library_playlist_tracks(playlist_id):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
+
+@app.route("/api/library/playlists/<playlist_id>/tracks", methods=["POST"])
+def api_library_add_tracks_to_playlist(playlist_id):
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    data = request.get_json(silent=True) or {}
+    track_ids = data.get("track_ids")
+    if not isinstance(track_ids, list):
+        single_track_id = str(data.get("track_id", "")).strip()
+        track_ids = [single_track_id] if single_track_id else []
+
+    track_ids = [str(track_id).strip() for track_id in track_ids if str(track_id).strip()]
+    if not track_ids:
+        return jsonify({"error": "track_ids required"}), 400
+
+    try:
+        with write_db(_DB) as db:
+            playlist = db.get_playlist(ID=playlist_id).one_or_none()
+            if playlist is None:
+                return jsonify({"error": "Playlist not found"}), 404
+            if int(getattr(playlist, "Attribute", 0) or 0) == 1:
+                return jsonify({"error": "Cannot add tracks to a folder"}), 400
+
+            added = 0
+            skipped = []
+            for track_id in track_ids:
+                track = db.get_content(ID=track_id).one_or_none()
+                if track is None:
+                    skipped.append(track_id)
+                    continue
+                try:
+                    db.add_to_playlist(playlist, track, track_no=None)
+                    added += 1
+                except Exception:
+                    skipped.append(track_id)
+            db.commit()
+            return jsonify({"ok": True, "added": added, "skipped": skipped}), 201
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
 # List all playlists
 @app.route("/api/playlists")
 def api_playlists():

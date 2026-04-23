@@ -3964,3 +3964,18 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   background: rgba(217, 70, 239, 0.24);
   box-shadow: 0 0 10px rgba(217, 70, 239, 0.22);
 }
+.le-load-btn:disabled {
+  opacity: .45;
+  cursor: default;
+  box-shadow: none;
+}
+.le-add-btn {
+  background: rgba(240, 180, 75, 0.16);
+  border-color: rgba(240, 180, 75, 0.4);
+  color: #f0b44b;
+  margin-left: auto;
+}
+.le-add-btn:hover:not(:disabled) {
+  background: rgba(240, 180, 75, 0.24);
+  box-shadow: 0 0 10px rgba(240, 180, 75, 0.2);
+}

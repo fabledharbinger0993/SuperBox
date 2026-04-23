@@ -4307,6 +4307,7 @@ let _leSortAsc = true;
 let _leActivePlaylistId = null;
 let _leCreateType = 'playlist';
 let _leStatusLabel = 'No library loaded';
+let _leSelectedTrackIds = new Set();
 
 function openLibraryEditor() {
   _leOpen = true;
@@ -4345,6 +4346,7 @@ function leSetStatus(label, count, totalCount) {
 function leSetTrackView(tracks, label) {
   _leBaseTracks = Array.isArray(tracks) ? tracks : [];
   _leStatusLabel = label || 'All Tracks';
+  _leSelectedTrackIds.clear();
   leRefreshTrackView();
 }
 
@@ -4356,6 +4358,23 @@ function leRefreshTrackView() {
   ) : _leBaseTracks;
   leRenderTracks(filtered);
   leSetStatus(_leStatusLabel, filtered.length, _leBaseTracks.length);
+  leUpdateActionState();
+}
+
+function leUpdateActionState() {
+  const addBtn = document.getElementById('le-add-btn');
+  if (!addBtn) return;
+  const canAdd = !!_leActivePlaylistId && _leSelectedTrackIds.size > 0;
+  addBtn.disabled = !canAdd;
+  if (!_leActivePlaylistId) {
+    addBtn.textContent = 'Select Playlist';
+  } else if (_leSelectedTrackIds.size === 0) {
+    addBtn.textContent = 'Add Selected';
+  } else if (_leSelectedTrackIds.size === 1) {
+    addBtn.textContent = 'Add 1 Track';
+  } else {
+    addBtn.textContent = `Add ${_leSelectedTrackIds.size} Tracks`;
+  }
 }
 
 async function leLoadLibrary() {
@@ -4421,6 +4440,7 @@ function leSelectAll() {
   document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
   document.querySelector('.le-tree-all')?.classList.add('active');
   leSetTrackView(_leAllTracks, 'All Tracks');
+  leUpdateActionState();
 }
 
 async function leSelectPlaylist(node, buttonEl) {
@@ -4433,15 +4453,18 @@ async function leSelectPlaylist(node, buttonEl) {
     if (res.ok) {
       const tracks = await res.json();
       leSetTrackView(tracks, node.name);
+      leUpdateActionState();
     }
   } catch (_) {}
 }
 
 function leSelectHistory(buttonEl) {
+  _leActivePlaylistId = null;
   document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
   buttonEl?.classList.add('active');
   const sorted = [..._leAllTracks].sort((a, b) => (b.date_added || '').localeCompare(a.date_added || ''));
   leSetTrackView(sorted.slice(0, 200), 'Recently Added');
+  leUpdateActionState();
 }
 
 function leRenderTracks(tracks) {
@@ -4459,6 +4482,7 @@ function leRenderTracks(tracks) {
     const row = document.createElement('div');
     row.className = 'le-track-row';
     row.dataset.id = t.id;
+    if (_leSelectedTrackIds.has(String(t.id))) row.classList.add('selected');
     const key = t.key ? `<span class="le-key-badge">${_leEsc(t.key)}</span>` : '—';
     const bpm = t.bpm ? Math.round(t.bpm) : '—';
     const dur = t.duration ? leFormatDur(t.duration) : '—';
@@ -4472,8 +4496,24 @@ function leRenderTracks(tracks) {
       <div class="le-col le-col-key">${key}</div>
       <div class="le-col le-col-dur">${dur}</div>
       <div class="le-col le-col-date">${date}</div>`;
+    row.addEventListener('click', evt => leToggleTrackSelection(String(t.id), evt));
     list.appendChild(row);
   });
+}
+
+function leToggleTrackSelection(trackId, evt) {
+  if (evt.metaKey || evt.ctrlKey) {
+    if (_leSelectedTrackIds.has(trackId)) _leSelectedTrackIds.delete(trackId);
+    else _leSelectedTrackIds.add(trackId);
+  } else {
+    const alreadySingle = _leSelectedTrackIds.size === 1 && _leSelectedTrackIds.has(trackId);
+    _leSelectedTrackIds.clear();
+    if (!alreadySingle) _leSelectedTrackIds.add(trackId);
+  }
+  document.querySelectorAll('.le-track-row').forEach(row => {
+    row.classList.toggle('selected', _leSelectedTrackIds.has(row.dataset.id));
+  });
+  leUpdateActionState();
 }
 
 function leSorted(tracks) {
@@ -4538,6 +4578,39 @@ async function leSubmitCreate() {
     showToast(`${_leCreateType === 'folder' ? 'Folder' : 'Playlist'} created.`, 'success');
   } catch (_) {
     showToast(`Could not create ${_leCreateType}.`, 'error');
+  }
+}
+
+async function leAddSelectionToActivePlaylist() {
+  if (!_leActivePlaylistId) {
+    showToast('Select a playlist first.', 'error');
+    return;
+  }
+  const trackIds = [..._leSelectedTrackIds];
+  if (!trackIds.length) {
+    showToast('Select at least one track first.', 'error');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/library/playlists/${_leActivePlaylistId}/tracks`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ track_ids: trackIds }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || 'Could not add tracks to playlist.', 'error');
+      return;
+    }
+    showToast(`Added ${data.added || trackIds.length} track${(data.added || trackIds.length) === 1 ? '' : 's'} to playlist.`, 'success');
+    const activeButton = document.querySelector(`.le-tree-item[data-id="${_leActivePlaylistId}"]`);
+    const activeLabel = activeButton?.querySelector('.le-tree-label')?.textContent || 'Playlist';
+    await leLoadLibrary();
+    if (activeButton) {
+      await leSelectPlaylist({ id: _leActivePlaylistId, type: 'playlist', name: activeLabel }, document.querySelector(`.le-tree-item[data-id="${_leActivePlaylistId}"]`));
+    }
+  } catch (_) {
+    showToast('Could not add tracks to playlist.', 'error');
   }
 }
 
