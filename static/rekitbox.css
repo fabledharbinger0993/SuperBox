@@ -3561,44 +3561,43 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 }
 
 /* ── Library & Playlist Editor — own design space ───────────────────────── */
-/*    Palette: near-black + electric magenta, inspired by the RekitBox cube  */
+/*    Backdrop: disco-queens.jpg full bleed. UI floats as frosted glass.     */
 #library-editor-overlay {
   position: fixed;
   inset: 0;
   z-index: 500;
-  background: rgba(4, 1, 12, 0.88);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: url('/static/disco-queens.jpg') center / cover no-repeat #07050f;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
   opacity: 0;
-  transition: opacity .25s cubic-bezier(.4,0,.2,1);
+  transition: opacity .28s cubic-bezier(.4,0,.2,1);
 }
 #library-editor-overlay.le-visible { opacity: 1; }
+
+/* Dark vignette — deepens the edges, lets the center magenta glow breathe */
+#library-editor-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 60% at 50% 50%,
+    rgba(4,1,12,.5) 0%,
+    rgba(4,1,12,.85) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
 
 #library-editor {
   flex: 1;
   display: flex;
   flex-direction: column;
-  /* Deep near-black, slight purple cast */
-  background: #07050f;
+  background: transparent;
   position: relative;
   overflow: hidden;
+  z-index: 1;
 }
 
-/* Cube watermark — very faint, centered */
-#library-editor::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: url('/static/RB-bg-update.png') center / 52vh no-repeat;
-  opacity: 0.032;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Everything above the watermark */
+/* Everything above the backdrop */
 .le-header, .le-body, .le-status-bar { position: relative; z-index: 1; }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
