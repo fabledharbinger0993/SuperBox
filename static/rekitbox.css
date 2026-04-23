@@ -1,36 +1,36 @@
 /* ── Design tokens ─────────────────────────────────────────────────────── */
 :root {
-  --bg:            #222128;
-  --surface:       #004744;
-  --surface-hi:    #008682;
-  --border:        #FF9100;
-  --border-hi:     #AF6400;
+  --bg:            #17131f;
+  --surface:       #1d1627;
+  --surface-hi:    #2a2036;
+  --border:        #3b3048;
+  --border-hi:     #5b4b6d;
 
-  --text:          #d9d9d9;
-  --text-muted:    #00b4ae;
-  --text-dim:      #6200DF;
+  --text:          #e8e1f1;
+  --text-muted:    #b6abc8;
+  --text-dim:      #7e7292;
 
   --safe:          #1A8200;
   --safe-dim:      rgba(26, 130, 0, 0.15);
   --safe-border:   rgba(26, 130, 0, 0.30);
 
-  --caution:       #AF6400;
-  --caution-dim:   rgba(175, 100, 0, 0.15);
-  --caution-border:rgba(175, 100, 0, 0.30);
+  --caution:       #cf9d46;
+  --caution-dim:   rgba(207, 157, 70, 0.15);
+  --caution-border:rgba(207, 157, 70, 0.30);
 
-  --warn:          #d97706;
-  --warn-dim:      rgba(217, 119, 6, 0.15);
-  --warn-border:   rgba(217, 119, 6, 0.30);
+  --warn:          #f0b44b;
+  --warn-dim:      rgba(240, 180, 75, 0.15);
+  --warn-border:   rgba(240, 180, 75, 0.30);
 
   --danger:        #EF4444;
   --danger-dim:    rgba(239, 68, 68, 0.15);
   --danger-border: rgba(239, 68, 68, 0.30);
 
-  --accent:        #6db8d4;
-  --accent-dim:    rgba(109, 184, 212, 0.15);
-  --accent-rgb:    109, 184, 212;
-  --accent2:       #5600C4;
-  --accent2-dim:   rgba(86, 0, 196, 0.15);
+  --accent:        #59c8d6;
+  --accent-dim:    rgba(89, 200, 214, 0.15);
+  --accent-rgb:    89, 200, 214;
+  --accent2:       #f0b44b;
+  --accent2-dim:   rgba(240, 180, 75, 0.15);
 
   --mono: 'JetBrains Mono','Fira Code','Cascadia Code',ui-monospace,monospace;
   --sans: system-ui,-apple-system,'Segoe UI',sans-serif;
