@@ -1067,10 +1067,7 @@ checkDeadRoots();
 /* ── Workflow rail scroll ───────────────────────────────────────────────────── */
 document.querySelectorAll('.step-tab').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.step-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const target = document.getElementById(btn.dataset.target);
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (btn.dataset.target) openToolDrawer(btn.dataset.target);
   });
 });
 
@@ -4138,6 +4135,47 @@ function runAudit() {
   runCommand(`/api/run/audit?${p.toString()}`, 'Audit — Database + Physical Scan', null, true);
 }
 
+async function previewCanonicalPlan() {
+  try {
+    const res = await fetch('/api/library/integrity/canonical-paths/plan?max_groups=50', { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || 'Could not load canonical plan preview.', 'error');
+      return;
+    }
+
+    const lines = [];
+    lines.push('Canonical Path Consolidation Plan (Read-only Preview)');
+    lines.push('');
+    lines.push(`Tracks scanned: ${data.total_tracks_scanned || 0}`);
+    lines.push(`Conflict groups: ${data.total_conflict_groups || 0}`);
+    lines.push(`Planned groups shown: ${data.planned_groups || 0}`);
+    lines.push('');
+
+    const plans = Array.isArray(data.plans) ? data.plans : [];
+    if (!plans.length) {
+      lines.push('No canonical-path conflicts detected.');
+    } else {
+      plans.forEach((plan, idx) => {
+        const sig = plan.signature || {};
+        const keeper = plan.keeper || {};
+        const remove = Array.isArray(plan.remove_candidates) ? plan.remove_candidates : [];
+        lines.push(`[${idx + 1}] ${sig.artist || '(unknown artist)'} — ${sig.title || '(untitled)'} (${sig.duration || 0}s)`);
+        lines.push(`  Keep: ${keeper.path || '(missing path)'} [ContentID ${keeper.content_id || '?'}]`);
+        lines.push(`  Estimated playlist slots to rethread: ${plan.estimated_playlist_slots_to_rethread || 0}`);
+        remove.forEach((entry) => {
+          lines.push(`  Remove candidate: ${entry.path || '(missing path)'} [ContentID ${entry.content_id || '?'}] refs=${entry.playlist_ref_count || 0}`);
+        });
+        lines.push('');
+      });
+    }
+
+    openReportModal('Canonical Path Plan — Read-only Preview', lines.join('\n'), null);
+  } catch (_) {
+    showToast('Could not load canonical plan preview.', 'error');
+  }
+}
+
 /* ── Legacy single-input drop zones (relocate, import, link, settings, etc.) */
 function setupDropZone(input) {
   if (!input || input.dataset.dropReady) return;
@@ -4294,11 +4332,11 @@ function closeDbPanel() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && _dbPanelActive) closeDbPanel();
-  if (e.key === 'Escape' && _leOpen) closeLibraryEditor();
+  if (e.key === 'Escape' && _toolDrawerStep) closeToolDrawer();
 });
 
 /* ══ Library & Playlist Editor ════════════════════════════════════════════ */
-let _leOpen = false;
+let _leOpen = true;
 let _leAllTracks = [];
 let _leBaseTracks = [];
 let _leSearchQuery = '';
@@ -4307,28 +4345,122 @@ let _leSortAsc = true;
 let _leActivePlaylistId = null;
 let _leActivePlaylistName = '';
 let _leCreateType = 'playlist';
-let _leStatusLabel = 'No library loaded';
+let _leStatusLabel = 'Loading…';
 let _leSelectedTrackIds = new Set();
 let _lePlayer = null;
 let _lePlayingTrackId = null;
 
+/* Library editor is always the primary view — openLibraryEditor just reloads if needed */
 function openLibraryEditor() {
   _leOpen = true;
-  const overlay = document.getElementById('library-editor-overlay');
-  overlay.classList.remove('hidden');
-  void overlay.offsetWidth;
-  overlay.classList.add('le-visible');
-  document.getElementById('rail-btn-library').classList.add('active');
   if (!_leAllTracks.length) leLoadLibrary();
 }
 
-function closeLibraryEditor() {
-  _leOpen = false;
-  leCloseCreate();
-  const overlay = document.getElementById('library-editor-overlay');
-  overlay.classList.remove('le-visible');
-  document.getElementById('rail-btn-library').classList.remove('active');
-  setTimeout(() => overlay.classList.add('hidden'), 220);
+function closeLibraryEditor() { /* no-op — editor is always visible */ }
+
+function leScrollTop() {
+  document.getElementById('le-track-list')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ── Filter state ─────────────────────────────────────────────────────── */
+const _leFilters = { rating: 0, color: -1 };
+
+function leApplyFilters() {
+  if (!_leBaseTracks.length) return;
+  const q = _leSearchQuery;
+  const bMin = parseFloat(document.getElementById('lf-bpm-min')?.value) || null;
+  const bMax = parseFloat(document.getElementById('lf-bpm-max')?.value) || null;
+  const key  = document.getElementById('lf-key')?.value  || '';
+  const genre = document.getElementById('lf-genre')?.value || '';
+  const filtered = _leBaseTracks.filter(t => {
+    if (q && !((t.title||'').toLowerCase().includes(q) ||
+               (t.artist||'').toLowerCase().includes(q) ||
+               (t.album||'').toLowerCase().includes(q))) return false;
+    if (bMin != null && (t.bpm == null || t.bpm < bMin)) return false;
+    if (bMax != null && (t.bpm == null || t.bpm > bMax)) return false;
+    if (key   && t.key   !== key)   return false;
+    if (genre && t.genre !== genre) return false;
+    if (_leFilters.rating > 0 && (t.rating || 0) < _leFilters.rating) return false;
+    if (_leFilters.color >= 0 && (t.color ?? -1) !== _leFilters.color) return false;
+    return true;
+  });
+  leRenderTracks(filtered);
+  leSetStatus(_leStatusLabel, filtered.length, _leBaseTracks.length);
+  leUpdateActionState();
+}
+
+function leSetRatingFilter(stars) {
+  _leFilters.rating = _leFilters.rating === stars ? 0 : stars;
+  document.querySelectorAll('.lf-star').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.min) <= _leFilters.rating && _leFilters.rating > 0);
+  });
+  leApplyFilters();
+}
+
+function leSetColorFilter(colorId) {
+  _leFilters.color = colorId;
+  document.querySelectorAll('.lf-color-dot').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.color) === colorId);
+  });
+  leApplyFilters();
+}
+
+function leClearFilters() {
+  _leFilters.rating = 0;
+  _leFilters.color = -1;
+  ['lf-bpm-min','lf-bpm-max'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const key = document.getElementById('lf-key');   if (key)   key.value   = '';
+  const genre = document.getElementById('lf-genre'); if (genre) genre.value = '';
+  document.querySelectorAll('.lf-star').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.lf-color-dot').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.color) === -1);
+  });
+  leApplyFilters();
+}
+
+function libBuildGenreSelect() {
+  const genres = [...new Set(_leAllTracks.map(t => t.genre).filter(Boolean))].sort();
+  const sel = document.getElementById('lf-genre');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Any Genre</option>';
+  genres.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+/* ── Tool Drawer ──────────────────────────────────────────────────────── */
+let _toolDrawerStep = null;
+
+function openToolDrawer(stepId) {
+  const drawer = document.getElementById('tool-drawer');
+  if (!drawer) return;
+  drawer.classList.add('open');
+  _toolDrawerStep = stepId;
+
+  const tab = document.querySelector(`.step-tab[data-target="${stepId}"]`);
+  const title = tab ? tab.textContent.trim().replace(/^[^\w]+/, '') : stepId.replace('step-', '');
+  document.getElementById('tool-drawer-title').textContent = title;
+
+  document.querySelectorAll('.step-tab').forEach(b => b.classList.toggle('active', b.dataset.target === stepId));
+  document.querySelectorAll('#tools-panel .tool-btn[data-step]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.step === stepId);
+  });
+
+  setTimeout(() => {
+    const card = document.getElementById(stepId);
+    if (card) card.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }, 30);
+}
+
+function closeToolDrawer() {
+  document.getElementById('tool-drawer')?.classList.remove('open');
+  _toolDrawerStep = null;
+  document.querySelectorAll('#tools-panel .tool-btn[data-step]').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.step-tab').forEach(b => b.classList.remove('active'));
 }
 
 function leSetStatus(label, count, totalCount) {
@@ -4354,14 +4486,7 @@ function leSetTrackView(tracks, label) {
 }
 
 function leRefreshTrackView() {
-  const filtered = _leSearchQuery ? _leBaseTracks.filter(t =>
-    (t.title || '').toLowerCase().includes(_leSearchQuery) ||
-    (t.artist || '').toLowerCase().includes(_leSearchQuery) ||
-    (t.album || '').toLowerCase().includes(_leSearchQuery)
-  ) : _leBaseTracks;
-  leRenderTracks(filtered);
-  leSetStatus(_leStatusLabel, filtered.length, _leBaseTracks.length);
-  leUpdateActionState();
+  leApplyFilters();
 }
 
 function leUpdateActionState() {
@@ -4472,6 +4597,7 @@ async function leLoadLibrary() {
     if (tracksRes.ok) {
       _leAllTracks = await tracksRes.json();
       document.getElementById('le-all-count').textContent = _leAllTracks.length;
+      libBuildGenreSelect();
     }
     if (playlistsRes.ok) {
       const playlists = await playlistsRes.json();
@@ -4774,18 +4900,22 @@ async function leRemoveSelectionFromActivePlaylist() {
     return;
   }
   try {
-    let removed = 0;
-    for (const trackId of trackIds) {
-      const res = await fetch(`/api/library/playlists/${encodeURIComponent(_leActivePlaylistId)}/tracks/${encodeURIComponent(trackId)}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) removed += 1;
+    const res = await fetch(`/api/library/playlists/${encodeURIComponent(_leActivePlaylistId)}/tracks`, {
+      method: 'DELETE',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ track_ids: trackIds }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || 'Could not remove selected tracks from playlist.', 'error');
+      return;
     }
+    const removed = Number(data.removed || 0);
     if (!removed) {
       showToast('No selected tracks were removed.', 'error');
       return;
     }
-    showToast(`Removed ${removed} track${removed === 1 ? '' : 's'} from playlist.`, 'success');
+    showToast(`Removed ${removed} playlist entr${removed === 1 ? 'y' : 'ies'}.`, 'success');
     const activeBtn = document.querySelector(`.le-tree-item[data-id="${_leActivePlaylistId}"]`);
     const activeLabel = activeBtn?.querySelector('.le-tree-label')?.textContent || _leActivePlaylistName || 'Playlist';
     await leLoadLibrary();
@@ -4936,10 +5066,22 @@ function _leExportShowErrors(errors) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  /* Move workflow-rail + main into the tool drawer body */
+  const drawerBody = document.getElementById('tool-drawer-body');
+  if (drawerBody) {
+    const rail = document.getElementById('workflow-rail');
+    const main = document.querySelector('main[data-rekki-droppable]');
+    if (rail) drawerBody.appendChild(rail);
+    if (main) drawerBody.appendChild(main);
+  }
+
+  /* Auto-load library on startup */
+  leLoadLibrary();
+
   const search = document.getElementById('le-search');
   if (search) search.addEventListener('input', e => {
     _leSearchQuery = e.target.value.toLowerCase();
-    leRefreshTrackView();
+    leApplyFilters();
   });
   const createInput = document.getElementById('le-create-input');
   if (createInput) createInput.addEventListener('keydown', e => {
@@ -4969,7 +5111,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function _leEsc(str) {
-  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return String(str ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
 }
 
 /* Wire all drop zones once the DOM is confirmed ready */
@@ -5432,12 +5579,15 @@ async function _rekkiRefreshStatus() {
   try {
     const r = await fetch('/api/rekki/status', { cache: 'no-store' });
     const d = await r.json();
-    if (d.ollama_reachable && d.model_available !== false) {
+    if (d.provider === 'scripted-local') {
+      _rekkiSetConn(true);
+      _rekkiSetStatus('Scripted Local Mode');
+    } else if (d.ollama_reachable && d.model_available !== false) {
       _rekkiSetConn(true);
       _rekkiSetStatus(`${d.resolved_model || d.model}`);
     } else {
       _rekkiSetConn(false);
-      _rekkiSetStatus(d.error || 'Ollama offline');
+      _rekkiSetStatus(d.error || 'Rekki offline');
     }
   } catch {
     _rekkiSetConn(false);

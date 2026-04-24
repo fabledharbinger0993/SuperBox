@@ -1,0 +1,609 @@
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - img "RekitBox" [ref=e4]
+      - generic "Rekki — AI enabled · drag onto anything or click to chat" [ref=e5]:
+        - img "Rekki" [ref=e6]
+        - text: AI
+      - generic [ref=e7]:
+        - strong [ref=e8]: Guthrie Entertainment LLC
+        - text: rekordbox-toolkit
+    - generic [ref=e9]:
+      - generic [ref=e12]: RekordBox is closed — safe to write
+      - generic [ref=e15]: "Last backup: 496h 1m ago"
+      - generic [ref=e18]: "Build: b79e5d4 (unreleased)"
+      - button "⚙ Settings" [ref=e19] [cursor=pointer]
+      - button "⏻ Quit" [ref=e20] [cursor=pointer]
+  - contentinfo [ref=e21]:
+    - img "Guthrie Entertainment" [ref=e22]
+    - generic [ref=e23]:
+      - strong [ref=e24]: REKITBOX
+      - text: · Guthrie Entertainment LLC · Osos Discos
+  - generic [ref=e25]:
+    - generic [ref=e28]:
+      - button "↑" [ref=e29] [cursor=pointer]
+      - button "⌂" [ref=e30] [cursor=pointer]
+    - generic [ref=e32]: Drag any item to a drop zone ↗
+  - generic [ref=e33]:
+    - generic [ref=e34]: Library
+    - button "Library Library" [ref=e35] [cursor=pointer]:
+      - img "Library" [ref=e36]
+      - generic [ref=e37]: Library
+    - button "Browse Files Files" [ref=e38] [cursor=pointer]:
+      - img "Browse Files" [ref=e39]
+      - generic [ref=e40]: Files
+    - generic [ref=e41]: File Tools
+    - button "Tag Tracks Tag Tracks" [ref=e42] [cursor=pointer]:
+      - img "Tag Tracks" [ref=e43]
+      - generic [ref=e44]: Tag Tracks
+    - button "Rename Rename" [ref=e45] [cursor=pointer]:
+      - img "Rename" [ref=e46]
+      - generic [ref=e47]: Rename
+    - button "Convert Convert" [ref=e48] [cursor=pointer]:
+      - img "Convert" [ref=e49]
+      - generic [ref=e50]: Convert
+    - button "Normalize Normalize" [ref=e51] [cursor=pointer]:
+      - img "Normalize" [ref=e52]
+      - generic [ref=e53]: Normalize
+    - generic [ref=e54]: Organize
+    - button "Organize Organize" [ref=e55] [cursor=pointer]:
+      - img "Organize" [ref=e56]
+      - generic [ref=e57]: Organize
+    - button "Duplicates Duplicates" [ref=e58] [cursor=pointer]:
+      - img "Duplicates" [ref=e59]
+      - generic [ref=e60]: Duplicates
+    - button "Novelty Novelty" [ref=e61] [cursor=pointer]:
+      - img "Novelty" [ref=e62]
+      - generic [ref=e63]: Novelty
+    - generic [ref=e64]: Database
+    - button "Audit Audit" [ref=e65] [cursor=pointer]:
+      - img "Audit" [ref=e66]
+      - generic [ref=e67]: Audit
+    - button "Relocate Relocate" [ref=e68] [cursor=pointer]:
+      - img "Relocate" [ref=e69]
+      - generic [ref=e70]: Relocate
+    - button "Import Import" [ref=e71] [cursor=pointer]:
+      - img "Import" [ref=e72]
+      - generic [ref=e73]: Import
+    - button "Link Link" [ref=e74] [cursor=pointer]:
+      - img "Link" [ref=e75]
+      - generic [ref=e76]: Link
+    - generic [ref=e77]: Utilities
+    - button "Pipeline Pipeline" [ref=e78] [cursor=pointer]:
+      - img "Pipeline" [ref=e79]
+      - generic [ref=e80]: Pipeline
+    - button "RekitGo RekitGo" [ref=e81] [cursor=pointer]:
+      - img "RekitGo" [ref=e82]
+      - generic [ref=e83]: RekitGo
+    - button "About About" [ref=e85] [cursor=pointer]:
+      - img "About" [ref=e86]
+      - generic [ref=e87]: About
+    - button "Glossary Glossary" [ref=e88] [cursor=pointer]:
+      - img "Glossary" [ref=e89]
+      - generic [ref=e90]: Glossary
+  - generic:
+    - generic:
+      - text: Glossary & Concepts
+      - emphasis: click term to pin
+  - text: ⚠ ⚠ ⚠ ⚠
+  - generic [ref=e91]:
+    - generic [ref=e92]: RekitBox — Ready
+    - generic [ref=e93]:
+      - generic:
+        - generic: Remaining
+        - generic: —
+      - generic:
+        - generic: Complete w/o Edits
+        - generic: "0"
+      - generic:
+        - generic: Edited
+        - generic: "0"
+      - generic:
+        - generic: Errors
+        - generic: "0"
+        - generic: (see report)
+      - generic:
+        - generic: Warnings
+        - generic: "0"
+        - generic: (see report)
+    - generic:
+      - button "▸ Output"
+  - generic [ref=e95]:
+    - strong [ref=e97]: Output
+    - button "−" [ref=e98] [cursor=pointer]
+  - generic [ref=e102]:
+    - generic [ref=e103]: RekordBox DB Tools
+    - button "✕" [ref=e104] [cursor=pointer]
+  - generic [ref=e107]:
+    - generic [ref=e108]:
+      - generic [ref=e110]: Library & Playlist Editor
+      - textbox "Search tracks…" [ref=e112]
+      - generic [ref=e113]:
+        - button "＋ Playlist" [ref=e114] [cursor=pointer]
+        - button "＋ Folder" [ref=e115] [cursor=pointer]
+        - button "Rename" [disabled] [ref=e116] [cursor=pointer]
+        - button "Delete" [disabled] [ref=e117] [cursor=pointer]
+        - button "⬆ Export to USB" [ref=e118] [cursor=pointer]
+    - generic [ref=e119]:
+      - generic [ref=e120]:
+        - generic [ref=e121]: BPM
+        - spinbutton [ref=e122]
+        - generic [ref=e123]: –
+        - spinbutton [ref=e124]
+      - generic [ref=e126]:
+        - generic [ref=e127]: Key
+        - combobox [ref=e128] [cursor=pointer]:
+          - option "Any Key" [selected]
+          - option "1A"
+          - option "2A"
+          - option "3A"
+          - option "4A"
+          - option "5A"
+          - option "6A"
+          - option "7A"
+          - option "8A"
+          - option "9A"
+          - option "10A"
+          - option "11A"
+          - option "12A"
+          - option "1B"
+          - option "2B"
+          - option "3B"
+          - option "4B"
+          - option "5B"
+          - option "6B"
+          - option "7B"
+          - option "8B"
+          - option "9B"
+          - option "10B"
+          - option "11B"
+          - option "12B"
+      - generic [ref=e130]:
+        - generic [ref=e131]: Genre
+        - combobox [ref=e132] [cursor=pointer]:
+          - option "Any Genre" [selected]
+      - generic [ref=e134]:
+        - generic [ref=e135]: Rating
+        - generic [ref=e136]:
+          - button "★" [ref=e137] [cursor=pointer]
+          - button "★" [ref=e138] [cursor=pointer]
+          - button "★" [ref=e139] [cursor=pointer]
+          - button "★" [ref=e140] [cursor=pointer]
+          - button "★" [ref=e141] [cursor=pointer]
+      - generic [ref=e143]:
+        - generic [ref=e144]: Color
+        - generic [ref=e145]:
+          - button "Any color" [ref=e146] [cursor=pointer]
+          - button "Pink" [ref=e147] [cursor=pointer]
+          - button "Red" [ref=e148] [cursor=pointer]
+          - button "Orange" [ref=e149] [cursor=pointer]
+          - button "Yellow" [ref=e150] [cursor=pointer]
+          - button "Green" [ref=e151] [cursor=pointer]
+          - button "Aqua" [ref=e152] [cursor=pointer]
+          - button "Blue" [ref=e153] [cursor=pointer]
+          - button "Purple" [ref=e154] [cursor=pointer]
+      - button "Clear" [ref=e156] [cursor=pointer]
+    - generic [ref=e157]:
+      - generic [ref=e158]: Create playlist
+      - textbox "Playlist name" [ref=e159]
+      - button "Create" [ref=e160] [cursor=pointer]
+      - button "Cancel" [ref=e161] [cursor=pointer]
+    - generic [ref=e162]:
+      - generic [ref=e163]:
+        - generic [ref=e164]: All Tracks
+        - button "♫ All Tracks —" [ref=e165] [cursor=pointer]:
+          - generic [ref=e166]: ♫
+          - generic [ref=e167]: All Tracks
+          - generic [ref=e168]: —
+        - generic [ref=e169]: Playlists
+        - generic [ref=e170]: History
+        - button "⏱ Recently Added" [ref=e171] [cursor=pointer]:
+          - generic [ref=e172]: ⏱
+          - generic [ref=e173]: Recently Added
+      - generic [ref=e175]:
+        - generic [ref=e176]:
+          - generic [ref=e177]: Play
+          - generic [ref=e178] [cursor=pointer]: "#"
+          - generic [ref=e179] [cursor=pointer]: Title
+          - generic [ref=e180] [cursor=pointer]: Artist
+          - generic [ref=e181] [cursor=pointer]: Album
+          - generic [ref=e182] [cursor=pointer]: BPM
+          - generic [ref=e183] [cursor=pointer]: Key
+          - generic [ref=e184] [cursor=pointer]: Time
+          - generic [ref=e185] [cursor=pointer]: Added
+        - generic [ref=e187]:
+          - generic [ref=e188]: ⚠
+          - generic [ref=e189]: Failed to load library.
+        - generic [ref=e190]:
+          - generic [ref=e191]: Could not load library — is the database connected?
+          - button "Remove Selected" [disabled] [ref=e192]
+          - button "Add Selected" [disabled] [ref=e193]
+          - button "↺ Reload" [ref=e194] [cursor=pointer]
+      - generic [ref=e195]:
+        - button "✕" [ref=e197] [cursor=pointer]
+        - generic [ref=e198]:
+          - navigation [ref=e199]:
+            - button "🏷 Tag Tracks" [ref=e200] [cursor=pointer]:
+              - generic [ref=e201]: 🏷
+              - text: Tag Tracks
+            - button "📝 Rename" [ref=e202] [cursor=pointer]:
+              - generic [ref=e203]: 📝
+              - text: Rename
+            - button "🔄 Convert" [ref=e204] [cursor=pointer]:
+              - generic [ref=e205]: 🔄
+              - text: Convert
+            - button "📢 Normalize" [ref=e206] [cursor=pointer]:
+              - generic [ref=e207]: 📢
+              - text: Normalize
+            - button "🗂 Organize" [ref=e208] [cursor=pointer]:
+              - generic [ref=e209]: 🗂
+              - text: Organize
+            - button "✂ Duplicates" [ref=e210] [cursor=pointer]:
+              - generic [ref=e211]: ✂
+              - text: Duplicates
+            - button "★ Novelty" [ref=e212] [cursor=pointer]:
+              - generic [ref=e213]: ★
+              - text: Novelty
+          - main [ref=e214]:
+            - generic [ref=e215]:
+              - generic [ref=e216]:
+                - img "Tag Tracks" [ref=e218]
+                - generic [ref=e219]:
+                  - generic [ref=e220]: Tag Tracks — Detect BPM & Musical Key
+                  - generic [ref=e221]: Reads each audio file and writes BPM and musical key into the file's tags. Skips files that already have tags — won't overwrite your Mix In Key work unless you ask it to.
+                - generic [ref=e222]: Writes Tags
+                - button "✦" [ref=e223] [cursor=pointer]
+              - generic [ref=e224]:
+                - group [ref=e225]:
+                  - generic "How does it detect BPM and key? ▸" [ref=e226] [cursor=pointer]
+                - group [ref=e227]:
+                  - generic "What could go wrong? ▸" [ref=e228] [cursor=pointer]
+              - generic [ref=e229]:
+                - generic [ref=e230]:
+                  - generic [ref=e231]: Music Folder(s)
+                  - generic [ref=e232]:
+                    - generic:
+                      - strong: ⤵ Drop folders here
+                      - text: or type a path and press Enter
+                    - generic [ref=e233]:
+                      - textbox "/Volumes/YourDrive/Music" [ref=e234]
+                      - button "Browse…" [ref=e235] [cursor=pointer]
+                      - button "+ Add" [ref=e236] [cursor=pointer]
+                - generic [ref=e237]:
+                  - generic [ref=e238]: Options
+                  - generic [ref=e239]:
+                    - generic [ref=e240] [cursor=pointer]:
+                      - checkbox "Skip BPM detection" [ref=e241]
+                      - text: Skip BPM detection
+                    - generic [ref=e242] [cursor=pointer]:
+                      - checkbox "Skip key detection" [ref=e243]
+                      - text: Skip key detection
+                    - generic [ref=e244] [cursor=pointer]:
+                      - checkbox "Force overwrite all existing tags" [ref=e245]
+                      - text: Force overwrite
+                      - emphasis [ref=e246]: all
+                      - text: existing tags
+                - generic [ref=e247]:
+                  - generic [ref=e248]:
+                    - text: Metadata Enrichment
+                    - generic [ref=e249]: Requires AcoustID API key
+                  - generic [ref=e250]:
+                    - generic [ref=e251] [cursor=pointer]:
+                      - checkbox "Look up title, artist & album from MusicBrainz after tagging" [ref=e252]
+                      - generic [ref=e253]: Look up title, artist & album from MusicBrainz after tagging
+                    - paragraph [ref=e254]:
+                      - text: Fingerprints each track and queries the AcoustID web service (~1 req/s). Only fills in
+                      - emphasis [ref=e255]: missing
+                      - text: fields unless Force Overwrite is on. Requires
+                      - code [ref=e256]: acoustid_api_key
+                      - text: in your RekitBox config.
+                - button "Detect BPM & Key" [ref=e258] [cursor=pointer]
+            - generic [ref=e259]:
+              - generic [ref=e260]:
+                - img "Duplicate Tracks" [ref=e262]
+                - generic [ref=e263]:
+                  - generic [ref=e264]: Duplicate Tracks
+                  - generic [ref=e265]: Acoustic fingerprinting finds identical recordings regardless of filename, format, or bitrate. Scan, review, and prune in one panel.
+                - generic [ref=e266]: Read-Only Scan
+                - button "✦" [ref=e267] [cursor=pointer]
+              - generic [ref=e268]:
+                - group [ref=e270]:
+                  - generic "How fingerprinting works & what the rankings mean ▸" [ref=e271] [cursor=pointer]
+                - generic [ref=e272]:
+                  - generic [ref=e273]:
+                    - generic [ref=e274]: Music Folder(s) to Scan
+                    - generic [ref=e275]:
+                      - generic:
+                        - strong: ⤵ Drop folders here
+                        - text: or type a path and press Enter
+                      - generic [ref=e276]:
+                        - textbox "/Volumes/YourDrive/Music" [ref=e277]
+                        - button "Browse…" [ref=e278] [cursor=pointer]
+                        - button "+ Add" [ref=e279] [cursor=pointer]
+                  - generic [ref=e280]:
+                    - generic [ref=e281]: Parallel Workers — fpcalc processes to run simultaneously (your Mac has 8 cores)
+                    - combobox [ref=e282]:
+                      - option "1 — sequential (safe, slowest)"
+                      - option "2 workers"
+                      - option "4 workers (recommended)" [selected]
+                      - option "6 workers (fast)"
+                      - option "8 workers (max — all cores)"
+                  - generic [ref=e283]:
+                    - generic [ref=e284]:
+                      - text: Match Mode
+                      - generic [ref=e285]: Controls detection thoroughness
+                    - generic [ref=e286]:
+                      - generic "Exact fingerprint string equality. Fastest — good for obvious duplicates." [ref=e287] [cursor=pointer]:
+                        - generic [ref=e288]:
+                          - strong [ref=e289]: Exact
+                          - generic [ref=e290]: Identical fingerprints only. Fastest.
+                      - generic "Hamming-distance comparison on raw fingerprint integers. Catches same track encoded differently (Beatport vs Bandcamp, different bitrate/codec)." [ref=e291] [cursor=pointer]:
+                        - generic [ref=e292]:
+                          - strong [ref=e293]: Fuzzy
+                          - generic [ref=e294]: Similar fingerprints. Catches re-encodes.
+                      - generic "Groups files with matching title+artist tags and similar duration before fingerprinting. Catches duplicates tagged differently." [ref=e295] [cursor=pointer]:
+                        - generic [ref=e296]:
+                          - strong [ref=e297]: Tags
+                          - generic [ref=e298]: Title + artist matching. Broadens search.
+                      - generic "Tags pre-matching + fuzzy fingerprinting. Most thorough — catches nearly everything. Slowest." [ref=e299] [cursor=pointer]:
+                        - generic [ref=e300]:
+                          - strong [ref=e301]: All
+                          - generic [ref=e302]: Tags + fuzzy. Most thorough, slowest.
+                  - button "Scan for Duplicates" [ref=e304] [cursor=pointer]
+                  - group [ref=e305]:
+                    - generic "▸ Load an existing report ▸" [ref=e306] [cursor=pointer]
+            - generic [ref=e307]:
+              - generic [ref=e308]:
+                - img "Normalize" [ref=e310]
+                - generic [ref=e311]:
+                  - generic [ref=e312]:
+                    - text: Normalize Loudness
+                    - emphasis [ref=e313]: (Optional)
+                  - generic [ref=e314]:
+                    - text: Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard.
+                    - strong [ref=e315]: This rewrites the actual audio file.
+                - generic [ref=e316]: Rewrites Audio
+                - button "✦" [ref=e317] [cursor=pointer]
+              - generic [ref=e318]:
+                - group [ref=e319]:
+                  - generic "What exactly happens to my files? ▸" [ref=e320] [cursor=pointer]
+                - group [ref=e321]:
+                  - generic "Should I normalize my files? ▸" [ref=e322] [cursor=pointer]
+              - generic [ref=e323]:
+                - generic [ref=e324]:
+                  - generic [ref=e325]: Music Folder(s)
+                  - generic [ref=e326]:
+                    - generic:
+                      - strong: ⤵ Drop folders here
+                      - text: or type a path and press Enter
+                    - generic [ref=e327]:
+                      - textbox "/Volumes/YourDrive/Music" [ref=e328]
+                      - button "Browse…" [ref=e329] [cursor=pointer]
+                      - button "+ Add" [ref=e330] [cursor=pointer]
+                - generic [ref=e331]:
+                  - generic [ref=e332]: Add a folder above to load loudness previews.
+                  - generic [ref=e333]:
+                    - generic [ref=e334]:
+                      - generic [ref=e335]:
+                        - generic [ref=e336]: Quietest
+                        - generic [ref=e337]: Original
+                      - button [disabled] [ref=e339] [cursor=pointer]
+                    - generic [ref=e341]:
+                      - generic [ref=e342]:
+                        - generic [ref=e343]: Quietest
+                        - generic [ref=e344]: Normalized −8 LUFS
+                      - button [disabled] [ref=e346] [cursor=pointer]
+                    - generic [ref=e348]:
+                      - generic [ref=e349]:
+                        - generic [ref=e350]: Loudest
+                        - generic [ref=e351]: Original
+                      - button [disabled] [ref=e353] [cursor=pointer]
+                    - generic [ref=e355]:
+                      - generic [ref=e356]:
+                        - generic [ref=e357]: Loudest
+                        - generic [ref=e358]: Normalized −8 LUFS
+                      - button [disabled] [ref=e360] [cursor=pointer]
+                - generic [ref=e362]:
+                  - generic [ref=e363]: Parallel Workers — ffmpeg processes to run simultaneously (your Mac has 8 cores)
+                  - combobox [ref=e364]:
+                    - option "1 — sequential (safe, slowest)"
+                    - option "2 workers"
+                    - option "4 workers (recommended)" [selected]
+                    - option "6 workers (fast)"
+                    - option "8 workers (max — all cores)"
+                - button "Normalize Loudness" [ref=e366] [cursor=pointer]
+            - generic [ref=e367]:
+              - generic [ref=e368]:
+                - img "Convert" [ref=e370]
+                - generic [ref=e371]:
+                  - generic [ref=e372]: Convert — Change Audio Format
+                  - generic [ref=e373]: Convert one or more source folders to a different audio format. Supports MP3, WAV, AIFF, and FLAC. Metadata is preserved.
+                - generic [ref=e374]: Rewrites Files
+                - button "✦" [ref=e375] [cursor=pointer]
+              - generic [ref=e376]:
+                - group [ref=e377]:
+                  - generic "Which format should I choose? ▸" [ref=e378] [cursor=pointer]
+                - group [ref=e379]:
+                  - generic "Will my tags be preserved? ▸" [ref=e380] [cursor=pointer]
+                - group [ref=e381]:
+                  - generic "How long will this take? ▸" [ref=e382] [cursor=pointer]
+              - generic [ref=e383]:
+                - generic [ref=e384]:
+                  - generic [ref=e385]:
+                    - generic [ref=e386]: Source Folder(s) to Convert
+                    - generic [ref=e387]:
+                      - generic:
+                        - strong: ⤵ Drop folder here
+                        - text: or type a path and press Enter
+                      - generic [ref=e388]:
+                        - textbox "/Volumes/YourDrive/Music" [ref=e389]
+                        - button "Browse…" [ref=e390] [cursor=pointer]
+                        - button "+ Add" [ref=e391] [cursor=pointer]
+                  - generic [ref=e392]:
+                    - generic [ref=e393]: Target Format
+                    - combobox [ref=e394]:
+                      - option "MP3 (320 kbps)" [selected]
+                      - option "WAV (lossless, uncompressed)"
+                      - option "AIFF (lossless, Mac native)"
+                      - option "FLAC (lossless, compressed)"
+                - generic [ref=e395]:
+                  - generic [ref=e396]: Parallel Workers — ffmpeg processes to run simultaneously (your Mac has 8 cores)
+                  - combobox [ref=e397]:
+                    - option "1 — sequential (safe, slowest)"
+                    - option "2 workers"
+                    - option "4 workers (recommended)" [selected]
+                    - option "6 workers (fast)"
+                    - option "8 workers (max — all cores)"
+                - button "Start Converting" [ref=e399] [cursor=pointer]
+            - generic [ref=e400]:
+              - generic [ref=e401]:
+                - img "Organize" [ref=e403]
+                - generic [ref=e404]:
+                  - generic [ref=e405]: Organize Library — Consolidate into Artist / Album / Track
+                  - generic [ref=e406]: Scans one or more folders (no matter how deeply nested) and moves or copies every track to the correct Artist / Album / Track location. Merges duplicate artist folders, creates missing folders, and prunes empty ones.
+                - generic [ref=e407]: Moves Files
+                - button "✦" [ref=e408] [cursor=pointer]
+              - generic [ref=e409]:
+                - group [ref=e410]:
+                  - generic "What structure does this create? ▸" [ref=e411] [cursor=pointer]
+                - group [ref=e412]:
+                  - generic "Is this safe to run? ▸" [ref=e413] [cursor=pointer]
+                - group [ref=e414]:
+                  - generic "How does it handle artist name variations? ▸" [ref=e415] [cursor=pointer]
+                - group [ref=e416]:
+                  - generic "What counts as a Mix / Live Set? ▸" [ref=e417] [cursor=pointer]
+              - generic [ref=e418]:
+                - generic [ref=e419]:
+                  - generic [ref=e420]:
+                    - generic [ref=e421]: Source Folders — where to scan
+                    - paragraph [ref=e422]: Add every folder you want reorganised. Files are walked recursively — add top-level roots, not individual artist folders.
+                    - generic [ref=e423]:
+                      - generic:
+                        - strong: ⤵ Drop folders here
+                        - text: or type a path and press Enter
+                      - generic [ref=e424]:
+                        - textbox "/Volumes/DJMT" [ref=e425]
+                        - button "Browse…" [ref=e426] [cursor=pointer]
+                        - button "+ Add" [ref=e427] [cursor=pointer]
+                  - generic [ref=e428]:
+                    - generic [ref=e429]: Target — organised library root
+                    - paragraph [ref=e430]: The root where files will be moved or copied into the Artist / Album / Track hierarchy. Must be writable.
+                    - generic [ref=e431]:
+                      - generic:
+                        - strong: ⤵ Drop target folder here
+                        - text: or type / browse to the root
+                      - generic [ref=e432]:
+                        - textbox "/Volumes/YourDrive/Music" [ref=e433]
+                        - button "Browse…" [ref=e434] [cursor=pointer]
+                - generic [ref=e436]:
+                  - generic [ref=e437]: Mode
+                  - combobox [ref=e438]:
+                    - option "Full Library Assimilation — move files, clean up source" [selected]
+                    - option "Full Library Integration — copy files only, source untouched"
+                - generic [ref=e439]:
+                  - generic [ref=e440]:
+                    - generic [ref=e441]: Mix Threshold — tracks longer than this go to Live Sets & Mixes
+                    - combobox [ref=e442]:
+                      - option "10 minutes"
+                      - option "15 minutes (default)" [selected]
+                      - option "20 minutes"
+                      - option "30 minutes"
+                      - option "60 minutes"
+                  - generic [ref=e443]:
+                    - generic [ref=e444]: Parallel Workers — I/O threads
+                    - combobox [ref=e445]:
+                      - option "1 — sequential (safe)" [selected]
+                      - option "2 workers"
+                      - option "4 workers"
+                - generic [ref=e447] [cursor=pointer]:
+                  - checkbox "Dry Run — preview without touching any files (recommended — uncheck to execute)" [checked] [ref=e448]
+                  - text: Dry Run — preview without touching any files
+                  - generic [ref=e449]: (recommended — uncheck to execute)
+                - button "Scan & Organize" [ref=e451] [cursor=pointer]
+                - generic [ref=e453]:
+                  - text: ▸
+                  - strong [ref=e454]: Move Rekordbox Library to Drive
+                  - text: Moves DB + Symlink
+            - generic [ref=e455]:
+              - generic [ref=e456]:
+                - img "Novelty Scanner" [ref=e458]
+                - generic [ref=e459]:
+                  - generic [ref=e460]: Novelty Scanner — Capture Unique Tracks from Any Drive
+                  - generic [ref=e461]: Scans a source drive for tracks that don't exist anywhere in your home library and copies every one of them across. When in doubt, it copies. Use this to safely rescue one-of-a-kind recordings from backup drives before anything gets lost.
+                - generic [ref=e462]: SAFE
+                - button "✦" [ref=e463] [cursor=pointer]
+              - generic [ref=e464]:
+                - group [ref=e465]:
+                  - generic "How is this different from Find Duplicates? ▸" [ref=e466] [cursor=pointer]
+                - group [ref=e467]:
+                  - generic "Dry Run vs Live Run ▸" [ref=e468] [cursor=pointer]
+              - generic [ref=e469]:
+                - generic [ref=e470]:
+                  - generic [ref=e471]: Source Drive(s) / Folder(s)
+                  - generic [ref=e472]:
+                    - generic:
+                      - strong: ⤵ Drop folders here
+                      - text: or type a path and press Enter
+                    - generic [ref=e473]:
+                      - textbox "/Volumes/Passport" [ref=e474]
+                      - button "Browse…" [ref=e475] [cursor=pointer]
+                      - button "+ Add" [ref=e476] [cursor=pointer]
+                - generic [ref=e477]:
+                  - generic [ref=e478]: Destination (Home Library)
+                  - generic [ref=e479]:
+                    - generic:
+                      - strong: ⤵ Drop destination folder here
+                      - text: or type a path and press Enter
+                    - generic [ref=e480]:
+                      - textbox "/Volumes/YourDrive/Music" [ref=e481]
+                      - button "Browse…" [ref=e482] [cursor=pointer]
+                - generic [ref=e485] [cursor=pointer]:
+                  - checkbox "Dry Run (preview only — nothing will be copied)" [checked] [ref=e486]
+                  - text: Dry Run (preview only — nothing will be copied)
+                - button "Scan for Novel Tracks" [ref=e488] [cursor=pointer]
+            - generic [ref=e489]:
+              - generic [ref=e490]:
+                - img "Rename Files" [ref=e492]
+                - generic [ref=e493]:
+                  - generic [ref=e494]: Rename Files
+                  - generic [ref=e495]: "Clean up file names using metadata tags. Generates \"Artist: Title\" format, removes underscores, numbers, processing markers (PN, IDs) — keeps all metadata searchable in Rekordbox."
+                - button "✦" [ref=e496] [cursor=pointer]
+              - group [ref=e497]:
+                - generic "How it works ▸" [ref=e498] [cursor=pointer]
+              - generic [ref=e499]:
+                - generic [ref=e500]:
+                  - generic [ref=e501]: Source Folder
+                  - generic [ref=e502]:
+                    - generic:
+                      - strong: ⤵ Drop folder here
+                      - text: or type a path and press Enter
+                    - generic [ref=e503]:
+                      - textbox "/Volumes/YourDrive/Music" [ref=e504]
+                      - button "Browse…" [ref=e505] [cursor=pointer]
+                      - button "+ Add" [ref=e506] [cursor=pointer]
+                - generic [ref=e509] [cursor=pointer]:
+                  - checkbox "Dry Run (preview only — no files will be renamed)" [checked] [ref=e510]
+                  - text: Dry Run (preview only — no files will be renamed)
+                - generic [ref=e511]:
+                  - button "Probe Ambiguities" [ref=e512] [cursor=pointer]
+                  - button "Clean File Names" [ref=e513] [cursor=pointer]
+  - generic [ref=e515]:
+    - generic [ref=e516]:
+      - generic [ref=e517]: Export to Pioneer USB
+      - button "✕" [active] [ref=e518] [cursor=pointer]
+    - generic [ref=e519]:
+      - generic [ref=e520]:
+        - generic [ref=e521]: Target Drive
+        - generic [ref=e523]: Scanning drives…
+      - generic [ref=e524]:
+        - generic [ref=e525]:
+          - text: Playlists
+          - generic [ref=e526]:
+            - button "All" [ref=e527] [cursor=pointer]
+            - button "None" [ref=e528] [cursor=pointer]
+        - generic [ref=e530]: Load your library first.
+      - generic [ref=e533]: Starting…
+    - generic [ref=e535]:
+      - button "Export" [disabled] [ref=e536] [cursor=pointer]
+      - button "Cancel" [ref=e537] [cursor=pointer]
+  - text: ▸ ▸ ▸ ▸ ▸ ▸ ▸ ▸ ▸ ▸

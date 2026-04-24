@@ -1243,53 +1243,101 @@
   <div id="fb-drag-hint">Drag any item to a drop zone ↗</div>
 </div>
 
-<!-- ══ Tools Panel (RekitBox modals + Rekordbox tools) ══════════════════════ -->
+<!-- ══ Tool Nav ══════════════════════════════════════════════════════════════ -->
 <div id="tools-panel">
-  <!-- Rekordbox DB tools -->
+
+  <!-- Library -->
+  <div class="tool-nav-section">Library</div>
+  <button class="tool-btn active" id="rail-btn-library" onclick="leScrollTop()" title="Library &amp; Playlist Editor">
+    <img src="/static/icon-rb-file.png" class="tool-icon" alt="Library">
+    <span class="tool-label">Library</span>
+  </button>
+  <button id="fb-toggle-btn" onclick="toggleFileBrowser()" class="tool-btn" title="Browse files (⌘B)">
+    <img src="/static/icon-rb-folder.png" class="tool-icon" alt="Browse Files">
+    <span class="tool-label">Files</span>
+  </button>
+
+  <div class="tool-nav-divider"></div>
+
+  <!-- File Tools -->
+  <div class="tool-nav-section">File Tools</div>
+  <button class="tool-btn" data-step="step-process" onclick="openToolDrawer('step-process')" title="Tag Tracks — Detect BPM &amp; Key">
+    <img src="/static/icon-tag.png" class="tool-icon" alt="Tag Tracks">
+    <span class="tool-label">Tag Tracks</span>
+  </button>
+  <button class="tool-btn" data-step="step-rename" onclick="openToolDrawer('step-rename')" title="Rename Tracks">
+    <img src="/static/icon-filename.png" class="tool-icon" alt="Rename">
+    <span class="tool-label">Rename</span>
+  </button>
+  <button class="tool-btn" data-step="step-convert" onclick="openToolDrawer('step-convert')" title="Convert Audio">
+    <img src="/static/icon-convert.png" class="tool-icon" alt="Convert">
+    <span class="tool-label">Convert</span>
+  </button>
+  <button class="tool-btn" data-step="step-normalize" onclick="openToolDrawer('step-normalize')" title="Normalize Volume">
+    <img src="/static/icon-normalize.png" class="tool-icon" alt="Normalize">
+    <span class="tool-label">Normalize</span>
+  </button>
+
+  <div class="tool-nav-divider"></div>
+
+  <!-- Organize -->
+  <div class="tool-nav-section">Organize</div>
+  <button class="tool-btn" data-step="step-organize" onclick="openToolDrawer('step-organize')" title="Organize Files">
+    <img src="/static/icon-organizer.png" class="tool-icon" alt="Organize">
+    <span class="tool-label">Organize</span>
+  </button>
+  <button class="tool-btn" data-step="step-duplicates" onclick="openToolDrawer('step-duplicates')" title="Find Duplicates">
+    <img src="/static/icon-find-duplicate.png" class="tool-icon" alt="Duplicates">
+    <span class="tool-label">Duplicates</span>
+  </button>
+  <button class="tool-btn" data-step="step-novelty" onclick="openToolDrawer('step-novelty')" title="Find New Tracks">
+    <img src="/static/icon-novelty.png" class="tool-icon" alt="Novelty">
+    <span class="tool-label">Novelty</span>
+  </button>
+
+  <div class="tool-nav-divider"></div>
+
+  <!-- Database -->
+  <div class="tool-nav-section">Database</div>
   <button class="tool-btn db-tool-btn" id="rail-btn-audit" onclick="openDbPanel('audit')" title="Audit Library" data-rekki-context='{"type":"tool-card","tool_name":"audit","label":"Audit Library","description":"I take a full database snapshot and cross-check it against the physical filesystem. Drop me here to understand library health or recent audit results.","severity":"info"}'>
     <img src="/static/icon-audit.png" class="tool-icon" alt="Audit">
+    <span class="tool-label">Audit</span>
   </button>
-
   <button class="tool-btn db-tool-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths" data-rekki-context='{"type":"tool-card","tool_name":"relocator","label":"Relocate Paths","description":"I update Rekordbox when files have moved on disk. Drop me here if tracks are showing as missing or to check relocate status.","severity":"warn"}'>
     <img src="/static/icon-move.png" class="tool-icon" alt="Relocate">
+    <span class="tool-label">Relocate</span>
   </button>
-
   <button class="tool-btn db-tool-btn" id="rail-btn-import" onclick="openDbPanel('import')" title="Import Tracks" data-rekki-context='{"type":"tool-card","tool_name":"importer","label":"Import Tracks","description":"I add new audio files into the Rekordbox database. Drop me here to understand what has been imported, what failed, or what is waiting.","severity":"info"}'>
     <img src="/static/icon-import.png" class="tool-icon" alt="Import">
+    <span class="tool-label">Import</span>
   </button>
-
   <button class="tool-btn db-tool-btn" id="rail-btn-link" onclick="openDbPanel('link')" title="Link Playlists" data-rekki-context='{"type":"tool-card","tool_name":"linker","label":"Link Playlists","description":"I connect imported tracks to Rekordbox playlists by folder name. Drop me here if playlist linkage is not working or to check link results.","severity":"info"}'>
     <img src="/static/icon-link.png" class="tool-icon" alt="Link">
+    <span class="tool-label">Link</span>
   </button>
 
-  <button class="tool-btn db-tool-btn" id="rail-btn-library" onclick="openLibraryEditor()" title="Library &amp; Playlist Editor">
-    <img src="/static/icon-rb-file.png" class="tool-icon" alt="Library Editor">
-  </button>
+  <div class="tool-nav-divider"></div>
 
-  <div class="tools-divider"></div>
-
-  <!-- RekitBox utility + modal tools -->
-  <button id="fb-toggle-btn" onclick="toggleFileBrowser()" class="tool-btn" title="Browse files (⌘B)">
-    <img src="/static/icon-rb-folder.png" class="tool-icon" alt="Browse files">
-  </button>
-
-  <button id="rekitgo-btn" onclick="openRekitGo()" class="tool-btn" title="RekitGo — iOS companion app">
-    <img src="/static/icon-rekitgo.png" class="tool-icon" alt="RekitGo">
-    <span id="rekitgo-btn-dot" class="tool-dot"></span>
-  </button>
-
+  <!-- Utilities -->
+  <div class="tool-nav-section">Utilities</div>
   <button id="pipeline-btn" onclick="openPipelineWizard()" class="tool-btn" title="Pipeline Wizard">
     <img src="/static/icon-start-wizard.png" class="tool-icon" alt="Pipeline">
+    <span class="tool-label">Pipeline</span>
   </button>
-
+  <button id="rekitgo-btn" onclick="openRekitGo()" class="tool-btn" title="RekitGo — iOS companion app">
+    <img src="/static/icon-rekitgo.png" class="tool-icon" alt="RekitGo">
+    <span class="tool-label">RekitGo</span>
+    <span id="rekitgo-btn-dot" class="tool-dot"></span>
+  </button>
   <button id="lightbulb-btn" onclick="openWelcome()" class="tool-btn" title="About RekitBox">
     <img src="/static/icon-welcome-info.png" class="tool-icon" alt="About">
+    <span class="tool-label">About</span>
   </button>
-
-  <!-- Glossary -->
   <button id="owl-btn" onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()" onclick="owlClick()" class="tool-btn" title="Glossary &amp; Concepts">
     <img src="/static/icon-site-key.png" class="tool-icon owl-icon" alt="Glossary">
+    <span class="tool-label">Glossary</span>
   </button>
+
 </div>
 
 <div id="owl-hover-panel"
@@ -1360,7 +1408,7 @@
             style="width:100%; background:var(--surface); border:1px solid var(--border-hi);
                    color:var(--text); border-radius:6px; padding:8px 10px; font-family:var(--mono);
                    font-size:.8rem; resize:vertical;"
-            placeholder="ollama&#10;DJMT PRIMARY_PROCESSING_LOGIC&#10;POST PROCESS ZIP ARCHIVE"></textarea>
+                 placeholder="cache&#10;DJMT PRIMARY_PROCESSING_LOGIC&#10;POST PROCESS ZIP ARCHIVE"></textarea>
           <div style="font-size:.75rem; color:var(--text-dim); margin-top:4px;">
             Folders with these names are skipped during all scans (Tag Tracks, Normalize, Convert, Audit). Use this to exclude nested drive copies, app data, or any non-music folder inside your music root.
           </div>
@@ -1391,15 +1439,15 @@
         <label class="settings-radio">
           <input type="radio" name="rekitbox-mode" value="suburban">
           <div>
-            <div class="settings-radio-label">🏙️ Suburban — AI enabled (recommended)</div>
-            <div class="settings-radio-desc">Rekki agent is enabled and will use the largest local Ollama model that fits in RAM. All AI features available.</div>
+            <div class="settings-radio-label">🏙️ Suburban — Rekki scripted wizard (recommended)</div>
+            <div class="settings-radio-desc">Rekki is enabled in scripted local mode. No outside model calls. Guidance and runbooks stay on-device.</div>
           </div>
         </label>
         <label class="settings-radio">
           <input type="radio" name="rekitbox-mode" value="rural">
           <div>
-            <div class="settings-radio-label">🌾 Rural — No AI</div>
-            <div class="settings-radio-desc">All Rekki/AI features are disabled. RekitBox runs as a pure toolkit with intelligent report compounding.</div>
+            <div class="settings-radio-label">🌾 Rural — Rekki disabled</div>
+            <div class="settings-radio-desc">Rekki helper is disabled. RekitBox runs as a pure toolkit mode.</div>
           </div>
         </label>
       </div>
@@ -1502,20 +1550,20 @@
     <div class="welcome-step" id="wstep-mode">
       <div class="welcome-step-body">
         <p class="welcome-step-title">Choose your RekitBox mode</p>
-        <p class="welcome-step-sub">Controls whether the Rekki AI agent is available. You can change this later in Settings.</p>
+        <p class="welcome-step-sub">Controls whether the Rekki scripted helper is available. You can change this later in Settings.</p>
         <div class="welcome-mode-cards">
           <button class="wbtn-mode" id="wbtn-suburban" onclick="welcomeSelectMode('suburban')">
             <span class="wbtn-mode-icon">🏙️</span>
             <div>
               <div class="wbtn-mode-name">Suburban</div>
-              <div class="wbtn-mode-desc">AI enabled — Rekki uses your largest local Ollama model. All features available.</div>
+              <div class="wbtn-mode-desc">Rekki enabled in scripted local mode. No external model calls.</div>
             </div>
           </button>
           <button class="wbtn-mode" id="wbtn-rural" onclick="welcomeSelectMode('rural')">
             <span class="wbtn-mode-icon">🌾</span>
             <div>
               <div class="wbtn-mode-name">Rural</div>
-              <div class="wbtn-mode-desc">No AI — pure toolkit mode with intelligent report compounding. Fastest, no Ollama required.</div>
+              <div class="wbtn-mode-desc">Rekki off — pure toolkit mode only.</div>
             </div>
           </button>
         </div>
@@ -1790,6 +1838,7 @@
       </div>
       <div class="btn-row" style="margin-top:12px">
         <button class="btn btn-neon" onclick="runAudit()">Run Audit</button>
+        <button class="btn btn-secondary" onclick="previewCanonicalPlan()">Preview Canonical Plan</button>
       </div>
     </div>
 
@@ -1909,8 +1958,8 @@
 <!-- backdrop -->
 <div id="db-panel-backdrop" onclick="closeDbPanel()"></div>
 
-<!-- ══ Library & Playlist Editor ═══════════════════════════════════════════ -->
-<div id="library-editor-overlay" class="hidden">
+<!-- ══ Library & Playlist Editor — Primary View ═══════════════════════════ -->
+<div id="library-editor-overlay">
   <div id="library-editor">
 
     <!-- Header bar -->
@@ -1928,8 +1977,67 @@
         <button class="le-header-btn" id="le-rename-btn" onclick="leRenameActivePlaylist()" title="Rename selected playlist" disabled>Rename</button>
         <button class="le-header-btn" id="le-delete-btn" onclick="leDeleteActivePlaylist()" title="Delete selected playlist" disabled>Delete</button>
         <button class="le-header-btn le-export-btn" onclick="leOpenExportModal()" title="Export playlists to Pioneer USB drive">⬆ Export to USB</button>
-        <button class="le-close-btn" onclick="closeLibraryEditor()" title="Close">✕</button>
       </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div id="lib-filter-bar">
+      <div class="lf-group">
+        <label class="lf-label">BPM</label>
+        <input type="number" class="lf-input" id="lf-bpm-min" placeholder="Min" min="20" max="300" oninput="leApplyFilters()">
+        <span style="color:rgba(200,130,240,.35);font-size:.7rem">–</span>
+        <input type="number" class="lf-input" id="lf-bpm-max" placeholder="Max" min="20" max="300" oninput="leApplyFilters()">
+      </div>
+      <div class="lf-sep"></div>
+      <div class="lf-group">
+        <label class="lf-label">Key</label>
+        <select class="lf-select" id="lf-key" onchange="leApplyFilters()">
+          <option value="">Any Key</option>
+          <option value="1A">1A</option><option value="2A">2A</option><option value="3A">3A</option>
+          <option value="4A">4A</option><option value="5A">5A</option><option value="6A">6A</option>
+          <option value="7A">7A</option><option value="8A">8A</option><option value="9A">9A</option>
+          <option value="10A">10A</option><option value="11A">11A</option><option value="12A">12A</option>
+          <option value="1B">1B</option><option value="2B">2B</option><option value="3B">3B</option>
+          <option value="4B">4B</option><option value="5B">5B</option><option value="6B">6B</option>
+          <option value="7B">7B</option><option value="8B">8B</option><option value="9B">9B</option>
+          <option value="10B">10B</option><option value="11B">11B</option><option value="12B">12B</option>
+        </select>
+      </div>
+      <div class="lf-sep"></div>
+      <div class="lf-group">
+        <label class="lf-label">Genre</label>
+        <select class="lf-select" id="lf-genre" onchange="leApplyFilters()">
+          <option value="">Any Genre</option>
+        </select>
+      </div>
+      <div class="lf-sep"></div>
+      <div class="lf-group">
+        <label class="lf-label">Rating</label>
+        <div id="lf-rating">
+          <button class="lf-star" data-min="1" onclick="leSetRatingFilter(1)" title="1★ or better">★</button>
+          <button class="lf-star" data-min="2" onclick="leSetRatingFilter(2)" title="2★ or better">★</button>
+          <button class="lf-star" data-min="3" onclick="leSetRatingFilter(3)" title="3★ or better">★</button>
+          <button class="lf-star" data-min="4" onclick="leSetRatingFilter(4)" title="4★ or better">★</button>
+          <button class="lf-star" data-min="5" onclick="leSetRatingFilter(5)" title="5★ only">★</button>
+        </div>
+      </div>
+      <div class="lf-sep"></div>
+      <div class="lf-group">
+        <label class="lf-label">Color</label>
+        <div id="lf-color-dots">
+          <button class="lf-color-dot active" data-color="-1" title="Any color" style="background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4)" onclick="leSetColorFilter(-1)"></button>
+          <button class="lf-color-dot" data-color="1" title="Pink" style="background:#ff69b4" onclick="leSetColorFilter(1)"></button>
+          <button class="lf-color-dot" data-color="2" title="Red" style="background:#ef4444" onclick="leSetColorFilter(2)"></button>
+          <button class="lf-color-dot" data-color="3" title="Orange" style="background:#f97316" onclick="leSetColorFilter(3)"></button>
+          <button class="lf-color-dot" data-color="4" title="Yellow" style="background:#eab308" onclick="leSetColorFilter(4)"></button>
+          <button class="lf-color-dot" data-color="5" title="Green" style="background:#22c55e" onclick="leSetColorFilter(5)"></button>
+          <button class="lf-color-dot" data-color="6" title="Aqua" style="background:#06b6d4" onclick="leSetColorFilter(6)"></button>
+          <button class="lf-color-dot" data-color="7" title="Blue" style="background:#3b82f6" onclick="leSetColorFilter(7)"></button>
+          <button class="lf-color-dot" data-color="8" title="Purple" style="background:#a855f7" onclick="leSetColorFilter(8)"></button>
+        </div>
+      </div>
+      <div class="lf-sep"></div>
+      <button class="lf-clear-btn" onclick="leClearFilters()">Clear</button>
     </div>
 
     <div class="le-create-bar" id="le-create-bar">
@@ -1939,7 +2047,7 @@
       <button class="le-create-cancel" onclick="leCloseCreate()">Cancel</button>
     </div>
 
-    <!-- Two-pane body -->
+    <!-- Three-pane body: sidebar | track list | tool drawer -->
     <div class="le-body">
 
       <!-- Left: Playlist tree -->
@@ -1962,7 +2070,7 @@
       <!-- Resize handle -->
       <div class="le-resize-handle" id="le-resize-handle"></div>
 
-      <!-- Right: Track list -->
+      <!-- Center: Track list -->
       <div class="le-main" id="le-main">
         <div class="le-track-header">
           <div class="le-col le-col-play">Play</div>
@@ -1978,14 +2086,25 @@
         <div class="le-track-list" id="le-track-list">
           <div class="le-empty-state" id="le-empty-state">
             <div style="font-size:2.5rem;margin-bottom:12px;">♫</div>
-            <div>Select a playlist or load your library to get started.</div>
+            <div>Loading library…</div>
           </div>
         </div>
         <div class="le-status-bar" id="le-status-bar">
-          <span id="le-status-text">No library loaded</span>
+          <span id="le-status-text">Loading…</span>
           <button class="le-load-btn" id="le-remove-btn" onclick="leRemoveSelectionFromActivePlaylist()" disabled>Remove Selected</button>
           <button class="le-load-btn le-add-btn" id="le-add-btn" onclick="leAddSelectionToActivePlaylist()" disabled>Add Selected</button>
-          <button class="le-load-btn" onclick="leLoadLibrary()">Load Library</button>
+          <button class="le-load-btn" onclick="leLoadLibrary()">↺ Reload</button>
+        </div>
+      </div>
+
+      <!-- Right: Tool Drawer (slides in over track list) -->
+      <div id="tool-drawer">
+        <div id="tool-drawer-header">
+          <span id="tool-drawer-title"></span>
+          <button id="tool-drawer-close" onclick="closeToolDrawer()" title="Close tool">✕</button>
+        </div>
+        <div id="tool-drawer-body">
+          <!-- workflow-rail and main are moved here by JS on DOMContentLoaded -->
         </div>
       </div>
 
@@ -2195,7 +2314,7 @@
       <textarea id="rekki-input" placeholder="Drop me on anything, or ask me something…"></textarea>
       <div id="rekki-compose-foot">
         <span id="rekki-status"></span>
-        <div id="rekki-conn-dot" title="Ollama connection status"></div>
+        <div id="rekki-conn-dot" title="Rekki scripted helper status"></div>
         <button id="rekki-send" onclick="rekkiSendMessage()">Send ↵</button>
       </div>
     </div>

@@ -38,9 +38,13 @@
   --radius: 8px;
   --log-h: clamp(180px, 30vh, 400px);
   --scan-bar-h: 44px;
+  --tool-drawer-mini-w: 58px;
+  --tool-drawer-expanded-w: 520px;
+  --tool-drawer-collapsed-offset: 56px;
 
   /* VS Code-style layout */
   --activity-bar-w: 52px;
+  --tool-nav-w: 200px;
   --header-h: 56px;
   --sidebar-w: 260px;
 }
@@ -48,21 +52,21 @@
 /* ── Reset ─────────────────────────────────────────────────────────────── */
 /* FIX: margin: 10 and padding: 10 are invalid (missing units). Should be 0. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 18px; }
+html { font-size: 10px; }
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--sans);
-  line-height: 1.6;
+  line-height: 1.45;
   min-height: 100vh;
   padding-top: var(--header-h);
-  padding-left: var(--activity-bar-w);
+  padding-left: var(--tool-nav-w);
   padding-bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px);
   transition: padding-left .25s cubic-bezier(.4,0,.2,1);
 }
 body.scan-active { padding-bottom: calc(var(--log-h) + var(--scan-bar-h) * 2 + 4px); }
 body.sidebar-open {
-  padding-left: calc(var(--activity-bar-w) + var(--sidebar-w));
+  padding-left: calc(var(--tool-nav-w) + var(--sidebar-w));
 }
 body::before {
   content: '';
@@ -107,7 +111,7 @@ label { display: block; color: var(--text-muted); font-size: .78rem;
 
 /* ── Header ────────────────────────────────────────────────────────────── */
 header {
-  position: fixed; top: 0; left: var(--activity-bar-w); right: 0; z-index: 170;
+  position: fixed; top: 0; left: var(--tool-nav-w); right: 0; z-index: 170;
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface-hi) 88%, black), var(--surface));
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
@@ -1146,51 +1150,86 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
   }
 }
 
-/* ══ Activity Bar ══════════════════════════════════════════════════════════ */
+/* ══ Tool Nav ══════════════════════════════════════════════════════════════ */
 #tools-panel {
   position: fixed;
-  left: 0; top: 0; bottom: 0;
-  width: var(--activity-bar-w);
+  left: 0; top: var(--header-h); bottom: 0;
+  width: var(--tool-nav-w);
   z-index: 180;
-  display: flex; flex-direction: column; align-items: center;
-  gap: 6px;
-  padding: 8px 0 8px;
+  display: flex; flex-direction: column; align-items: stretch;
+  gap: 0;
+  padding: 8px 0;
   background: var(--surface);
   border-right: 1px solid var(--border);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 .tool-btn {
   position: relative;
-  display: flex; align-items: center; justify-content: center;
-  width: 44px; height: 44px;
+  display: flex; align-items: center; justify-content: flex-start;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 14px;
+  gap: 10px;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 0;
   cursor: pointer;
-  transition: all .15s;
+  transition: all .12s;
   user-select: none;
+  text-align: left;
 }
 .tool-btn:hover {
   background: var(--accent-dim);
-  border-color: rgba(109,184,212,.3);
+  color: var(--text);
 }
 .tool-btn.active {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-left-color: var(--accent);
 }
-.tool-folder { display: none; }
+.tool-label {
+  font-size: .77rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color .12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tool-btn:hover .tool-label { color: var(--text); }
+.tool-btn.active .tool-label { color: var(--accent); }
+.tool-nav-section {
+  padding: 14px 14px 4px;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.tool-nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 10px;
+}
 .tool-icon {
-  width: 28px; height: 28px;
+  width: 22px; height: 22px;
   object-fit: contain;
   border-radius: 4px;
-  filter: hue-rotate(160deg) saturate(0.7) brightness(1.05);
+  opacity: .65;
+  flex-shrink: 0;
+  transition: opacity .12s;
 }
+.tool-btn:hover .tool-icon,
+.tool-btn.active .tool-icon { opacity: 1; }
 
 #tools-panel .db-tool-btn .tool-icon {
-  width: 28px;
-  height: 28px;
-  opacity: 0.75;
-  filter: grayscale(25%) brightness(0.9);
+  width: 22px;
+  height: 22px;
+  opacity: 0.6;
+  filter: grayscale(30%);
 }
 #tools-panel .db-tool-btn:hover .tool-icon,
 #tools-panel .db-tool-btn.active .tool-icon {
@@ -1251,6 +1290,28 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
 #welcome-modal {
   position: relative;
   overflow: hidden;
+}
+
+/* Global modal/panel text downscale so dense UI fits without clipping. */
+#settings-modal,
+#welcome-modal,
+#report-modal,
+#path-modal-box,
+#pipeline-wizard,
+#db-panel,
+#library-editor,
+#le-export-modal,
+.rename-learn-modal,
+.confirm-panel {
+  font-size: .9rem;
+}
+
+#db-panel #db-panel-title,
+#pipeline-wizard .pipe-wiz-title,
+#welcome-modal .welcome-step-title,
+#report-modal .rmod-header-text h2,
+#settings-modal .settings-header h2 {
+  line-height: 1.25;
 }
 #settings-modal::before,
 #report-modal::before,
@@ -1529,7 +1590,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
 
 #session-pills-container {
   position: fixed;
-  left: calc(var(--activity-bar-w) + 16px);
+  left: calc(var(--tool-nav-w) + 16px);
   bottom: calc(var(--scan-bar-h) + 8px);
   z-index: 9998;
   display: flex;
@@ -1932,7 +1993,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
 
 #fb-panel {
   position: fixed;
-  left: var(--activity-bar-w);
+  left: var(--tool-nav-w);
   top: 0; bottom: 0;
   width: var(--sidebar-w);
   background: var(--surface);
@@ -1940,7 +2001,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
   z-index: 158;
   display: flex; flex-direction: column;
   overflow: hidden;
-  transform: translateX(calc(-1 * (var(--sidebar-w) + var(--activity-bar-w))));
+  transform: translateX(calc(-1 * (var(--sidebar-w) + var(--tool-nav-w))));
   transition: transform .25s cubic-bezier(.4,0,.2,1);
 }
 #fb-panel.fb-open { transform: translateX(0); }
@@ -3560,33 +3621,25 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 .wbtn-mode-name { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
 .wbtn-mode-desc { font-size: .78rem; color: var(--text-muted); line-height: 1.45; }
 
-/* ── Tool icon: consistent filter for all rail buttons ─────────────────── */
-/* Remove db-tool-btn grayscale treatment — use the same accent filter */
-#tools-panel .db-tool-btn .tool-icon {
-  width: 28px;
-  height: 28px;
-  opacity: 0.82;
-  filter: hue-rotate(160deg) saturate(0.6) brightness(0.95);
-}
-#tools-panel .db-tool-btn:hover .tool-icon,
-#tools-panel .db-tool-btn.active .tool-icon {
-  opacity: 1;
-  filter: hue-rotate(160deg) saturate(1.1) brightness(1.1);
-}
+/* ── Tool icon: db-tool-btn inherits shared .tool-icon opacity rules ──── */
 
 /* ── Library & Playlist Editor — own design space ───────────────────────── */
 /*    Backdrop: disco-queens.jpg full bleed. UI floats as frosted glass.     */
 #library-editor-overlay {
   position: fixed;
-  inset: 0;
-  z-index: 500;
+  left: var(--tool-nav-w);
+  top: var(--header-h);
+  right: 0;
+  bottom: var(--scan-bar-h);
+  z-index: 5;
   background: url('/static/disco-queens.jpg') center / cover no-repeat #07050f;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
-  opacity: 0;
-  transition: opacity .28s cubic-bezier(.4,0,.2,1);
+  opacity: 1;
 }
+#library-editor-overlay.hidden { display: none !important; }
+/* le-visible is no-op — editor is always visible */
 #library-editor-overlay.le-visible { opacity: 1; }
 
 /* Dark vignette — deepens the edges, lets the center magenta glow breathe */
@@ -3609,6 +3662,22 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   position: relative;
   overflow: hidden;
   z-index: 1;
+  --le-control-min-h: 28px;
+}
+
+#library-editor input:not([type="checkbox"]):not([type="radio"]),
+#library-editor select {
+  min-height: var(--le-control-min-h);
+}
+
+#library-editor .le-header-btn,
+#library-editor .le-create-submit,
+#library-editor .le-create-cancel,
+#library-editor .le-load-btn,
+#library-editor .lf-clear-btn,
+#library-editor .le-export-sel-btn {
+  min-height: var(--le-control-min-h);
+  line-height: 1;
 }
 
 /* Everything above the backdrop */
@@ -3620,7 +3689,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   align-items: center;
   gap: 14px;
   padding: 0 20px;
-  height: 54px;
+  height: 52px;
   background: rgba(10, 4, 20, 0.78);
   backdrop-filter: blur(18px) saturate(1.4);
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
@@ -3844,7 +3913,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   display: flex;
   align-items: center;
   padding: 0 14px;
-  height: 32px;
+  height: 30px;
   background: rgba(10, 4, 20, 0.75);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -3877,7 +3946,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   display: flex;
   align-items: center;
   padding: 0 14px;
-  height: 36px;
+  height: 34px;
   border-bottom: 1px solid rgba(120, 20, 160, 0.12);
   font-size: .81rem;
   transition: background .08s;
@@ -4029,6 +4098,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 }
 
 /* ── USB Export modal ───────────────────────────────────────────────────── */
+#le-export-backdrop.hidden,
+#le-export-modal.hidden { display: none; }
 #le-export-backdrop {
   position: fixed;
   inset: 0;
@@ -4212,4 +4283,248 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   padding: 14px 22px 18px;
   border-top: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+/* ══ Library Filter Bar ════════════════════════════════════════════════════ */
+#lib-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+  padding: 0 16px;
+  height: 44px;
+  background: rgba(6, 2, 14, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(150, 30, 200, 0.2);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 2;
+}
+#lib-filter-bar::-webkit-scrollbar { display: none; }
+.lf-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.lf-label {
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(200, 130, 240, 0.5);
+  white-space: nowrap;
+}
+.lf-input {
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(150, 30, 200, 0.28);
+  border-radius: 5px;
+  color: #e8d4ff;
+  padding: 3px 7px;
+  font-size: .74rem;
+  width: 58px;
+  font-family: var(--mono);
+}
+.lf-input:focus { outline: none; border-color: rgba(217, 70, 239, 0.6); }
+.lf-input::-webkit-inner-spin-button,
+.lf-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.lf-select {
+  background: rgba(6, 2, 14, 0.9);
+  border: 1px solid rgba(150, 30, 200, 0.28);
+  border-radius: 5px;
+  color: #e8d4ff;
+  padding: 3px 8px;
+  font-size: .74rem;
+  max-width: 130px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(200,130,240,0.5)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 22px;
+}
+.lf-select:focus { outline: none; border-color: rgba(217, 70, 239, 0.6); }
+.lf-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(150, 30, 200, 0.22);
+  flex-shrink: 0;
+}
+#lf-rating {
+  display: flex;
+  gap: 1px;
+  align-items: center;
+}
+.lf-star {
+  background: transparent;
+  border: none;
+  color: rgba(200, 130, 240, 0.28);
+  font-size: .9rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color .12s, transform .1s;
+}
+.lf-star:hover { color: rgba(240, 180, 75, 0.7); transform: scale(1.15); }
+.lf-star.active { color: #f0b44b; }
+#lf-color-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.lf-color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color .12s, transform .1s;
+  padding: 0;
+  flex-shrink: 0;
+}
+.lf-color-dot:hover { border-color: rgba(255,255,255,.55); transform: scale(1.18); }
+.lf-color-dot.active { border-color: rgba(255,255,255,.85); transform: scale(1.12); }
+.lf-clear-btn {
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid rgba(150, 30, 200, 0.22);
+  color: rgba(200, 130, 240, 0.45);
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: .7rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all .12s;
+}
+.lf-clear-btn:hover {
+  color: #e8d4ff;
+  border-color: rgba(217, 70, 239, 0.45);
+  background: rgba(217, 70, 239, 0.08);
+}
+
+/* ══ Tool Drawer ═══════════════════════════════════════════════════════════ */
+.le-body { position: relative; }
+
+#tool-drawer {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: var(--tool-drawer-expanded-w);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: rgba(7, 2, 16, 0.97);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  border-left: 1px solid rgba(140, 25, 190, 0.4);
+  box-shadow: -8px 0 32px rgba(100, 20, 160, 0.25);
+  transform: translateX(calc(100% - var(--tool-drawer-mini-w)));
+  transition: transform .26s cubic-bezier(.4, 0, .2, 1);
+  overflow: hidden;
+}
+#tool-drawer.open,
+#tool-drawer:hover { transform: translateX(0); }
+
+#tool-drawer-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 44px;
+  background: rgba(10, 3, 22, 0.95);
+  border-bottom: 1px solid rgba(140, 25, 190, 0.3);
+  flex-shrink: 0;
+}
+#tool-drawer-title {
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: rgba(220, 160, 255, 0.9);
+  flex: 1;
+}
+#tool-drawer-close {
+  background: transparent;
+  border: none;
+  color: rgba(200, 130, 240, 0.45);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 5px;
+  transition: all .12s;
+  line-height: 1;
+}
+#tool-drawer-close:hover {
+  color: #e8d4ff;
+  background: rgba(255, 255, 255, .06);
+}
+#tool-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(150, 30, 200, 0.3) transparent;
+}
+#tool-drawer-body::-webkit-scrollbar { width: 4px; }
+#tool-drawer-body::-webkit-scrollbar-track { background: transparent; }
+#tool-drawer-body::-webkit-scrollbar-thumb { background: rgba(150, 30, 200, 0.3); border-radius: 2px; }
+
+/* Pipeline cards inside drawer — override page-level layout assumptions */
+#tool-drawer main {
+  padding: 16px;
+  min-height: auto;
+}
+#tool-drawer main .section-title { display: none; }
+#tool-drawer .workflow-rail {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgba(8, 2, 18, 0.98);
+  border-bottom: 1px solid rgba(140, 25, 190, 0.25);
+  padding: 0 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#tool-drawer .workflow-rail::-webkit-scrollbar { display: none; }
+#tool-drawer .step-tab { padding: 10px 14px; font-size: .75rem; }
+#tool-drawer .card { margin-bottom: 12px; }
+
+/* Collapsed state: icon rail only, cards hidden until hover/explicit open. */
+#tool-drawer:not(.open):not(:hover) #tool-drawer-header {
+  justify-content: center;
+  padding: 0;
+  height: 42px;
+}
+#tool-drawer:not(.open):not(:hover) #tool-drawer-title,
+#tool-drawer:not(.open):not(:hover) #tool-drawer-close,
+#tool-drawer:not(.open):not(:hover) #tool-drawer main {
+  display: none;
+}
+#tool-drawer:not(.open):not(:hover) #tool-drawer-body {
+  overflow: hidden;
+}
+#tool-drawer:not(.open):not(:hover) .workflow-rail {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: var(--tool-drawer-collapsed-offset) 6px 8px;
+  border-bottom: none;
+  background: transparent;
+  overflow: visible;
+}
+#tool-drawer:not(.open):not(:hover) .step-tab {
+  min-height: 38px;
+  padding: 0;
+  justify-content: center;
+  border: 1px solid rgba(140, 25, 190, 0.26);
+  border-radius: 8px;
+  font-size: 0;
+}
+#tool-drawer:not(.open):not(:hover) .step-tab .step-num {
+  width: 20px;
+  height: 20px;
+  font-size: .78rem;
+  background: transparent;
 }

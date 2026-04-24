@@ -1,241 +1,3 @@
-'''
-# ── Rekordbox One Library Export ────────────────────────────────────────────
-
-@app.route("/api/export/rekordbox", methods=["POST"])
-def api_export_rekordbox():
-    """
-    Export playlists and tracks to Rekordbox One Library structure (playlist XML and folder structure).
-    Body: { "target": "/Volumes/USB" }
-    """
-    data = request.get_json(silent=True) or {}
-    target = data.get("target", "").strip()
-    if not target or not os.path.isdir(target):
-        return jsonify({"error": "Valid target folder required"}), 400
-    try:
-        from pyrekordbox import Rekordbox6Database
-        from config import DJMT_DB, MUSIC_ROOT
-        import shutil
-        import xml.etree.ElementTree as ET
-        # 1. Copy master.db to target (simulate export)
-        db_src = str(DJMT_DB)
-        db_dst = os.path.join(target, "PIONEER", "Master", "master.db")
-        os.makedirs(os.path.dirname(db_dst), exist_ok=True)
-        shutil.copy2(db_src, db_dst)
-        # 2. Generate playlist XML (minimal example)
-        with Rekordbox6Database(db_src) as db:
-            playlists = db.get_playlist().all()
-            root = ET.Element("DJ_PLAYLISTS")
-            for pl in playlists:
-                pl_el = ET.SubElement(root, "PLAYLIST", Name=pl.Name or "", Id=str(pl.ID))
-                songs = db.get_playlist_songs(PlaylistID=pl.ID).order_by("TrackNo").all()
-                for song in songs:
-                    t = song.Content
-                    if t is None:
-                        continue
-                    ET.SubElement(pl_el, "TRACK", Id=str(t.ID), Title=t.Title or "", FilePath=t.FolderPath or "")
-            tree = ET.ElementTree(root)
-            xml_path = os.path.join(target, "PIONEER", "playlists.xml")
-            tree.write(xml_path, encoding="utf-8", xml_declaration=True)
-        # 3. Copy audio files to Contents folder (flat, for demo)
-        contents_dir = os.path.join(target, "PIONEER", "Contents")
-        os.makedirs(contents_dir, exist_ok=True)
-        for pl in playlists:
-            songs = db.get_playlist_songs(PlaylistID=pl.ID).all()
-            for song in songs:
-                t = song.Content
-                if t and t.FolderPath and os.path.isfile(t.FolderPath):
-                    dest = os.path.join(contents_dir, os.path.basename(t.FolderPath))
-                    if not os.path.exists(dest):
-                        shutil.copy2(t.FolderPath, dest)
-        return jsonify({"ok": True, "db": db_dst, "xml": xml_path, "contents": contents_dir})
-    except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
-import threading
-import sounddevice as sd
-import soundfile as sf
-
-# Singleton playback state
-_playback_lock = threading.Lock()
-_playback_thread = None
-_playback_stop_event = threading.Event()
-_playback_current_path = None
-
-# Helper: stop playback
-def _stop_playback():
-    global _playback_thread, _playback_stop_event, _playback_current_path
-    with _playback_lock:
-        if _playback_thread and _playback_thread.is_alive():
-            _playback_stop_event.set()
-            _playback_thread.join(timeout=2)
-        _playback_thread = None
-        _playback_current_path = None
-        _playback_stop_event.clear()
-
-# Helper: playback thread
-def _play_audio_file(path):
-    try:
-        with sf.SoundFile(path) as f:
-            for block in f.blocks(blocksize=1024, dtype='float32'):
-                if _playback_stop_event.is_set():
-                    break
-                sd.play(block, f.samplerate, blocking=True)
-    except Exception as exc:
-        print(f"Playback error: {exc}")
-
-# API: Start playback
-@app.route("/api/playback/start", methods=["POST"])
-def api_playback_start():
-    global _playback_thread, _playback_current_path
-    data = request.get_json(silent=True) or {}
-    file_path = data.get("file_path", "").strip()
-    if not file_path or not os.path.isfile(file_path):
-        return jsonify({"error": "File not found"}), 404
-    _stop_playback()
-    def _thread():
-        _play_audio_file(file_path)
-    with _playback_lock:
-        _playback_stop_event.clear()
-        _playback_thread = threading.Thread(target=_thread, daemon=True)
-        _playback_thread.start()
-        _playback_current_path = file_path
-    return jsonify({"status": "playing", "file_path": file_path})
-
-# API: Stop playback
-@app.route("/api/playback/stop", methods=["POST"])
-def api_playback_stop():
-    _stop_playback()
-    return jsonify({"status": "stopped"})
-# --- Mode and Model Exposure ---
-from config import REKITBOX_MODE
-# --- /api/config: Expose mode and model ---
-@app.route("/api/config")
-def api_config():
-    from user_config import load_user_config, CONFIG_PATH  # noqa: PLC0415
-    import json as _json
-    try:
-        cfg = load_user_config()
-        cfg.pop("mobile_token", None)
-        from config import REKITBOX_MODE
-        model = os.environ.get("REKIT_AGENT_MODEL", "") if REKITBOX_MODE == "suburban" else ""
-        cfg["mode"] = REKITBOX_MODE
-        cfg["rekki_model"] = model
-        return jsonify(cfg)
-    except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
-# --- /api/settings: Allow mode update ---
-@app.route("/api/settings", methods=["POST"])
-def api_settings():
-    try:
-        from user_config import load_user_config, CONFIG_PATH  # noqa: PLC0415
-        import json as _json
-        data = request.get_json(force=True) or {}
-        cfg  = load_user_config()
-        if "archive_mode" in data:
-            cfg["archive_mode"] = data["archive_mode"]
-        if "custom_archive_dir" in data:
-            cfg["custom_archive_dir"] = data["custom_archive_dir"]
-        if "excluded_dirs" in data:
-            cfg["excluded_dirs"] = [d for d in data["excluded_dirs"] if isinstance(d, str) and d.strip()]
-        if "mode" in data and data["mode"] in ("rural", "suburban"):
-            cfg["mode"] = data["mode"]
-        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-            _json.dump(cfg, f, indent=2)
-        return jsonify({"ok": True, "note": "Restart RekitBox for changes to take effect."})
-    except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 500
-# --- Gate Rekki endpoints by mode ---
-@app.route("/api/rekki/chat", methods=["POST"])
-def api_rekki_chat():
-    if REKITBOX_MODE != "suburban":
-        return jsonify({"ok": False, "error": "Rekki is disabled in Rural mode."}), 403
-    data = request.get_json(silent=True) or {}
-    user_message = str(data.get("message", "")).strip()
-    history = data.get("history") or []
-    model = str(data.get("model") or os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)).strip()
-    source = str(data.get("source", "main")).strip() or "main"
-    if not user_message:
-        return jsonify({"ok": False, "error": "message is required"}), 400
-    if not model:
-        return jsonify({"ok": False, "error": "model is required"}), 400
-    resolved_model, model_ok, model_error = _rekki_resolve_model(model)
-    if not model_ok:
-        return jsonify({"ok": False, "error": f"Ollama unavailable: {model_error}"}), 502
-    sanitized_history = []
-    if isinstance(history, list):
-        for item in history[-8:]:
-            if not isinstance(item, dict):
-                continue
-            role = str(item.get("role", "")).strip()
-            content = str(item.get("content", "")).strip()
-            if role in {"user", "assistant"} and content:
-                sanitized_history.append({"role": role, "content": content})
-    context = _rekki_context_snapshot()
-    memory_context_block = ""
-    if _REKKI_MEMORY_ENABLED:
-        try:
-            memory_context_block = format_recalled_memory(recall_memory())
-        except Exception as _mem_err:
-            memory_context_block = ""
-            print(f"[rekki] recall_memory failed: {_mem_err}")
-    system_prompt = (
-        "You are Rekki, an AI agent piloting RekitBox — a DJ library management tool. "
-        "Help the user understand app state and suggest safe next actions. "
-        "Do not claim to have executed commands or modified files unless explicitly told by server context."
-    )
-    if memory_context_block:
-        system_prompt += "\n\n### Memory Context\n" + memory_context_block
-    user_payload = (
-        "RekitBox runtime context (JSON):\n"
-        f"{json.dumps(context, indent=2)}\n\n"
-        "User message:\n"
-        f"{user_message}"
-    )
-    payload = {
-        "model": resolved_model,
-        "stream": False,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            *sanitized_history,
-            {"role": "user", "content": user_payload},
-        ],
-        "options": {"temperature": 0.2},
-    }
-    try:
-        data = _rekki_http_post_json(_rekki_chat_url(), payload, timeout=90)
-        reply = str((data.get("message") or {}).get("content", "")).strip()
-        if not reply:
-            return jsonify({"ok": False, "error": "empty response from ollama"}), 502
-        if _REKKI_MEMORY_ENABLED:
-            try:
-                db = get_memory_db()
-                user_msg_id = db.insert_chat_message(role="user", content=user_message, source=source)
-                assistant_msg_id = db.insert_chat_message(role="assistant", content=reply, source=source)
-                create_memory(
-                    core_insight=reply[:200],
-                    confidence_score=0.7,
-                    tags=["chat"],
-                    congress_engaged=False,
-                )
-            except Exception as _persist_err:
-                print(f"[rekki] memory persistence failed: {_persist_err}")
-        return jsonify({
-            "ok": True,
-            "name": "Rekki",
-            "provider": "ollama",
-            "model": resolved_model,
-            "requested_model": model,
-            "reply": reply,
-            "context": context,
-            "memory_enabled": _REKKI_MEMORY_ENABLED,
-        })
-    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 502
-@app.route("/api/rekki/context")
-def api_rekki_context():
-    if REKITBOX_MODE != "suburban":
-        return jsonify({"error": "Rekki is disabled in Rural mode."}), 403
-    return jsonify(_rekki_context_snapshot())
-'''
 """
 RekitBox / app.py
 
@@ -323,18 +85,64 @@ def _library_track_payload(track, *, track_no=None):
         except Exception:
             date_added = None
 
+    raw_rating = int(getattr(track, "Rating", 0) or 0)
+    stars = 0 if raw_rating == 0 else max(1, min(5, round(raw_rating / 51)))
+
+    color_id = int(getattr(track, "ColorID", 0) or 0)
+
+    genre_name = ""
+    try:
+        genre_name = track.Genre.Name if track.Genre else ""
+    except Exception:
+        pass
+
+    label_name = ""
+    try:
+        label_name = track.Label.Name if track.Label else ""
+    except Exception:
+        pass
+
+    comment = str(getattr(track, "Commnt", "") or "").strip()
+    play_count = int(getattr(track, "DJPlayCount", 0) or 0)
+
     return {
-        "id": str(track.ID),
-        "title": track.Title or "",
-        "artist": track.Artist.Name if track.Artist else "",
-        "album": track.Album.Name if getattr(track, "Album", None) else "",
-        "bpm": round(track.BPM / 100, 1) if track.BPM else None,
-        "key": track.Key.Name if track.Key else None,
-        "duration": track.Length if track.Length else None,
+        "id":         str(track.ID),
+        "title":      track.Title or "",
+        "artist":     track.Artist.Name if track.Artist else "",
+        "album":      track.Album.Name if getattr(track, "Album", None) else "",
+        "genre":      genre_name,
+        "label":      label_name,
+        "bpm":        round(track.BPM / 100, 1) if track.BPM else None,
+        "key":        track.Key.Name if track.Key else None,
+        "key_id":     int(track.KeyID) if track.KeyID else None,
+        "duration":   track.Length if track.Length else None,
         "date_added": date_added,
-        "file_path": track.FolderPath or "",
-        "track_no": track_no,
+        "file_path":  track.FolderPath or "",
+        "rating":     stars,
+        "color":      color_id,
+        "play_count": play_count,
+        "comment":    comment,
+        "track_no":   track_no,
     }
+
+
+def _norm_text(value):
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def _track_identity_signature(track):
+    """Logical identity used to avoid duplicate playlist entries across alt content rows."""
+    title = _norm_text(getattr(track, "Title", ""))
+    artist_name = ""
+    try:
+        artist_name = _norm_text(track.Artist.Name if track.Artist else "")
+    except Exception:
+        artist_name = ""
+
+    duration = int(getattr(track, "Length", 0) or 0)
+    file_name = _norm_text(Path(str(getattr(track, "FolderPath", "") or "")).name)
+    # Prefer artist/title/duration; use filename fallback when tags are weak.
+    return (artist_name, title, duration, file_name)
 
 
 def _playlist_tree_payload(db):
@@ -380,6 +188,70 @@ def _playlist_tree_payload(db):
     return _finalize(roots)
 
 
+def _library_canonical_path_conflicts(db):
+    """Return (tracks_scanned, conflict_groups) for canonical-path integrity checks."""
+
+    def _norm(value):
+        return " ".join(str(value or "").strip().lower().split())
+
+    tracks = db.get_content().all()
+    grouped = {}
+    for track in tracks:
+        title = _norm(getattr(track, "Title", ""))
+        artist_name = ""
+        try:
+            artist_name = _norm(track.Artist.Name if track.Artist else "")
+        except Exception:
+            artist_name = ""
+
+        duration = int(getattr(track, "Length", 0) or 0)
+        path = str(getattr(track, "FolderPath", "") or "").strip()
+
+        # Skip weak signatures that cannot be trusted for canonical checks.
+        if not title or not path:
+            continue
+
+        signature = (artist_name, title, duration)
+        grouped.setdefault(signature, []).append(track)
+
+    conflicts = []
+    for signature, rows in grouped.items():
+        distinct_paths = {
+            str(getattr(row, "FolderPath", "") or "").strip()
+            for row in rows
+            if str(getattr(row, "FolderPath", "") or "").strip()
+        }
+        if len(distinct_paths) <= 1:
+            continue
+
+        items = []
+        for row in rows:
+            row_path = str(getattr(row, "FolderPath", "") or "").strip()
+            if not row_path:
+                continue
+            playlist_refs = db.get_playlist_songs(ContentID=row.ID).all()
+            items.append({
+                "content_id": str(row.ID),
+                "path": row_path,
+                "exists_on_disk": os.path.isfile(row_path),
+                "playlist_ref_count": len(playlist_refs),
+            })
+
+        artist_name, title, duration = signature
+        conflicts.append({
+            "signature": {
+                "artist": artist_name,
+                "title": title,
+                "duration": duration,
+            },
+            "path_count": len(distinct_paths),
+            "entries": items,
+        })
+
+    conflicts.sort(key=lambda g: (g["path_count"], len(g["entries"])), reverse=True)
+    return len(tracks), conflicts
+
+
 @app.route("/api/library/tracks")
 def api_library_tracks():
     from db_connection import read_db  # noqa: PLC0415
@@ -389,6 +261,90 @@ def api_library_tracks():
         with read_db(_DB) as db:
             tracks = [_library_track_payload(track) for track in db.get_content().all()]
             return jsonify(tracks)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/integrity/canonical-paths")
+def api_library_integrity_canonical_paths():
+    """
+    Detect likely duplicate logical tracks that point at multiple physical paths.
+    This is read-only and intended to support canonical-path cleanup workflows.
+    """
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        with read_db(_DB) as db:
+            tracks_scanned, conflicts = _library_canonical_path_conflicts(db)
+
+            return jsonify({
+                "ok": True,
+                "total_tracks_scanned": tracks_scanned,
+                "conflict_group_count": len(conflicts),
+                "groups": conflicts,
+            })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/integrity/canonical-paths/plan")
+def api_library_integrity_canonical_paths_plan():
+    """
+    Build a read-only consolidation plan for canonical path cleanup.
+    No DB writes are performed.
+    """
+    from db_connection import read_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    try:
+        try:
+            max_groups = int(request.args.get("max_groups", 50))
+        except (TypeError, ValueError):
+            max_groups = 50
+        max_groups = max(1, min(500, max_groups))
+
+        with read_db(_DB) as db:
+            tracks_scanned, conflicts = _library_canonical_path_conflicts(db)
+
+        plans = []
+        for group in conflicts[:max_groups]:
+            entries = group.get("entries") or []
+            if len(entries) < 2:
+                continue
+
+            # Prefer keeper with on-disk presence and strongest playlist usage.
+            keeper = max(
+                entries,
+                key=lambda e: (
+                    1 if e.get("exists_on_disk") else 0,
+                    int(e.get("playlist_ref_count", 0) or 0),
+                    -len(str(e.get("path") or "")),
+                    str(e.get("path") or "").lower(),
+                ),
+            )
+            remove_candidates = [
+                e for e in entries if str(e.get("content_id")) != str(keeper.get("content_id"))
+            ]
+            estimated_rethread = sum(
+                int(e.get("playlist_ref_count", 0) or 0) for e in remove_candidates
+            )
+
+            plans.append({
+                "signature": group.get("signature") or {},
+                "keeper": keeper,
+                "remove_candidates": remove_candidates,
+                "estimated_playlist_slots_to_rethread": estimated_rethread,
+            })
+
+        return jsonify({
+            "ok": True,
+            "read_only": True,
+            "total_tracks_scanned": tracks_scanned,
+            "total_conflict_groups": len(conflicts),
+            "planned_groups": len(plans),
+            "plans": plans,
+        })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -516,6 +472,14 @@ def api_library_add_tracks_to_playlist(playlist_id):
             if int(getattr(playlist, "Attribute", 0) or 0) == 1:
                 return jsonify({"error": "Cannot add tracks to a folder"}), 400
 
+            existing_ids = set()
+            existing_signatures = set()
+            for song in db.get_playlist_songs(PlaylistID=playlist.ID).all():
+                existing_ids.add(str(getattr(song, "ContentID", "")))
+                song_track = getattr(song, "Content", None)
+                if song_track is not None:
+                    existing_signatures.add(_track_identity_signature(song_track))
+
             added = 0
             skipped = []
             for track_id in track_ids:
@@ -523,8 +487,16 @@ def api_library_add_tracks_to_playlist(playlist_id):
                 if track is None:
                     skipped.append(track_id)
                     continue
+
+                signature = _track_identity_signature(track)
+                # Keep one canonical track reference per playlist entry.
+                if str(track.ID) in existing_ids or signature in existing_signatures:
+                    skipped.append(track_id)
+                    continue
                 try:
                     db.add_to_playlist(playlist, track, track_no=None)
+                    existing_ids.add(str(track.ID))
+                    existing_signatures.add(signature)
                     added += 1
                 except Exception:
                     skipped.append(track_id)
@@ -586,12 +558,56 @@ def api_library_remove_track_from_playlist(playlist_id, track_id):
 
     try:
         with write_db(_DB) as db:
-            song = db.get_playlist_songs(PlaylistID=playlist_id, ContentID=track_id).one_or_none()
-            if song is None:
+            songs = db.get_playlist_songs(PlaylistID=playlist_id, ContentID=track_id).all()
+            if not songs:
                 return jsonify({"error": "Track not in playlist"}), 404
-            db.remove_from_playlist(playlist_id, song.ID)
+            removed = 0
+            for song in songs:
+                db.remove_from_playlist(playlist_id, song.ID)
+                removed += 1
             db.commit()
-            return jsonify({"ok": True, "status": "removed"})
+            return jsonify({"ok": True, "status": "removed", "removed": removed})
+    except RuntimeError as exc:
+        return jsonify({"error": str(exc)}), 503
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/library/playlists/<playlist_id>/tracks", methods=["DELETE"])
+def api_library_remove_tracks_from_playlist(playlist_id):
+    from db_connection import write_db  # noqa: PLC0415
+    from config import DJMT_DB as _DB  # noqa: PLC0415
+
+    data = request.get_json(silent=True) or {}
+    track_ids = data.get("track_ids")
+    if not isinstance(track_ids, list):
+        return jsonify({"error": "track_ids required"}), 400
+
+    track_ids = [str(track_id).strip() for track_id in track_ids if str(track_id).strip()]
+    if not track_ids:
+        return jsonify({"error": "track_ids required"}), 400
+
+    try:
+        with write_db(_DB) as db:
+            playlist = db.get_playlist(ID=playlist_id).one_or_none()
+            if playlist is None:
+                return jsonify({"error": "Playlist not found"}), 404
+            if int(getattr(playlist, "Attribute", 0) or 0) == 1:
+                return jsonify({"error": "Cannot remove tracks from a folder"}), 400
+
+            removed = 0
+            missing = []
+            for track_id in track_ids:
+                songs = db.get_playlist_songs(PlaylistID=playlist.ID, ContentID=track_id).all()
+                if not songs:
+                    missing.append(track_id)
+                    continue
+                for song in songs:
+                    db.remove_from_playlist(playlist.ID, song.ID)
+                    removed += 1
+
+            db.commit()
+            return jsonify({"ok": True, "removed": removed, "missing": missing})
     except RuntimeError as exc:
         return jsonify({"error": str(exc)}), 503
     except Exception as exc:
@@ -1097,11 +1113,12 @@ def _rekki_db_health_snapshot() -> dict:
     }
 
 
-# ── Rekki (local read-only assistant panel) ─────────────────────────────────
+# ── Rekki (local scripted assistant panel) ─────────────────────────────────
 
-_REKKI_DEFAULT_MODEL = os.environ.get("REKIT_AGENT_MODEL", "qwen2.5-coder:7b")
+_REKKI_DEFAULT_MODEL = os.environ.get("REKIT_AGENT_MODEL", "rekki-scripted-v1")
 _REKKI_PROFILE = os.environ.get("REKIT_AGENT_PROFILE", "default")
 _REKKI_AUTOMATION_SCRIPT = REPO_ROOT / "scripts" / "agent_workflow.sh"
+_REKKI_SCRIPTED_MODEL = "rekki-scripted-v1"
 
 
 def _rekki_chat_url() -> str:
@@ -1117,54 +1134,238 @@ def _rekki_base_url() -> str:
 
 
 def _rekki_http_post_json(url: str, payload: dict, timeout: int = 30) -> dict:
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8", errors="replace"))
+    raise RuntimeError("External AI calls are disabled for Rekki scripted mode")
 
 
 def _rekki_http_get_json(url: str, timeout: int = 10) -> dict:
-    req = urllib.request.Request(url, method="GET")
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8", errors="replace"))
+    raise RuntimeError("External AI calls are disabled for Rekki scripted mode")
 
 
 def _rekki_list_models() -> list[str]:
-    tags = _rekki_http_get_json(f"{_rekki_base_url()}/api/tags", timeout=8)
-    return [str((m or {}).get("name", "")).strip() for m in (tags.get("models") or []) if str((m or {}).get("name", "")).strip()]
+    return [_REKKI_SCRIPTED_MODEL]
 
 
 def _rekki_resolve_model(requested_model: str) -> tuple[str, bool, str | None]:
-    model = (requested_model or "").strip() or _REKKI_DEFAULT_MODEL
-    try:
-        names = _rekki_list_models()
-    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as exc:
-        return model, False, str(exc)
-
-    if not names:
-        return model, False, "no local ollama models found"
-
-    if model in names:
-        return model, True, None
-
-    for name in names:
-        if name.startswith(f"{model}:") or model.startswith(f"{name}:"):
-            return name, True, None
-
-    # Safe fallback: first locally-installed model to avoid hard 400 failures.
-    return names[0], True, None
+    return _REKKI_SCRIPTED_MODEL, True, None
 
 
 def _rekki_automation_env(model: str, profile: str) -> dict:
     env = os.environ.copy()
-    env["REKIT_AGENT_PROVIDER"] = "ollama"
-    env["REKIT_AGENT_MODEL"] = model or _REKKI_DEFAULT_MODEL
+    env["REKIT_AGENT_PROVIDER"] = "scripted-local"
+    env["REKIT_AGENT_MODEL"] = _REKKI_SCRIPTED_MODEL
     env["REKIT_AGENT_PROFILE"] = profile or _REKKI_PROFILE
     return env
+
+
+def _rekki_tool_from_text(text: str) -> str | None:
+    checks = [
+        ("duplicate", "duplicate_detector"),
+        ("dedupe", "duplicate_detector"),
+        ("normalize", "normalizer"),
+        ("bpm", "audio_processor"),
+        ("key", "audio_processor"),
+        ("tag", "audio_processor"),
+        ("organize", "library_organizer"),
+        ("relocate", "relocator"),
+        ("missing file", "relocator"),
+        ("import", "importer"),
+        ("playlist", "library"),
+        ("library", "library"),
+        ("export", "export"),
+        ("usb", "export"),
+        ("pioneer", "export"),
+        ("rekitgo", "mobile"),
+        ("mobile", "mobile"),
+        ("audit", "audit"),
+        ("rename", "renamer"),
+        ("novelty", "novelty_scanner"),
+    ]
+    for needle, tool in checks:
+        if needle in text:
+            return tool
+    return None
+
+
+def _rekki_action_plan(tool: str, context: dict) -> list[str]:
+    db_ok = bool((((context or {}).get("db_health") or {}).get("sqlite") or {}).get("ok"))
+    rb_running = bool((context or {}).get("rb_running"))
+    backup_exists = bool((((context or {}).get("backup") or {}).get("exists")))
+
+    preflight = []
+    if not db_ok:
+        preflight.append("Run Audit Library first and review DB health before any write action.")
+    if rb_running:
+        preflight.append("Close Rekordbox before write actions to avoid lock conflicts.")
+    if not backup_exists:
+        preflight.append("Create a backup first. No backup means no safe rollback.")
+
+    steps_by_tool = {
+        "audio_processor": [
+            "Run Tag Tracks on the target folders.",
+            "Review skipped files and rerun only failed paths.",
+            "Open Library Editor and sort by BPM/Key to verify coverage.",
+        ],
+        "duplicate_detector": [
+            "Run Duplicate Tracks scan first (read-only).",
+            "Review confidence groups before any prune action.",
+            "Keep one canonical copy per recording and preserve folder paths.",
+        ],
+        "relocator": [
+            "Set old path prefix and new path prefix in Relocate Paths.",
+            "Run relocate and validate random tracks in Library Editor stream preview.",
+            "If unresolved tracks remain, rerun with narrower path prefixes.",
+        ],
+        "library_organizer": [
+            "Run in dry-style review mode first if available.",
+            "Apply organize only after backup confirmation.",
+            "Re-check playlist links and relocate any moved paths if needed.",
+        ],
+        "importer": [
+            "Use Import Tracks for new source folders.",
+            "Verify imported rows in Library Editor and play-test a sample.",
+            "Link imported tracks into playlists after import completes.",
+        ],
+        "library": [
+            "Load Library, select/curate playlists, and use Add/Remove Selected.",
+            "Rename or delete playlists as needed.",
+            "Patch track titles only when metadata is confirmed.",
+        ],
+        "export": [
+            "Insert Pioneer USB with existing PIONEER/Master/master.db.",
+            "Open Export to USB, select target drive and playlists.",
+            "Run export and wait for completion before unplugging the drive.",
+        ],
+        "mobile": [
+            "Ensure Tailscale path is reachable and /api/mobile/ping is healthy.",
+            "Use RekitGo for remote playlist edits and export control.",
+            "Keep token auth enabled for all mobile routes.",
+        ],
+        "audit": [
+            "Run Audit Library and inspect missing files, BPM/key gaps, and path drift.",
+            "Fix high-risk issues first: missing paths and DB integrity warnings.",
+            "Use findings to drive relocate/tag/import follow-up actions.",
+        ],
+        "renamer": [
+            "Preview rename results first.",
+            "Apply rename only on confirmed selections.",
+            "Re-audit paths to ensure no broken links were introduced.",
+        ],
+        "novelty_scanner": [
+            "Scan source drive for unknown tracks.",
+            "Copy selected additions into library root.",
+            "Import copied tracks into DB and then playlist them.",
+        ],
+    }
+
+    return [*preflight, *(steps_by_tool.get(tool, [
+        "Run Audit Library for current state.",
+        "Choose the matching tool card and execute one step at a time.",
+        "Re-check status and logs before the next write operation.",
+    ]))]
+
+
+def _rekki_scripted_reply(user_message: str, source: str, context: dict) -> str:
+    msg = (user_message or "").strip()
+    lower = msg.lower()
+    tool = _rekki_tool_from_text(lower) or _rekki_tool_from_text((source or "").lower())
+
+    if any(k in lower for k in ["hi", "hello", "hey", "yo"]) and len(lower) < 30:
+        return (
+            "I am in scripted local mode. No outside calls, no model inference. "
+            "Tell me the exact task (paths, playlist goal, or export target) and I will give you a step-by-step runbook."
+        )
+
+    if any(k in lower for k in ["error", "failed", "not working", "broken", "stuck", "can\'t", "cannot"]):
+        plan = _rekki_action_plan(tool or "audit", context)
+        return "Issue triage:\n- " + "\n- ".join(plan[:4])
+
+    if "search" in lower or "find" in lower:
+        return (
+            "Fast search workflow:\n"
+            "- Load Library and search by title/artist/album first.\n"
+            "- Use playlist narrowing to reduce candidate set.\n"
+            "- Keep naming consistent (artist/title) to improve hit quality.\n"
+            "- Next upgrade path: BPM/key/date filters in mobile + desktop endpoints."
+        )
+
+    if "rekitgo" in lower or "mobile" in lower or "tailscale" in lower:
+        return (
+            "RekitGo remote control checklist:\n"
+            "- Confirm /api/mobile/ping responds over Tailscale.\n"
+            "- Keep bearer token auth enabled.\n"
+            "- Use mobile playlist CRUD and export routes for remote operations.\n"
+            "- If export stalls, poll /api/mobile/export/<job_id> until complete/failed."
+        )
+
+    if tool:
+        plan = _rekki_action_plan(tool, context)
+        return f"{tool} runbook:\n- " + "\n- ".join(plan)
+
+    return (
+        "General RekitBox runbook:\n"
+        "- Start with Audit Library to establish current health.\n"
+        "- Fix path issues with Relocate Paths.\n"
+        "- Fill metadata gaps with Tag Tracks (BPM/Key).\n"
+        "- Curate playlists in Library Editor.\n"
+        "- Export selected playlists to Pioneer USB after backup confirmation."
+    )
+
+
+def _rekki_infer_context_local(scrape: dict) -> dict:
+    scrape = scrape or {}
+    element_text = str(scrape.get("elementText", "")).strip()
+    section = str(scrape.get("sectionHeading", "")).strip()
+    tool_panel = str(scrape.get("toolPanel", "")).strip()
+    attrs = scrape.get("existingAttributes", {}) or {}
+    page_state = scrape.get("pageState", {}) or {}
+
+    blob = " ".join([
+        element_text.lower(),
+        section.lower(),
+        tool_panel.lower(),
+        str(attrs).lower(),
+        str(page_state.get("activeTool", "")).lower(),
+        str(page_state.get("lastRunStatus", "")).lower(),
+    ])
+
+    tool = _rekki_tool_from_text(blob)
+    severity = "info"
+    if any(k in blob for k in ["error", "failed", "exception", "missing"]):
+        severity = "error"
+    elif any(k in blob for k in ["warn", "caution", "duplicate", "delete", "prune"]):
+        severity = "warn"
+    elif any(k in blob for k in ["success", "complete", "healthy", "ok"]):
+        severity = "safe"
+
+    inferred_type = str(attrs.get("type") or "").strip() or "generic"
+    if inferred_type == "generic":
+        if "playlist" in blob:
+            inferred_type = "playlist"
+        elif "track" in blob:
+            inferred_type = "track-row"
+        elif "status" in blob:
+            inferred_type = "status-pill"
+        elif "button" in blob:
+            inferred_type = "button"
+        elif "log" in blob:
+            inferred_type = "log-entry"
+
+    label = str(attrs.get("label") or "").strip()[:60]
+    if not label:
+        label = (section or tool_panel or element_text or "RekitBox context")[:60]
+
+    if tool:
+        description = f"This area belongs to {tool}. I can guide the safest next step and what to verify before writing to DB."
+    else:
+        description = "I can explain this UI area and provide the next safe operation sequence."
+
+    return {
+        "type": inferred_type,
+        "label": label,
+        "description": description,
+        "tool": tool,
+        "severity": severity,
+    }
 
 
 def _rekki_automation_status(model: str, profile: str) -> tuple[bool, str, int]:
@@ -1226,25 +1427,23 @@ def _rekki_context_snapshot() -> dict:
 
 @app.route("/api/rekki/status")
 def api_rekki_status():
-    model = os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)
+    model = _REKKI_SCRIPTED_MODEL
     resolved_model, model_ok, model_error = _rekki_resolve_model(model)
     result = {
         "ok": True,
         "name": "Rekki",
-        "provider": "ollama",
+        "provider": "scripted-local",
         "model": model,
         "resolved_model": resolved_model,
         "model_resolved": model != resolved_model,
         "profile": os.environ.get("REKIT_AGENT_PROFILE", _REKKI_PROFILE),
-        "ollama_base": _rekki_base_url(),
-        "ollama_reachable": False,
-        "model_available": None,
+        "ollama_base": None,
+        "ollama_reachable": True,
+        "model_available": True,
+        "external_calls_blocked": True,
         "error": None,
     }
-    if model_ok:
-        result["ollama_reachable"] = True
-        result["model_available"] = True
-    else:
+    if not model_ok:
         result["error"] = model_error
 
     ok, status_text, status_code = _rekki_automation_status(
@@ -1397,78 +1596,22 @@ def api_rekki_chat():
 
     data = request.get_json(silent=True) or {}
     user_message = str(data.get("message", "")).strip()
-    history = data.get("history") or []
-    model = str(data.get("model") or os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)).strip()
     source = str(data.get("source", "main")).strip() or "main"
 
     if not user_message:
         return jsonify({"ok": False, "error": "message is required"}), 400
-    if not model:
-        return jsonify({"ok": False, "error": "model is required"}), 400
-
-    resolved_model, model_ok, model_error = _rekki_resolve_model(model)
-    if not model_ok:
-        return jsonify({"ok": False, "error": f"Ollama unavailable: {model_error}"}), 502
-
-    sanitized_history = []
-    if isinstance(history, list):
-        for item in history[-8:]:
-            if not isinstance(item, dict):
-                continue
-            role = str(item.get("role", "")).strip()
-            content = str(item.get("content", "")).strip()
-            if role in {"user", "assistant"} and content:
-                sanitized_history.append({"role": role, "content": content})
 
     context = _rekki_context_snapshot()
 
-    # ── HologrA.I.m: recall memory before every response ─────────────────────
-    memory_context_block = ""
-    if _REKKI_MEMORY_ENABLED:
-        try:
-            memory_context_block = format_recalled_memory(recall_memory())
-        except Exception as _mem_err:
-            memory_context_block = ""
-            print(f"[rekki] recall_memory failed: {_mem_err}")
-
-    system_prompt = (
-        "You are Rekki, an AI agent piloting RekitBox — a DJ library management tool. "
-        "Help the user understand app state and suggest safe next actions. "
-        "Do not claim to have executed commands or modified files unless explicitly told by server context."
-    )
-    if memory_context_block:
-        system_prompt += "\n\n### Memory Context\n" + memory_context_block
-
-    user_payload = (
-        "RekitBox runtime context (JSON):\n"
-        f"{json.dumps(context, indent=2)}\n\n"
-        "User message:\n"
-        f"{user_message}"
-    )
-
-    payload = {
-        "model": resolved_model,
-        "stream": False,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            *sanitized_history,
-            {"role": "user", "content": user_payload},
-        ],
-        "options": {"temperature": 0.2},
-    }
-
     try:
-        data = _rekki_http_post_json(_rekki_chat_url(), payload, timeout=90)
-        reply = str((data.get("message") or {}).get("content", "")).strip()
-        if not reply:
-            return jsonify({"ok": False, "error": "empty response from ollama"}), 502
+        reply = _rekki_scripted_reply(user_message, source, context)
 
         # ── HologrA.I.m: persist chat + create memory after every response ───
         if _REKKI_MEMORY_ENABLED:
             try:
                 db = get_memory_db()
-                user_msg_id = db.insert_chat_message(role="user", content=user_message, source=source)
-                assistant_msg_id = db.insert_chat_message(role="assistant", content=reply, source=source)
+                db.insert_chat_message(role="user", content=user_message, source=source)
+                db.insert_chat_message(role="assistant", content=reply, source=source)
                 create_memory(
                     core_insight=reply[:200],
                     confidence_score=0.7,
@@ -1481,14 +1624,15 @@ def api_rekki_chat():
         return jsonify({
             "ok": True,
             "name": "Rekki",
-            "provider": "ollama",
-            "model": resolved_model,
-            "requested_model": model,
+            "provider": "scripted-local",
+            "model": _REKKI_SCRIPTED_MODEL,
+            "requested_model": _REKKI_SCRIPTED_MODEL,
             "reply": reply,
             "context": context,
             "memory_enabled": _REKKI_MEMORY_ENABLED,
+            "external_calls_blocked": True,
         })
-    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError) as exc:
+    except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 502
 
 
@@ -1505,62 +1649,12 @@ def api_rekki_infer_context():
     existing_attrs = scrape.get("existingAttributes", {})
     page_state = scrape.get("pageState", {})
 
-    resolved_model, model_ok, model_error = _rekki_resolve_model(
-        os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)
-    )
-    if not model_ok:
-        return jsonify({"ok": False, "error": f"Ollama unavailable: {model_error}"}), 502
-
-    system_prompt = (
-        "You are Rekki, an AI agent embedded inside RekitBox — a local rekordbox music library "
-        "management tool. Your entire domain is rekordbox DJ library management: track metadata, "
-        "file paths, playlists, BPM/key analysis, duplicate detection, library organization, "
-        "database health, and the tools that operate on them (scanner, relocator, duplicate_detector, "
-        "pruner, audio_processor, library_organizer, audit, renamer, importer).\n\n"
-        "You have been dropped onto a UI element that has no context annotation yet. "
-        "Based on the DOM scrape provided, infer what this element represents and return a "
-        "JSON object with these fields:\n"
-        "  type: string (e.g. 'error', 'log-entry', 'tool-card', 'track-row', 'duplicate-group', "
-        "'db-path', 'scan-result', 'playlist', 'status-pill', 'button', 'generic')\n"
-        "  label: string — a short human-readable label for this element (max 60 chars)\n"
-        "  description: string — 1-2 sentences Rekki should open with when dropped here\n"
-        "  tool: string or null — which RekitBox tool this element belongs to\n"
-        "  severity: 'info'|'warn'|'error'|'safe' or null\n\n"
-        "Return ONLY valid JSON. No markdown fences, no explanation outside the JSON."
-    )
-
-    user_payload = (
-        f"Element text: {element_text!r}\n"
-        f"Section heading: {section!r}\n"
-        f"Tool panel: {tool_panel!r}\n"
-        f"Parent chain: {parent_chain}\n"
-        f"Siblings: {siblings[:6]}\n"
-        f"Existing attributes: {existing_attrs}\n"
-        f"Page state — active tool: {page_state.get('activeTool', '')!r}, "
-        f"last status: {page_state.get('lastRunStatus', '')!r}\n"
-        f"Recent log tail: {page_state.get('logTail', [])[:4]}"
-    )
-
-    payload = {
-        "model": resolved_model,
-        "stream": False,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_payload},
-        ],
-        "options": {"temperature": 0.1},
-    }
+    _ = (element_text, parent_chain, siblings, section, tool_panel, existing_attrs, page_state)
 
     try:
-        result = _rekki_http_post_json(_rekki_chat_url(), payload, timeout=30)
-        raw = str((result.get("message") or {}).get("content", "")).strip()
-        if not raw:
-            return jsonify({"ok": False, "error": "empty inference response"}), 502
-        inferred = json.loads(raw)
+        inferred = _rekki_infer_context_local(scrape)
         return jsonify({"ok": True, "context": inferred})
-    except json.JSONDecodeError:
-        return jsonify({"ok": False, "error": "model returned non-JSON", "raw": raw[:300]}), 502
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+    except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 502
 
 
@@ -1568,28 +1662,25 @@ def api_rekki_infer_context():
 def api_rekki_automation():
     data = request.get_json(silent=True) or {}
     action = str(data.get("action", "")).strip().lower()
-    model = str(data.get("model") or os.environ.get("REKIT_AGENT_MODEL", _REKKI_DEFAULT_MODEL)).strip()
+    model = _REKKI_SCRIPTED_MODEL
     profile = str(data.get("profile") or os.environ.get("REKIT_AGENT_PROFILE", _REKKI_PROFILE)).strip()
 
-    resolved_model, model_ok, model_error = _rekki_resolve_model(model)
-    if not model_ok:
-        return jsonify({"ok": False, "error": f"Ollama unavailable: {model_error}"}), 502
-
-    ok, output, code = _rekki_automation_action(action, resolved_model, profile)
-    status_ok, status_text, status_code = _rekki_automation_status(resolved_model, profile)
+    ok, output, code = _rekki_automation_action(action, model, profile)
+    status_ok, status_text, status_code = _rekki_automation_status(model, profile)
     http_code = 200 if ok else (code if code in {400, 404} else 502)
     return jsonify({
         "ok": ok,
         "action": action,
-        "provider": "ollama",
+        "provider": "scripted-local",
         "requested_model": model,
-        "model": resolved_model,
+        "model": model,
         "profile": profile,
         "output": output,
         "code": code,
         "status_ok": status_ok,
         "status_text": status_text,
         "status_code": status_code,
+        "external_calls_blocked": True,
     }), http_code
 
 
