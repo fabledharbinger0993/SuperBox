@@ -62,6 +62,12 @@ function showRekitBoxMode() {
 document.addEventListener('DOMContentLoaded', () => {
   _applyRekkiModeUI(localStorage.getItem('rekitbox-mode') || 'suburban');
   showRekitBoxMode();
+  
+  // Initialize tool drawer pin button
+  const pinBtn = document.getElementById('tool-drawer-pin');
+  if (pinBtn) {
+    _syncToolDrawerPinState();
+  }
 });
 /* ── State ─────────────────────────────────────────────────────────────────── */
 let activeSource = null;
@@ -4434,6 +4440,38 @@ function libBuildGenreSelect() {
 
 /* ── Tool Drawer ──────────────────────────────────────────────────────── */
 let _toolDrawerStep = null;
+let _toolDrawerPinned = false;
+
+function _syncToolDrawerPinState() {
+  const drawer = document.getElementById('tool-drawer');
+  const pinBtn = document.getElementById('tool-drawer-pin');
+  if (!drawer || !pinBtn) return;
+
+  const isExpanded = drawer.classList.contains('open');
+  pinBtn.textContent = _toolDrawerPinned ? 'Unpin' : 'Pin';
+  pinBtn.title = _toolDrawerPinned ? 'Unpin tool drawer' : 'Pin tool drawer open';
+  pinBtn.setAttribute('aria-pressed', _toolDrawerPinned ? 'true' : 'false');
+
+  if (!_toolDrawerStep && _toolDrawerPinned) {
+    document.getElementById('tool-drawer-title').textContent = 'Tool Drawer';
+  }
+}
+
+function toggleToolDrawerPin() {
+  _toolDrawerPinned = !_toolDrawerPinned;
+  const drawer = document.getElementById('tool-drawer');
+  if (!drawer) return;
+  
+  if (_toolDrawerPinned) {
+    drawer.classList.add('open');
+  } else {
+    // Only unpin if no tool step is open
+    if (!_toolDrawerStep) {
+      drawer.classList.remove('open');
+    }
+  }
+  _syncToolDrawerPinState();
+}
 
 function openToolDrawer(stepId) {
   const drawer = document.getElementById('tool-drawer');
@@ -4449,6 +4487,7 @@ function openToolDrawer(stepId) {
   document.querySelectorAll('#tools-panel .tool-btn[data-step]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.step === stepId);
   });
+  _syncToolDrawerPinState();
 
   setTimeout(() => {
     const card = document.getElementById(stepId);
@@ -4457,10 +4496,16 @@ function openToolDrawer(stepId) {
 }
 
 function closeToolDrawer() {
-  document.getElementById('tool-drawer')?.classList.remove('open');
   _toolDrawerStep = null;
+  document.getElementById('tool-drawer-title').textContent = '';
   document.querySelectorAll('#tools-panel .tool-btn[data-step]').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.step-tab').forEach(b => b.classList.remove('active'));
+  
+  // Only collapse drawer if it's not pinned
+  if (!_toolDrawerPinned) {
+    document.getElementById('tool-drawer')?.classList.remove('open');
+  }
+  _syncToolDrawerPinState();
 }
 
 function leSetStatus(label, count, totalCount) {
