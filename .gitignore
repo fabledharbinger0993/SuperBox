@@ -45,3 +45,4 @@ static/index.html
 # Only the .pi/prompts/ tree is needed by RekitBox (rekit_agent.py reads it
 # directly from the sibling RekkiClaw repo — no local copy required).
 agent_assets/fabledclaw_snapshot/
+packaging/*.app

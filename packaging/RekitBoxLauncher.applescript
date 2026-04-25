@@ -1,4 +1,5 @@
 -- RekitBoxLauncher.applescript
--- Launches RekitBox via launch.sh, for use in a .app wrapper
+-- Launches RekitBox via launch.sh using absolute path to canonical repo
+-- Works from any .app location (~/Applications/, Dock, etc.)
 
-do shell script "cd \"" & POSIX path of (path to me as text) & "../../ && ./launch.sh > /dev/null 2>&1 &"
+do shell script "bash '/Users/cameronkelly/FABLEDHARBINGER/GIT_REPOS/RekitBox/launch.sh' > /dev/null 2>&1 &"
