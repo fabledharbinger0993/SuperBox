@@ -88,7 +88,17 @@ def _backup_db(db_path: Path) -> Path:
     Raises RuntimeError if the source file doesn't exist.
     """
     if not db_path.exists():
-        raise RuntimeError(f"Database not found at {db_path}")
+        # Check if the volume/drive is mounted
+        volume_path = Path(f"/{db_path.parts[1]}/{db_path.parts[2]}") if len(db_path.parts) >= 3 else None
+        drive_hint = ""
+        if volume_path and not volume_path.exists():
+            drive_hint = f"\n\nThe drive '{volume_path}' is not mounted. Please ensure the drive is connected and mounted before running this operation."
+        elif volume_path and volume_path.exists():
+            drive_hint = f"\n\nThe drive is mounted, but the database file doesn't exist at the expected location. Check your configuration in ~/.rekordbox-toolkit/config.json"
+        
+        raise RuntimeError(
+            f"Database not found at {db_path}{drive_hint}"
+        )
 
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
