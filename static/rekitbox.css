@@ -4694,3 +4694,98 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   font-size: .78rem;
   background: transparent;
 }
+
+/* ── Rekordbox Library Migration ──────────────────────────────────────────── */
+.migrate-db-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.migrate-db-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface-hi);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s;
+  user-select: none;
+}
+
+.migrate-db-header:hover {
+  background: var(--surface-raised);
+}
+
+.migrate-db-chevron {
+  font-size: 1rem;
+  color: var(--text-dim);
+  transition: transform .2s;
+}
+
+.migrate-db-body {
+  padding: 16px;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.migrate-db-blurb {
+  font-size: .85rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+}
+
+.migrate-db-blurb code {
+  font-family: var(--mono);
+  font-size: .82rem;
+  background: var(--surface-raised);
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: var(--accent);
+}
+
+.migrate-db-confirm-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-danger-outline {
+  background: transparent;
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+  transition: background .15s, border-color .15s;
+}
+
+.btn-danger-outline:hover:not(:disabled) {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+}
+
+.btn-danger-outline:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Helper text in labels ────────────────────────────────────────────── */
+.label-hint {
+  font-size: .75rem;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+/* ── Styled select dropdowns ──────────────────────────────────────────── */
+.select-styled {
+  background: var(--surface-hi);
+  border: 1px solid var(--border-hi);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: .85rem;
+  width: 100%;
+}

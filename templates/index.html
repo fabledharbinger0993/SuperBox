@@ -271,8 +271,8 @@
           <div class="folder-pills" id="dupes-pills"></div>
         </div>
         <div class="field">
-          <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— fpcalc processes to run simultaneously (your Mac has 8 cores)</span></label>
-          <select id="dupes-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+          <label>Parallel Workers <span class="label-hint">— fpcalc processes to run simultaneously (your Mac has 8 cores)</span></label>
+          <select id="dupes-workers" class="select-styled">
             <option value="1">1 — sequential (safe, slowest)</option>
             <option value="2">2 workers</option>
             <option value="4" selected>4 workers (recommended)</option>
@@ -410,7 +410,7 @@
   <!-- Step 1 — bottom-right. "What you're doing." Proceed button bottom-right. -->
   <div class="confirm-panel" id="confirm-step1">
     <div class="confirm-panel-head">
-      <img src="/static/RB_LOGO.png" alt="" style="width:22px;height:22px;object-fit:contain;opacity:.55;flex-shrink:0;mix-blend-mode:screen;">
+      <img src="/static/RB_LOGO.png" alt="" class="rb-logo-icon">
       <div class="confirm-step-num">1</div>
       <div class="confirm-panel-title">Confirm Selection</div>
       <button class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
@@ -428,7 +428,7 @@
   <!-- Step 2 — top-left. File list + execute. -->
   <div class="confirm-panel" id="confirm-step2">
     <div class="confirm-panel-head">
-      <img src="/static/RB_LOGO.png" alt="" style="width:22px;height:22px;object-fit:contain;opacity:.55;flex-shrink:0;mix-blend-mode:screen;">
+      <img src="/static/RB_LOGO.png" alt="" class="rb-logo-icon">
       <div class="confirm-step-num">2</div>
       <div class="confirm-panel-title">Review &amp; Execute</div>
       <button class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
@@ -460,7 +460,7 @@
     <div class="card-head">
       <div class="card-icon danger"><img src="/static/icon-normalize.png" alt="Normalize"></div>
       <div class="card-meta">
-        <div class="card-title">Normalize Loudness <em style="font-weight:400;color:var(--text-muted)">(Optional)</em></div>
+        <div class="card-title">Normalize Loudness <em class="optional-label">(Optional)</em></div>
         <div class="card-blurb">Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard. <strong>This rewrites the actual audio file.</strong></div>
       </div>
       <span class="risk-badge danger">Rewrites Audio</span>
@@ -521,26 +521,26 @@
           <!-- rows: quietest original, quietest normalised, loudest original, loudest normalised -->
           <div class="norm-sample-row norm-sample-placeholder" data-slot="0">
             <div class="norm-sample-meta"><span class="norm-sample-kind">Quietest</span><span class="norm-sample-tag">Original</span></div>
-            <div class="norm-sample-player"><button class="norm-play-btn" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" type="button" title="Play audio" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
           </div>
           <div class="norm-sample-row norm-sample-placeholder" data-slot="1">
             <div class="norm-sample-meta"><span class="norm-sample-kind">Quietest</span><span class="norm-sample-tag norm-sample-tag--norm">Normalized  −8 LUFS</span></div>
-            <div class="norm-sample-player"><button class="norm-play-btn" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" type="button" title="Play audio" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
           </div>
           <div class="norm-sample-row norm-sample-placeholder" data-slot="2">
             <div class="norm-sample-meta"><span class="norm-sample-kind">Loudest</span><span class="norm-sample-tag">Original</span></div>
-            <div class="norm-sample-player"><button class="norm-play-btn" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" type="button" title="Play audio" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
           </div>
           <div class="norm-sample-row norm-sample-placeholder" data-slot="3">
             <div class="norm-sample-meta"><span class="norm-sample-kind">Loudest</span><span class="norm-sample-tag norm-sample-tag--norm">Normalized  −8 LUFS</span></div>
-            <div class="norm-sample-player"><button class="norm-play-btn" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" type="button" title="Play audio" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
           </div>
         </div>
       </div>
 
       <div class="field">
-        <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
-        <select id="normalize-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+        <label>Parallel Workers <span class="label-hint">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
+        <select id="normalize-workers" class="normalize-workers-select" title="Select number of parallel workers for ffmpeg processes">
           <option value="1">1 — sequential (safe, slowest)</option>
           <option value="2">2 workers</option>
           <option value="4" selected>4 workers (recommended)</option>
@@ -621,8 +621,8 @@
         </div>
       </div>
       <div class="field">
-        <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
-        <select id="convert-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+        <label>Parallel Workers <span class="label-hint">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
+        <select id="convert-workers" class="select-styled">
           <option value="1">1 — sequential (safe, slowest)</option>
           <option value="2">2 workers</option>
           <option value="4" selected>4 workers (recommended)</option>
@@ -735,7 +735,7 @@
       <div class="field-row">
         <div class="field">
           <label>Mode</label>
-          <select id="organize-mode" onchange="orgUpdateMode(this.value)" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+          <select id="organize-mode" onchange="orgUpdateMode(this.value)" class="select-styled">
             <option value="assimilate" selected>Full Library Assimilation — move files, clean up source</option>
             <option value="integrate">Full Library Integration — copy files only, source untouched</option>
           </select>
@@ -743,8 +743,8 @@
       </div>
       <div class="field-row">
         <div class="field">
-          <label>Mix Threshold <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— tracks longer than this go to Live Sets &amp; Mixes</span></label>
-          <select id="organize-mix-threshold" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+          <label>Mix Threshold <span class="label-hint">— tracks longer than this go to Live Sets &amp; Mixes</span></label>
+          <select id="organize-mix-threshold" class="select-styled">
             <option value="10">10 minutes</option>
             <option value="15" selected>15 minutes (default)</option>
             <option value="20">20 minutes</option>
@@ -753,8 +753,8 @@
           </select>
         </div>
         <div class="field">
-          <label>Parallel Workers <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">— I/O threads</span></label>
-          <select id="organize-workers" style="background:var(--surface-hi);border:1px solid var(--border-hi);color:var(--text);border-radius:var(--radius);padding:8px 12px;font-size:.85rem;width:100%;">
+          <label>Parallel Workers <span class="label-hint">— I/O threads</span></label>
+          <select id="organize-workers" class="select-styled">
             <option value="1" selected>1 — sequential (safe)</option>
             <option value="2">2 workers</option>
             <option value="4">4 workers</option>
@@ -764,7 +764,7 @@
       <div class="field" style="margin-top:4px">
         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;">
           <input type="checkbox" id="organize-dry-run" checked style="width:16px;height:16px;accent-color:var(--accent);">
-          Dry Run — preview without touching any files <span style="font-size:.75rem;color:var(--text-dim);font-weight:400;">(recommended — uncheck to execute)</span>
+          Dry Run — preview without touching any files <span class="label-hint">(recommended — uncheck to execute)</span>
         </label>
       </div>
       <div class="btn-row">
@@ -1193,7 +1193,7 @@
 <div id="report-modal-backdrop" class="hidden">
   <div id="report-modal">
     <div class="rmod-header">
-      <img src="/static/RB_LOGO.png" alt="" style="width:22px;height:22px;object-fit:contain;opacity:.55;flex-shrink:0;mix-blend-mode:screen;">
+      <img src="/static/RB_LOGO.png" alt="" class="rb-logo-icon">
       <div class="rmod-header-text">
         <h2 id="rmod-title">Step Complete</h2>
         <p class="rmod-save-path" id="rmod-save-path"></p>
@@ -1505,7 +1505,7 @@
 <div id="welcome-backdrop" class="hidden">
   <div id="welcome-modal">
     <div class="welcome-header">
-      <img src="/static/RB_LOGO.png" alt="" style="width:22px;height:22px;object-fit:contain;opacity:.55;flex-shrink:0;mix-blend-mode:screen;">
+      <img src="/static/RB_LOGO.png" alt="" class="rb-logo-icon">
       <div class="welcome-header-text">
         <h2>Welcome to RekitBox</h2>
         <p>A free, open-source rekordbox library toolkit by Guthrie Entertainment LLC</p>

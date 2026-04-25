@@ -9,5 +9,9 @@
 		"**/.venv": true,
 		"**/venv": true
 	},
-	"github.copilot.chat.agentDebugLog.fileLogging.enabled": true
+	"github.copilot.chat.agentDebugLog.fileLogging.enabled": true,
+	"html.validate.styles": false,
+	"htmlhint.options": {
+		"inline-style-disabled": false
+	}
 }

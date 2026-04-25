@@ -2851,6 +2851,102 @@ function runOrganize() {
   });
 }
 
+/* ── Rekordbox Library Migration ───────────────────────────────────────────── */
+function toggleMigrateSection() {
+  const body = document.getElementById('migrate-db-body');
+  const chevron = document.getElementById('migrate-db-chevron');
+  if (!body || !chevron) return;
+  
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  chevron.textContent = isHidden ? '▾' : '▸';
+}
+
+function migrateCbChanged() {
+  const checkbox = document.getElementById('migrate-confirm-cb');
+  const button = document.getElementById('btn-migrate-db');
+  if (checkbox && button) {
+    button.disabled = !checkbox.checked;
+  }
+}
+
+async function runMigrateDb() {
+  const target = document.getElementById('organize-target').value.trim();
+  if (!target) {
+    showToast('Enter a target drive path in the "Target — organised library root" field above.', 'warning');
+    return;
+  }
+  
+  const rbMsg = 'Rekordbox must be closed before migrating the database. Please quit Rekordbox and try again.';
+  if (!checkRbBlock(rbMsg)) return;
+  
+  if (isRunning) return;
+  
+  initLog('Move Rekordbox Library to Drive');
+  showScanBar('Move Rekordbox Library to Drive');
+  isRunning = true;
+  setSpinner(true);
+  setAllButtons(true);
+  appendLog('▸ Move Rekordbox Library to Drive', 'dim');
+  appendLog('', 'dim');
+  
+  try {
+    const resp = await fetch('/api/migrate-pioneer-db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target }),
+    });
+    
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      appendLog(`✖ Error: ${errorText}`, 'danger');
+      showToast('Migration failed. Check log for details.', 'error');
+      return;
+    }
+    
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split('\n\n');
+      buf = parts.pop();
+      
+      for (const part of parts) {
+        const dataLine = part.split('\n').find(l => l.startsWith('data: '));
+        if (!dataLine) continue;
+        
+        try {
+          const data = JSON.parse(dataLine.slice(6));
+          if (data.line !== undefined) {
+            appendLog(data.line);
+          }
+          if (data.done !== undefined && data.done) {
+            appendLog('✓ Migration complete', 'safe');
+            showToast('Database migration complete. Rekordbox will now use the drive location.', 'success');
+            // Reset UI
+            document.getElementById('migrate-confirm-cb').checked = false;
+            migrateCbChanged();
+          }
+        } catch (e) {
+          console.error('Parse error:', e);
+        }
+      }
+    }
+  } catch (err) {
+    appendLog(`✖ Error: ${err.message}`, 'danger');
+    showToast('Migration failed. Check log for details.', 'error');
+  } finally {
+    isRunning = false;
+    setSpinner(false);
+    setAllButtons(false);
+  }
+}
+
 /* ── Novelty Scanner ───────────────────────────────────────────────────────── */
 function runNovelty() {
   const sources = getFolderPaths('novelty-pills');
