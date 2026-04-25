@@ -87,7 +87,10 @@ cat > "$APP_PATH/Contents/Info.plist" << PLIST
 PLIST
 echo "  ✓ Info.plist written"
 
-ICON_SRC="$SCRIPT_DIR/static/RB_LOGO.png"
+# Prefer new branded icon, fall back to legacy logo
+ICON_SRC="$SCRIPT_DIR/static/icon-rekitbox-app.png"
+[[ ! -f "$ICON_SRC" ]] && ICON_SRC="$SCRIPT_DIR/static/RB_LOGO.png"
+
 if [[ -f "$ICON_SRC" ]]; then
   ICONSET_DIR="$BUILD_DIR/rekitbox_agent.iconset"
   mkdir -p "$ICONSET_DIR"

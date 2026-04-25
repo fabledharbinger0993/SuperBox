@@ -77,6 +77,6 @@ def play_splash_and_continue(video_path, main_entry):
         finish()
 
 if __name__ == "__main__":
-    splash = Path(__file__).parent / "static/rekki-entrance.mp4"
+    splash = Path(__file__).parent / "static/rekitbox-splash.mp4"
     main_py = str(Path(__file__).parent / "main.py")
     play_splash_and_continue(str(splash), main_py)

@@ -82,6 +82,16 @@ class _Api:
 
 
 if __name__ == '__main__':
+    # Play splash video if available (skips if dependencies missing or video not found)
+    try:
+        from splash_player import play_splash_and_continue
+        splash_path = _ROOT / 'static' / 'rekitbox-splash.mp4'
+        if splash_path.exists():
+            # This will play the splash and exec back to this script when done
+            play_splash_and_continue(str(splash_path), __file__)
+    except Exception:
+        pass  # Continue without splash if it fails
+    
     if not _server_running():
         threading.Thread(target=_start_server, daemon=True).start()
         if not _wait_for_server():
