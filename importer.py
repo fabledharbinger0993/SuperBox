@@ -36,9 +36,16 @@ Resume mechanism:
 
 import json
 import logging
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    import fcntl  # POSIX file locking
+    _HAS_FCNTL = True
+except ImportError:
+    _HAS_FCNTL = False  # Windows - fallback to no locking
 
 from pyrekordbox import Rekordbox6Database
 
@@ -90,29 +97,49 @@ def _save_progress(root: Path, completed: set[str]) -> None:
     Merges into the existing file so parallel imports of other roots are
     preserved. Silently swallows write errors — a failed progress save must
     never abort an import that is otherwise succeeding.
+    
+    CONCURRENCY FIX: Uses fcntl file locking on POSIX systems to prevent
+    corruption when multiple processes write simultaneously.
     """
     key = str(root.resolve())
     try:
         _PROGRESS_FILE.parent.mkdir(parents=True, exist_ok=True)
-        # Load existing data so we don't overwrite other roots' progress
-        data: dict = {}
-        if _PROGRESS_FILE.exists():
-            try:
-                data = json.loads(_PROGRESS_FILE.read_text(encoding="utf-8"))
-            except Exception:
-                pass  # Corrupt file — overwrite it
-        now = datetime.now(timezone.utc).isoformat()
-        if key not in data or not isinstance(data[key], dict):
-            data[key] = {"started_at": now}
-        data[key]["completed_paths"] = sorted(completed)
-        data[key]["updated_at"] = now
-        data[key]["count"] = len(completed)
-        _PROGRESS_FILE.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        
+        # Use file locking if available (POSIX systems)
+        if _HAS_FCNTL:
+            lock_file = _PROGRESS_FILE.parent / ".import_progress.lock"
+            with open(lock_file, "w") as lock_fd:
+                fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX)
+                try:
+                    _save_progress_unsafe(root, completed, key)
+                finally:
+                    fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+        else:
+            # Windows fallback - no locking available
+            _save_progress_unsafe(root, completed, key)
     except Exception:
         log.warning("Could not save import progress — run will NOT be resumable")
+
+
+def _save_progress_unsafe(root: Path, completed: set[str], key: str) -> None:
+    """Internal helper for _save_progress - NOT thread-safe, must be called within lock."""
+    # Load existing data so we don't overwrite other roots' progress
+    data: dict = {}
+    if _PROGRESS_FILE.exists():
+        try:
+            data = json.loads(_PROGRESS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass  # Corrupt file — overwrite it
+    now = datetime.now(timezone.utc).isoformat()
+    if key not in data or not isinstance(data[key], dict):
+        data[key] = {"started_at": now}
+    data[key]["completed_paths"] = sorted(completed)
+    data[key]["updated_at"] = now
+    data[key]["count"] = len(completed)
+    _PROGRESS_FILE.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
 
 def _clear_progress(root: Path) -> None:
@@ -187,8 +214,11 @@ class ImportReport:
 
 
 # ─── Artist resolution ────────────────────────────────────────────────────────
+# CONCURRENCY FIX: Thread lock to prevent race conditions when parallel SSE
+# streams or subprocess workers access the cache simultaneously.
 
 _artist_cache: dict[str, str] = {}
+_artist_cache_lock = threading.Lock()
 
 
 def _get_or_create_artist(name: str, db: Rekordbox6Database) -> str | None:
@@ -196,22 +226,28 @@ def _get_or_create_artist(name: str, db: Rekordbox6Database) -> str | None:
     if not name or not name.strip():
         return None
     name = name.strip()
-    if name in _artist_cache:
-        return _artist_cache[name]
+    
+    with _artist_cache_lock:
+        if name in _artist_cache:
+            return _artist_cache[name]
+    
     existing = db.get_artist(Name=name).one_or_none()
     if existing is not None:
-        _artist_cache[name] = str(existing.ID)
+        with _artist_cache_lock:
+            _artist_cache[name] = str(existing.ID)
         return str(existing.ID)
     try:
         artist = db.add_artist(name=name)
-        _artist_cache[name] = str(artist.ID)
+        with _artist_cache_lock:
+            _artist_cache[name] = str(artist.ID)
         log.debug("Created artist: %r", name)
         return str(artist.ID)
     except ValueError:
         # Race condition — re-fetch
         existing = db.get_artist(Name=name).one_or_none()
         if existing:
-            _artist_cache[name] = str(existing.ID)
+            with _artist_cache_lock:
+                _artist_cache[name] = str(existing.ID)
             return str(existing.ID)
         log.error("Failed to get or create artist %r", name)
         return None
@@ -219,7 +255,8 @@ def _get_or_create_artist(name: str, db: Rekordbox6Database) -> str | None:
 
 def clear_caches() -> None:
     """Clear all session-level caches. Useful between test runs."""
-    _artist_cache.clear()
+    with _artist_cache_lock:
+        _artist_cache.clear()
     clear_key_cache()
 
 

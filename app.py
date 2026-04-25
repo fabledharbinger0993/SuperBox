@@ -31,8 +31,10 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, request, send_file, send_from_directory
+from flask import Flask, Response, jsonify, render_template, request, send_file, send_from_directory, g
 from flask_sock import Sock
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from mutagen import File as MutagenFile
 
 import mimetypes
@@ -70,6 +72,14 @@ app = Flask(
     static_folder=str(_REPO_ROOT / 'static'),
 )
 sock = Sock(app)
+
+# Rate limiting for mobile API authentication
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["1000 per hour"],
+    storage_uri="memory://",
+)
 
 # ── Rekki brain: Congress deliberation + HologrA.I.m memory ──────────────────
 # ── RekitBox Native Playlist/Track API ───────────────────────────────────────
@@ -851,8 +861,10 @@ except ImportError:
     def get_step_status(*a, **kw): return {}  # no-op fallback
 
 # ── Active-process tracker (interrupt / emergency-stop) ───────────────────────
+# CONCURRENCY FIX: Changed from single global to dict + lock to prevent race
+# conditions when multiple SSE streams run concurrently.
 _proc_lock: threading.Lock = threading.Lock()
-_active_proc: "subprocess.Popen | None" = None
+_active_procs: dict[str, subprocess.Popen] = {}
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 
@@ -1402,8 +1414,8 @@ def _rekki_automation_action(action: str, model: str, profile: str) -> tuple[boo
 
 def _rekki_context_snapshot() -> dict:
     with _proc_lock:
-        proc = _active_proc
-    active = bool(proc is not None and proc.poll() is None)
+        # Check if any SSE streams are active
+        active = any(proc.poll() is None for proc in _active_procs.values())
 
     last_response = None
     state_dir = REPO_ROOT / ".git" / "agent-workflow"
@@ -1722,10 +1734,11 @@ def _stream(
       {"line": "..."}          — a line of output
       {"done": true, "exit_code": N}  — command finished
 
-    Registers the process in _active_proc so /api/cancel endpoints can
-    send signals to it mid-run.
+    Registers the process in _active_procs dict with a unique request ID
+    so /api/cancel endpoints can send signals to it mid-run. Uses thread-safe
+    dictionary to support concurrent SSE streams without race conditions.
     """
-    global _active_proc
+    request_id = str(uuid.uuid4())
     _library_root = library_root
     _step_name    = step_name
     try:
@@ -1742,7 +1755,7 @@ def _stream(
             env=_subprocess_env(),
         )
         with _proc_lock:
-            _active_proc = process
+            _active_procs[request_id] = process
         try:
             for line in iter(process.stdout.readline, ""):
                 yield f"data: {json.dumps({'line': line.rstrip()})}\n\n"
@@ -1752,17 +1765,27 @@ def _stream(
             yield f"data: {json.dumps({'done': True, 'exit_code': process.returncode})}\n\n"
         finally:
             with _proc_lock:
-                _active_proc = None
+                _active_procs.pop(request_id, None)
     except Exception as exc:
         with _proc_lock:
-            _active_proc = None
+            _active_procs.pop(request_id, None)
         yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}', 'done': True, 'exit_code': 1})}\n\n"
     finally:
         for path in cleanup_paths or []:
             try:
                 path.unlink(missing_ok=True)
-            except Exception:
-                pass
+            except OSError as exc:
+                app.logger.warning("SSE cleanup failed for %s: %s", path, exc)
+                # Attempt to move to a quarantine location instead of leaving in place
+                try:
+                    from config import REPORTS_DIR  # noqa: PLC0415
+                    quarantine_dir = REPORTS_DIR.parent / "quarantine"
+                    quarantine_dir.mkdir(exist_ok=True)
+                    dest = quarantine_dir / f"cleanup_failed_{path.name}"
+                    path.rename(dest)
+                    app.logger.info("Moved uncleanable temp file to quarantine: %s", dest)
+                except Exception:
+                    pass  # Give up gracefully
 
 
 def _sse_response(
@@ -1910,7 +1933,7 @@ def _stream_pipeline(steps: list[dict]):
       {"done": true, "exit_code": 0}   — all steps complete
       {"done": true, "exit_code": N, "failed_step": "..."} — step failed
     """
-    global _active_proc
+    request_id = str(uuid.uuid4())
     total = len(steps)
     last_report_path: str | None = None   # passed from duplicates → prune
 
@@ -1936,7 +1959,7 @@ def _stream_pipeline(steps: list[dict]):
                 env=_subprocess_env(),
             )
             with _proc_lock:
-                _active_proc = process
+                _active_procs[request_id] = process
             try:
                 for line in iter(process.stdout.readline, ""):
                     stripped = line.rstrip()
@@ -1948,10 +1971,10 @@ def _stream_pipeline(steps: list[dict]):
                 exit_code = process.returncode
             finally:
                 with _proc_lock:
-                    _active_proc = None
+                    _active_procs.pop(request_id, None)
         except Exception as exc:
             with _proc_lock:
-                _active_proc = None
+                _active_procs.pop(request_id, None)
             yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}'})}\n\n"
             exit_code = 1
 
@@ -2620,6 +2643,7 @@ def api_relocate():
 
     # Multiple old roots — chain each CLI run, only emit done after the last one
     def _multi():
+        request_id = str(uuid.uuid4())
         overall = 0
         for i, old in enumerate(old_roots):
             if i > 0:
@@ -2632,8 +2656,7 @@ def api_relocate():
                     text=True, bufsize=1, cwd=str(REPO_ROOT), env=_subprocess_env(),
                 )
                 with _proc_lock:
-                    global _active_proc
-                    _active_proc = proc
+                    _active_procs[request_id] = proc
                 try:
                     for line in iter(proc.stdout.readline, ""):
                         yield f"data: {json.dumps({'line': line.rstrip()})}\n\n"
@@ -2642,10 +2665,10 @@ def api_relocate():
                         overall = proc.returncode
                 finally:
                     with _proc_lock:
-                        _active_proc = None
+                        _active_procs.pop(request_id, None)
             except Exception as exc:
                 with _proc_lock:
-                    _active_proc = None
+                    _active_procs.pop(request_id, None)
                 yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}'})}\n\n"
                 overall = 1
         if library_root:
@@ -3076,11 +3099,25 @@ def api_open_file():
     try:
         _sys = platform.system()
         if _sys == "Darwin":
-            subprocess.Popen(["open", str(p)])
+            # HIGH-07 FIX: Close file descriptors to prevent leaks
+            subprocess.Popen(
+                ["open", str(p)],
+                close_fds=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         elif _sys == "Windows":
             os.startfile(str(p))  # type: ignore[attr-defined]
         else:
-            subprocess.Popen(["xdg-open", str(p)])
+            # HIGH-07 FIX: Close file descriptors to prevent leaks
+            subprocess.Popen(
+                ["xdg-open", str(p)],
+                close_fds=True,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
@@ -3237,24 +3274,40 @@ def api_audit_path_roots():
 
 @app.route("/api/cancel", methods=["POST"])
 def api_cancel():
-    """Send SIGTERM to the active subprocess (graceful interrupt / checkpoint)."""
+    """Send SIGTERM to all active subprocesses (graceful interrupt / checkpoint)."""
+    count = 0
     with _proc_lock:
-        proc = _active_proc
-    if proc is None:
-        return jsonify({"ok": False, "error": "No active scan"}), 404
-    proc.terminate()
-    return jsonify({"ok": True})
+        for proc in list(_active_procs.values()):
+            try:
+                if proc.poll() is None:  # Still running
+                    proc.terminate()
+                    count += 1
+            except Exception as exc:
+                app.logger.warning("Failed to terminate process: %s", exc)
+        _active_procs.clear()
+    
+    if count > 0:
+        return jsonify({"ok": True, "terminated": count})
+    return jsonify({"ok": False, "error": "No active scan"}), 404
 
 
 @app.route("/api/cancel/force", methods=["POST"])
 def api_cancel_force():
-    """Send SIGKILL to the active subprocess (emergency stop — server stays running)."""
+    """Send SIGKILL to all active subprocesses (emergency stop — server stays running)."""
+    count = 0
     with _proc_lock:
-        proc = _active_proc
-    if proc is None:
-        return jsonify({"ok": False, "error": "No active scan"}), 404
-    proc.kill()
-    return jsonify({"ok": True})
+        for proc in list(_active_procs.values()):
+            try:
+                if proc.poll() is None:  # Still running
+                    proc.kill()
+                    count += 1
+            except Exception as exc:
+                app.logger.warning("Failed to kill process: %s", exc)
+        _active_procs.clear()
+    
+    if count > 0:
+        return jsonify({"ok": True, "killed": count})
+    return jsonify({"ok": False, "error": "No active scan"}), 404
 
 
 # ── Normalize preview ─────────────────────────────────────────────────────────
@@ -3483,8 +3536,9 @@ def api_update_apply():
     """
     # Refuse mid-scan — interrupt would leave the DB in an ambiguous state.
     with _proc_lock:
-        active = _active_proc
-    if active is not None and active.poll() is None:
+        # Check if any SSE streams are active
+        active = any(proc.poll() is None for proc in _active_procs.values())
+    if active:
         return jsonify({
             "ok": False,
             "error": "A scan is still running — cancel or finish it before updating.",
@@ -3875,11 +3929,15 @@ def _read_mobile_token() -> str:
 
 
 @app.before_request
+@limiter.limit("10 per minute", exempt_when=lambda: not request.path.startswith('/api/mobile/'))
 def _check_mobile_auth():
     """
     Require Bearer token for all /api/mobile/* routes except /api/mobile/ping.
     Desktop routes (/, /api/status, /api/run/*, etc.) are unaffected — they are
     already only reachable on localhost so no auth is needed there.
+    
+    SECURITY: Rate limited to 10 attempts per minute to prevent brute-force
+    attacks on the Bearer token.
     """
     if not request.path.startswith("/api/mobile/"):
         return
@@ -3893,6 +3951,11 @@ def _check_mobile_auth():
         }), 503
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer ") or auth[7:] != current_token:
+        app.logger.warning(
+            "Mobile API auth failed from %s for %s",
+            request.remote_addr,
+            request.path,
+        )
         return jsonify({"error": "unauthorized"}), 401
 
 # ── Mobile API routes ────────────────────────────────────────────────────────
@@ -4066,11 +4129,32 @@ def mobile_folder_files(folder_path: str):
 
     folder_path is URL-encoded by the client and decoded by Flask's <path:>
     converter. We resolve it to an absolute path and validate it exists.
+    
+    SECURITY: Validates that folder_path stays within allowed music roots
+    to prevent path traversal attacks (e.g., ../../etc/passwd).
     """
     import datetime  # noqa: PLC0415
+    from config import MUSIC_ROOT  # noqa: PLC0415
+    
     p = Path("/" + folder_path) if not folder_path.startswith("/") else Path(folder_path)
+    
+    # Resolve to absolute path and check for path traversal
+    try:
+        p_resolved = p.resolve()
+    except (OSError, RuntimeError):
+        return jsonify({"error": "invalid_path"}), 400
+    
+    # Validate against MUSIC_ROOT
+    music_root_resolved = MUSIC_ROOT.resolve()
+    if not str(p_resolved).startswith(str(music_root_resolved)):
+        app.logger.warning(
+            "Path traversal attempt blocked: %s (outside %s)",
+            p_resolved,
+            music_root_resolved,
+        )
+        return jsonify({"error": "forbidden"}), 403
 
-    if not p.is_dir():
+    if not p_resolved.is_dir():
         return jsonify({"error": "folder_not_found"}), 404
 
     audio_extensions = {
@@ -4079,7 +4163,7 @@ def mobile_folder_files(folder_path: str):
 
     files = []
     try:
-        for f in sorted(p.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+        for f in sorted(p_resolved.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
             if not f.is_file():
                 continue
             if f.suffix.lower() not in audio_extensions:
@@ -4996,6 +5080,22 @@ def disable_cache_on_static_files(response):
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
+    
+    # INFO-01 FIX: Add Content-Security-Policy header for defense-in-depth
+    # against XSS attacks. This is a local-only app but CSP is still good practice.
+    # 'unsafe-inline' is required for inline scripts in index.html.
+    # 'unsafe-eval' is required for dynamic code execution in some JS libraries.
+    response.headers['Content-Security-Policy'] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "connect-src 'self' ws://localhost:* wss://localhost:*; "
+        "font-src 'self' data:; "
+        "object-src 'none'; "
+        "base-uri 'self';"
+    )
+    
     return response
 
 

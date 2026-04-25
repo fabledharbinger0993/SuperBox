@@ -13,6 +13,7 @@ Public interface:
 """
 
 import logging
+import threading
 from uuid import uuid4
 
 from pyrekordbox import Rekordbox6Database
@@ -101,7 +102,10 @@ def notation_to_scale_name(raw: str | None) -> str | None:
 # ─── Get-or-create ────────────────────────────────────────────────────────────
 
 # Module-level cache: ScaleName → DjmdKey.ID (always str)
+# CONCURRENCY FIX: Thread lock to prevent race conditions when parallel SSE
+# streams or subprocess workers access the cache simultaneously.
 _key_id_cache: dict[str, str] = {}
+_key_id_cache_lock = threading.Lock()
 
 
 def _next_seq(db: Rekordbox6Database) -> int:
@@ -124,12 +128,14 @@ def _get_or_create_key_row(scale_name: str, db: Rekordbox6Database) -> str:
 
     Returns str. Raises ValueError if scale_name is not in CANONICAL_SCALE_NAMES.
     """
-    if scale_name in _key_id_cache:
-        return _key_id_cache[scale_name]
+    with _key_id_cache_lock:
+        if scale_name in _key_id_cache:
+            return _key_id_cache[scale_name]
 
     existing = db.get_key(ScaleName=scale_name).first()
     if existing is not None:
-        _key_id_cache[scale_name] = str(existing.ID)
+        with _key_id_cache_lock:
+            _key_id_cache[scale_name] = str(existing.ID)
         return str(existing.ID)
 
     if scale_name not in CANONICAL_SCALE_NAMES:
@@ -152,7 +158,8 @@ def _get_or_create_key_row(scale_name: str, db: Rekordbox6Database) -> str:
         "Created DjmdKey row: ScaleName=%r ID=%s Seq=%s",
         scale_name, new_id, seq,
     )
-    _key_id_cache[scale_name] = str(new_id)
+    with _key_id_cache_lock:
+        _key_id_cache[scale_name] = str(new_id)
     return str(new_id)
 
 
@@ -175,7 +182,8 @@ def resolve_key_id(
 
 def clear_cache() -> None:
     """Clear the in-memory key ID cache. Useful between test runs."""
-    _key_id_cache.clear()
+    with _key_id_cache_lock:
+        _key_id_cache.clear()
 
 
 # ─── Smoke test ───────────────────────────────────────────────────────────────

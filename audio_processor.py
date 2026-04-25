@@ -920,6 +920,8 @@ def process_directory(
                 time.sleep(pause_seconds)
 
     # Write scan index for duplicate pre-filter
+    # MED-03 FIX: Use atomic write pattern (write-to-temp + rename) to prevent
+    # corruption if process crashes mid-write or concurrent access occurs.
     if scan_index:
         index_path = Path.home() / "rekordbox-toolkit" / "scan_index.json"
         index_path.parent.mkdir(parents=True, exist_ok=True)
@@ -931,9 +933,24 @@ def process_directory(
                         existing[entry["path"]] = entry
             for entry in scan_index:
                 existing[entry["path"]] = entry
-            with open(index_path, "w", encoding="utf-8") as f:
-                json.dump(list(existing.values()), f, indent=2)
-            log.info("Scan index written: %s (%d entries)", index_path, len(existing))
+            
+            # Atomic write: write to temp file then rename
+            import tempfile
+            temp_fd, temp_path = tempfile.mkstemp(
+                dir=index_path.parent,
+                prefix=".scan_index_",
+                suffix=".json.tmp"
+            )
+            try:
+                with os.fdopen(temp_fd, "w", encoding="utf-8") as f:
+                    json.dump(list(existing.values()), f, indent=2)
+                # Atomic rename (POSIX guarantees atomicity)
+                Path(temp_path).replace(index_path)
+                log.info("Scan index written: %s (%d entries)", index_path, len(existing))
+            except Exception:
+                # Clean up temp file on failure
+                Path(temp_path).unlink(missing_ok=True)
+                raise
         except Exception as exc:
             log.warning("Could not write scan index: %s", exc)
 

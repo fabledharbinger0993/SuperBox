@@ -12,7 +12,8 @@
 
 flask>=3.0
 flask-sock>=0.7
-# Web framework — routes, SSE streaming, JSON responses
+flask-limiter>=3.5
+# Web framework — routes, SSE streaming, JSON responses, rate limiting
 
 waitress>=3.0
 # Production WSGI server (Automator-safe: no stdout bleed unlike dev server)
