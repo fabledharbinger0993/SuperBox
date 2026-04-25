@@ -511,7 +511,7 @@ async function saveSettings() {
   const custom = document.getElementById('settings-custom-input').value.trim();
   const boxMode = document.querySelector('input[name="rekitbox-mode"]:checked')?.value || 'suburban';
   if (mode === 'custom' && !custom) {
-    alert('Please enter a folder path for the custom archive location.');
+    showToast('Enter a folder path for the custom archive location.', 'warning');
     return;
   }
   const btn = document.querySelector('.settings-save');
@@ -535,10 +535,10 @@ async function saveSettings() {
       await fetch('/api/quit', { method: 'POST' }).catch(() => {});
       setTimeout(() => window.close(), 500);
     } else {
-      alert('Save failed: ' + (data.error || 'unknown error'));
+      showToast('Save failed — ' + (data.error || 'unknown error'), 'error');
     }
   } catch(e) {
-    alert('Could not save settings.');
+    showToast('Could not save settings.', 'error');
   } finally {
     btn.textContent = 'Save'; btn.disabled = false;
   }
@@ -1406,7 +1406,7 @@ function _showRetryOption() {
 /* ── Individual command runners ────────────────────────────────────────────── */
 function runProcess() {
   const paths = getFolderPaths('process-pills');
-  if (!paths.length) { alert('Add at least one music folder first.'); return; }
+  if (!paths.length) { showToast('Add at least one music folder first.', 'warning'); return; }
 
   // Retry-errored mode: POST the specific file list, force=true, no directory scan
   const retryOnly = document.getElementById('process-retry-errored')?.checked;
@@ -1417,7 +1417,7 @@ function runProcess() {
       ...(_lastErrorSummary.other          || []).map(e => e.path),
     ].filter(Boolean);
     if (!retryPaths.length) {
-      alert('No retryable errored tracks found from the last run.');
+      showToast('No retryable errored tracks from the last run.', 'warning');
       return;
     }
     const body = {
@@ -1519,7 +1519,7 @@ function _runProcessRetry(body) {
 
 function runNormalize(_skipConfirm = false) {
   const paths = getFolderPaths('normalize-pills');
-  if (!paths.length) { alert('Add at least one music folder first.'); return; }
+  if (!paths.length) { showToast('Add at least one music folder first.', 'warning'); return; }
   if (!_skipConfirm) {
     const confirmed = confirm(
       'This will rewrite audio files.\n\n' +
@@ -1543,7 +1543,7 @@ function runNormalize(_skipConfirm = false) {
 
 function runImportDry() {
   const paths = getFolderPaths('import-pills');
-  if (!paths.length) { alert('Add at least one music folder first.'); return; }
+  if (!paths.length) { showToast('Add at least one music folder first.', 'warning'); return; }
   const p = new URLSearchParams({ dry_run: '1' });
   paths.forEach(path => p.append('path', path));
   runCommand(`/api/run/import?${p}`, 'Preview Import — Dry Run', null, true, false, null);
@@ -1552,7 +1552,7 @@ function runImportDry() {
 function runImport() {
   if (checkRbBlock('import-rb-block')) return;
   const paths = getFolderPaths('import-pills');
-  if (!paths.length) { alert('Add at least one music folder first.'); return; }
+  if (!paths.length) { showToast('Add at least one music folder first.', 'warning'); return; }
   const p = new URLSearchParams();
   paths.forEach(path => p.append('path', path));
   runCommand(`/api/run/import?${p}`, 'Import — Writing Tracks to Database', null, true);
@@ -1561,7 +1561,7 @@ function runImport() {
 function runLink() {
   if (checkRbBlock('link-rb-block')) return;
   const paths = getFolderPaths('link-pills');
-  if (!paths.length) { alert('Add at least one music folder first.'); return; }
+  if (!paths.length) { showToast('Add at least one music folder first.', 'warning'); return; }
   const p = new URLSearchParams();
   paths.forEach(path => p.append('path', path));
   runCommand(`/api/run/link?${p}`, 'Link Playlists — Matching Tracks to Folders', null, true);
@@ -1571,8 +1571,8 @@ function runRelocate() {
   if (checkRbBlock('relocate-rb-block')) return;
   const oldPaths = getFolderPaths('relocate-old-pills');
   const new_ = document.getElementById('relocate-new').value.trim();
-  if (!oldPaths.length) { alert('Add at least one old path prefix.'); return; }
-  if (!new_) { alert('Enter the new (destination) path.'); return; }
+  if (!oldPaths.length) { showToast('Add at least one old path prefix.', 'warning'); return; }
+  if (!new_) { showToast('Enter the new destination path.', 'warning'); return; }
   const p = new URLSearchParams({ new_root: new_ });
   oldPaths.forEach(old => p.append('old_root', old));
   runCommand(`/api/run/relocate?${p}`, 'Relocate — Updating File Paths in Database', null, true);
@@ -1580,7 +1580,7 @@ function runRelocate() {
 
 function runDuplicates() {
   const paths = getFolderPaths('dupes-pills');
-  if (!paths.length) { alert('Add at least one music folder first.'); return; }
+  if (!paths.length) { showToast('Add at least one music folder first.', 'warning'); return; }
   const p = new URLSearchParams();
   paths.forEach(path => p.append('path', path));
   const workers = document.getElementById('dupes-workers')?.value || '4';
@@ -1624,8 +1624,8 @@ document.addEventListener('DOMContentLoaded', _initMatchModeUI);
 function runConvert() {
   const paths = getFolderPaths('convert-pills');
   const format = document.getElementById('convert-format').value.trim();
-  if (!paths.length) { alert('Add at least one folder first.'); return; }
-  if (!format) { alert('Select a target format.'); return; }
+  if (!paths.length) { showToast('Add at least one folder first.', 'warning'); return; }
+  if (!format) { showToast('Select a target format.', 'warning'); return; }
   const workers = document.getElementById('convert-workers')?.value || '4';
   const p = new URLSearchParams({ format });
   paths.forEach(path => p.append('path', path));
@@ -1737,7 +1737,7 @@ function discardCheckpoint() {
 
 function pipeWizNext() {
   if (pipelineSteps.length === 0) {
-    alert('Add at least one step to the pipeline first.');
+    showToast('Add at least one step to the pipeline first.', 'warning');
     return;
   }
   const p1 = document.getElementById('pipe-wiz-p1');
@@ -2532,7 +2532,7 @@ async function _runOnePipelineStep(step, dryRun, capturedCsv) {
 
 async function runPipeline(dryRun = true, confirmMode = false) {
   if (pipelineSteps.length === 0) {
-    alert('Add at least one step to the pipeline first.');
+    showToast('Add at least one step to the pipeline first.', 'warning');
     return;
   }
   if (isRunning) return;
@@ -2738,8 +2738,8 @@ function runOrganize() {
   const workers  = document.getElementById('organize-workers')?.value || '1';
   const threshold = document.getElementById('organize-mix-threshold')?.value || '15';
   const mode     = document.getElementById('organize-mode')?.value || 'assimilate';
-  if (!sources.length) { alert('Enter at least one source folder path.'); return; }
-  if (!target) { alert('Enter a target (library root) folder path.'); return; }
+  if (!sources.length) { showToast('Enter at least one source folder path.', 'warning'); return; }
+  if (!target) { showToast('Enter a target library root folder path.', 'warning'); return; }
   const p = new URLSearchParams();
   sources.forEach(s => p.append('source', s));
   p.set('target', target);
@@ -2768,8 +2768,8 @@ function runNovelty() {
   const sources = getFolderPaths('novelty-pills');
   const dest    = document.getElementById('novelty-dest').value.trim();
   const dryRun  = document.getElementById('novelty-dry-run').checked;
-  if (!sources.length) { alert('Add at least one source drive or folder.'); return; }
-  if (!dest)           { alert('Enter a destination (home library) path.'); return; }
+  if (!sources.length) { showToast('Add at least one source drive or folder.', 'warning'); return; }
+  if (!dest)           { showToast('Enter a destination library path.', 'warning'); return; }
   const p = new URLSearchParams();
   sources.forEach(source => p.append('source', source));
   p.set('dest', dest);
@@ -2790,7 +2790,7 @@ function runNovelty() {
 function renameZoneAdd() {
   const input = document.getElementById('rename-zone-text');
   const path = input.value.trim();
-  if (!path) { alert('Enter a folder path'); return; }
+  if (!path) { showToast('Enter a folder path.', 'warning'); return; }
   addFolderPill('rename-pills', path);
   input.value = '';
 }
@@ -2798,7 +2798,10 @@ function renameZoneAdd() {
 function runRename() {
   const paths = getFolderPaths('rename-pills');
   const dryRun = document.getElementById('rename-dry-run').checked;
-  if (!paths.length) { alert('Add a folder to rename files in.'); return; }
+  if (!paths.length) { showToast('Add a folder to rename files in.', 'warning'); return; }
+  if (paths.length > 1) {
+    showToast(`Rename processes one folder at a time — using "${paths[0].split('/').pop()}".`, 'neutral');
+  }
 
   if (!dryRun) {
     runRenameWithPreflight(paths[0]);
@@ -2835,7 +2838,7 @@ async function runRenameWithPreflight(path) {
     data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Probe failed');
   } catch (err) {
-    alert(`Could not run the rename preflight.\n\n${err.message || err}`);
+    showToast('Rename preflight failed — ' + (err.message || err), 'error');
     return;
   }
 
@@ -2946,7 +2949,7 @@ async function applyRenamePreflightAndRun() {
 
     if (action === 'manual') {
       if (!targetName) {
-        alert('Every exact rename needs a filename. Fill it in or switch that row to another action.');
+        showToast('Every exact rename needs a filename — fill it in or switch that row to another action.', 'warning');
         input?.focus();
         return;
       }
@@ -2954,12 +2957,12 @@ async function applyRenamePreflightAndRun() {
     } else if (action === 'producer_alias') {
       const token = extractProducerAliasToken(proposedMix);
       if (!targetName) {
-        alert('Producer alias fixes need the producer name with the correct casing.');
+        showToast('Producer alias fixes need the producer name with the correct casing.', 'warning');
         input?.focus();
         return;
       }
       if (!token) {
-        alert('This row does not have a clear producer attribution token to learn from. Use exact filename instead.');
+        showToast('This row has no clear producer attribution token — use exact filename instead.', 'warning');
         return;
       }
       entries.push({ action: 'producer_alias', source_path: sourcePath, token, canonical: targetName });
@@ -2979,7 +2982,7 @@ async function applyRenamePreflightAndRun() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not apply rename decisions');
   } catch (err) {
-    alert(`Could not apply the rename preflight decisions.\n\n${err.message || err}`);
+    showToast('Could not apply rename decisions — ' + (err.message || err), 'error');
     return;
   }
 
@@ -3024,7 +3027,7 @@ function extractProducerAliasToken(text) {
 
 async function runRenameProbe() {
   const paths = getFolderPaths('rename-pills');
-  if (!paths.length) { alert('Add a folder to probe.'); return; }
+  if (!paths.length) { showToast('Add a folder to probe.', 'warning'); return; }
 
   const p = new URLSearchParams();
   p.set('path', paths[0]);
@@ -3037,7 +3040,7 @@ async function runRenameProbe() {
     data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Probe failed');
   } catch (err) {
-    alert(`Could not probe rename ambiguities.\n\n${err.message || err}`);
+    showToast('Rename probe failed — ' + (err.message || err), 'error');
     return;
   }
 
@@ -3081,7 +3084,7 @@ async function _loadPrunePage(page) {
 
   const res  = await fetch(url);
   const data = await res.json();
-  if (!res.ok) { alert('Could not load report:\n' + data.error); return false; }
+  if (!res.ok) { showToast('Could not load report — ' + data.error, 'error'); return false; }
 
   pruneGroups        = data.groups;
   prunePage          = data.page;
@@ -3201,7 +3204,7 @@ async function selectAllBest() {
     _syncCheckboxes();
     _updateSaButtons();
     _updatePruneSummary();
-  } catch (err) { alert('Error: ' + err); }
+  } catch (err) { showToast('Could not load keep paths — ' + err, 'error'); }
 }
 
 async function selectAllLower() {
@@ -3212,7 +3215,7 @@ async function selectAllLower() {
     _syncCheckboxes();
     _updateSaButtons();
     _updatePruneSummary();
-  } catch (err) { alert('Error: ' + err); }
+  } catch (err) { showToast('Could not load remove paths — ' + err, 'error'); }
 }
 
 function _renderPrunePagination() {
@@ -3249,10 +3252,7 @@ async function _autoLoadDupeResults(csvPath) {
     const badge = document.getElementById('dupes-risk-badge');
     if (badge) { badge.textContent = 'Writes DB + Files'; badge.className = 'risk-badge danger'; }
     document.getElementById('step-duplicates')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } catch (err) {
-    console.error('Failed to load duplicate results:', err);
-    alert('Could not load results: ' + err);
-  }
+  } catch (err) { showToast('Could not load results — ' + err, 'error'); }
 }
 
 function resetDupesScan() {
@@ -3323,7 +3323,7 @@ function _updatePruneSummary() {
 async function previewFile(path) {
   try {
     await fetch('/api/open-file?path=' + encodeURIComponent(path));
-  } catch(e) { alert('Could not open file: ' + e); }
+  } catch(e) { showToast('Could not open file — ' + e, 'error'); }
 }
 
 /* ── Confirmation flow — 3 spatially separated steps ──────────────────────── */
@@ -4132,7 +4132,7 @@ async function dropPathFor(inputId) {
 
 function runAudit() {
   const paths = getFolderPaths('audit-pills');
-  if (!paths.length) { alert('Add at least one folder path to scan.'); return; }
+  if (!paths.length) { showToast('Add at least one folder path to scan.', 'warning'); return; }
   const savePhys = document.getElementById('audit-save-physical')?.checked ? '1' : '0';
   const p = new URLSearchParams();
   p.set('save_physical', savePhys);
@@ -4440,7 +4440,7 @@ function libBuildGenreSelect() {
 
 /* ── Tool Drawer ──────────────────────────────────────────────────────── */
 let _toolDrawerStep = null;
-let _toolDrawerPinned = false;
+let _toolDrawerPinned = localStorage.getItem('rb_drawer_pinned') === '1';
 
 function _syncToolDrawerPinState() {
   const drawer = document.getElementById('tool-drawer');
@@ -4459,6 +4459,7 @@ function _syncToolDrawerPinState() {
 
 function toggleToolDrawerPin() {
   _toolDrawerPinned = !_toolDrawerPinned;
+  localStorage.setItem('rb_drawer_pinned', _toolDrawerPinned ? '1' : '0');
   const drawer = document.getElementById('tool-drawer');
   if (!drawer) return;
   
@@ -4489,9 +4490,11 @@ function openToolDrawer(stepId) {
   });
   _syncToolDrawerPinState();
 
+  const drawerBody = document.getElementById('tool-drawer-body');
+  if (drawerBody) drawerBody.scrollTop = 0;
   setTimeout(() => {
     const card = document.getElementById(stepId);
-    if (card) card.scrollIntoView({ block: 'start', behavior: 'instant' });
+    if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, 30);
 }
 
