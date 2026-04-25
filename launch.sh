@@ -73,6 +73,12 @@ source "$VENV/bin/activate"
 cd "$SCRIPT_DIR"
 git pull origin main --ff-only >> "$LOG" 2>&1
 
+# ── Update Python dependencies ────────────────────────────────────────────
+# After git pull, requirements may have changed — reinstall/upgrade quietly.
+# This ensures the app always runs with the correct dependency versions.
+pip install --upgrade --quiet -r "$SCRIPT_DIR/requirements_ui.txt" >> "$LOG" 2>&1
+pip install --upgrade --quiet -r "$SCRIPT_DIR/requirements.txt" >> "$LOG" 2>&1
+
 # ── Bring up Tailscale for RekitGo remote access (best-effort, non-blocking) ─
 # RekitBox runs fully offline without this. Tailscale just enables the iOS app
 # to connect remotely. Silent on failure — missing Tailscale is not an error.

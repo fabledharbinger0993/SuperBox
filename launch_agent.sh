@@ -60,6 +60,11 @@ export REKIT_AGENT_PROFILE="${REKIT_AGENT_PROFILE:-cl}"
 cd "$SCRIPT_DIR" || exit 1
 git pull origin main --ff-only >> "$LOG" 2>&1
 
+# ── Update Python dependencies ────────────────────────────────────────────
+# After git pull, requirements may have changed — reinstall/upgrade quietly.
+pip install --upgrade --quiet -r "$SCRIPT_DIR/requirements_ui.txt" >> "$LOG" 2>&1
+pip install --upgrade --quiet -r "$SCRIPT_DIR/requirements.txt" >> "$LOG" 2>&1
+
 if command -v tailscale &>/dev/null; then
   tailscale up --accept-routes >> "$LOG" 2>&1 &
 fi
