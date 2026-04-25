@@ -1,0 +1,92 @@
+name: Attach RekitBox-Agent.zip to release
+
+# Companion workflow for the RekitBox Agent variant. Runs alongside
+# release-zip.yml to attach RekitBox-Agent.zip to every release.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  attach-agent-zip:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Build RekitBox Agent.app bundle
+        run: |
+          mkdir -p "dist/RekitBox Agent.app/Contents/MacOS"
+          mkdir -p "dist/RekitBox Agent.app/Contents/Resources"
+          
+          # Create launcher script
+          cat > "dist/RekitBox Agent.app/Contents/MacOS/RekitBoxAgent" << 'LAUNCHER'
+          #!/bin/bash
+          # RekitBox Agent bootstrap launcher
+          
+          PARENT_DIR="$HOME/RekitBox"
+          INSTALL_DIR="$PARENT_DIR/RekitBox"
+          REPO_URL="https://github.com/fabledharbinger0993/RekitBox.git"
+          
+          if [ -d "$INSTALL_DIR/.git" ]; then
+            if [ -f "$INSTALL_DIR/launch_agent.sh" ]; then
+              bash "$INSTALL_DIR/launch_agent.sh"
+            else
+              STALE_BACKUP="${INSTALL_DIR}.stale-$(date +%Y%m%d-%H%M%S)"
+              mv "$INSTALL_DIR" "$STALE_BACKUP"
+              CLONE_CMD="mkdir -p '$PARENT_DIR' && git clone '$REPO_URL' '$INSTALL_DIR' && bash '$INSTALL_DIR/launch_agent.sh'"
+              osascript -e "tell application \"Terminal\" to do script \"$CLONE_CMD\""
+              osascript -e "tell application \"Terminal\" to activate"
+            fi
+          else
+            CLONE_CMD="mkdir -p '$PARENT_DIR' && git clone '$REPO_URL' '$INSTALL_DIR' && bash '$INSTALL_DIR/launch_agent.sh'"
+            osascript -e "tell application \"Terminal\" to do script \"$CLONE_CMD\""
+            osascript -e "tell application \"Terminal\" to activate"
+          fi
+          LAUNCHER
+          chmod +x "dist/RekitBox Agent.app/Contents/MacOS/RekitBoxAgent"
+          
+          # Create Info.plist
+          cat > "dist/RekitBox Agent.app/Contents/Info.plist" << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key>
+            <string>RekitBoxAgent</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.fabledharbinger.rekitbox.agent</string>
+            <key>CFBundleName</key>
+            <string>RekitBox Agent</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${{ github.event.release.tag_name }}</string>
+            <key>CFBundleVersion</key>
+            <string>${{ github.event.release.tag_name }}</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>10.15</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+          
+          # Create PkgInfo
+          echo -n "APPL????" > "dist/RekitBox Agent.app/Contents/PkgInfo"
+
+      - name: Build RekitBox-Agent.zip
+        run: |
+          cd dist
+          zip -r -y /tmp/RekitBox-Agent.zip "RekitBox Agent.app"
+          unzip -l /tmp/RekitBox-Agent.zip
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" /tmp/RekitBox-Agent.zip --clobber --repo "$GITHUB_REPOSITORY"

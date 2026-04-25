@@ -23,12 +23,61 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
-      - name: Stage RekitBox.app with preserved exec bits
+      - name: Build RekitBox.app bundle
         run: |
-          mkdir -p dist
-          cp -R packaging/RekitBox.app dist/RekitBox.app
-          # cp -R preserves exec bits on Linux/macOS; belt-and-braces:
+          mkdir -p dist/RekitBox.app/Contents/MacOS
+          mkdir -p dist/RekitBox.app/Contents/Resources
+          
+          # Create launcher script
+          cat > dist/RekitBox.app/Contents/MacOS/RekitBox << 'LAUNCHER'
+          #!/bin/bash
+          # RekitBox bootstrap launcher
+          # First run: clones the repo. Every run: hands off to launch.sh.
+          
+          PARENT_DIR="$HOME/RekitBox"
+          INSTALL_DIR="$PARENT_DIR/RekitBox"
+          REPO_URL="https://github.com/fabledharbinger0993/RekitBox.git"
+          
+          if [ -d "$INSTALL_DIR/.git" ]; then
+            # Already installed — hand off to launch.sh (handles git pull + server start)
+            bash "$INSTALL_DIR/launch.sh"
+          else
+            # First install — open Terminal so the user can see clone + setup progress
+            CLONE_CMD="mkdir -p '$PARENT_DIR' && git clone '$REPO_URL' '$INSTALL_DIR' && bash '$INSTALL_DIR/launch.sh'"
+            osascript -e "tell application \"Terminal\" to do script \"$CLONE_CMD\""
+            osascript -e "tell application \"Terminal\" to activate"
+          fi
+          LAUNCHER
           chmod +x dist/RekitBox.app/Contents/MacOS/RekitBox
+          
+          # Create Info.plist
+          cat > dist/RekitBox.app/Contents/Info.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key>
+            <string>RekitBox</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.fabledharbinger.rekitbox</string>
+            <key>CFBundleName</key>
+            <string>RekitBox</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>${{ github.event.release.tag_name }}</string>
+            <key>CFBundleVersion</key>
+            <string>${{ github.event.release.tag_name }}</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>10.15</string>
+            <key>NSHighResolutionCapable</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+          
+          # Create PkgInfo
+          echo -n "APPL????" > dist/RekitBox.app/Contents/PkgInfo
 
       - name: Build RekitBox.zip
         run: |
