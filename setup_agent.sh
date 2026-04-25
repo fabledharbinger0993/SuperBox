@@ -3,8 +3,8 @@
 # Creates and provisions a dedicated venv-agent runtime.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VENV="$SCRIPT_DIR/../../venv-agent"
-SENTINEL="$SCRIPT_DIR/../../.rekitbox_agent_ready"
+VENV="$SCRIPT_DIR/../venv-agent"
+SENTINEL="$SCRIPT_DIR/../.rekitbox_agent_ready"
 
 clear
 echo ""

@@ -7,8 +7,8 @@
 # When complete it touches ../.rekitbox_ready so launch.sh knows to proceed.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VENV="$SCRIPT_DIR/../../venv"
-SENTINEL="$SCRIPT_DIR/../../.rekitbox_ready"
+VENV="$SCRIPT_DIR/../venv"
+SENTINEL="$SCRIPT_DIR/../.rekitbox_ready"
 
 # ── Banner ────────────────────────────────────────────────────────────────
 clear

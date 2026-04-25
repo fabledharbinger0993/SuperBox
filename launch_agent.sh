@@ -4,9 +4,9 @@
 # from the regular RekitBox runtime.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VENV="$SCRIPT_DIR/../../venv-agent"
-SENTINEL="$SCRIPT_DIR/../../.rekitbox_agent_ready"
-LOG="$SCRIPT_DIR/../../rekitbox-agent.log"
+VENV="$SCRIPT_DIR/../venv-agent"
+SENTINEL="$SCRIPT_DIR/../.rekitbox_agent_ready"
+LOG="$SCRIPT_DIR/../rekitbox-agent.log"
 AGENT_ENV_FILE="$SCRIPT_DIR/.rekitbox-agent.env"
 
 _brew() {
