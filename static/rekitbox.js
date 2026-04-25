@@ -78,6 +78,94 @@ let renamePreflightState = null;
 /* ── File Browser Panel ─────────────────────────────────────────────────────── */
 let _fbCurrentPath = '/Volumes';
 
+/* ── Right Nav Dropdown ─────────────────────────────────────────────────────── */
+let _activeDropdown = null;
+
+function toggleRightNavDropdown(type) {
+  const dropdown = document.getElementById(`dropdown-${type}`);
+  const btn = document.getElementById(`nav-btn-${type}`);
+  
+  if (!dropdown || !btn) return;
+  
+  // If clicking the same button, close it
+  if (_activeDropdown === type) {
+    closeRightNavDropdown();
+    return;
+  }
+  
+  // Close any other dropdown first
+  if (_activeDropdown) closeRightNavDropdown();
+  
+  // Open this one
+  dropdown.classList.add('visible');
+  btn.classList.add('active');
+  _activeDropdown = type;
+  
+  // Load content based on type
+  if (type === 'library') {
+    loadLibraryFolders(dropdown);
+  } else if (type === 'files') {
+    loadFileBrowserFolders(dropdown);
+  }
+}
+
+function closeRightNavDropdown() {
+  if (!_activeDropdown) return;
+  
+  const dropdown = document.getElementById(`dropdown-${_activeDropdown}`);
+  const btn = document.getElementById(`nav-btn-${_activeDropdown}`);
+  
+  if (dropdown) dropdown.classList.remove('visible');
+  if (btn) btn.classList.remove('active');
+  
+  _activeDropdown = null;
+}
+
+// Click outside to close dropdown
+document.addEventListener('click', (e) => {
+  if (!_activeDropdown) return;
+  
+  const navBar = document.getElementById('nav-bar-right');
+  const dropdown = document.getElementById(`dropdown-${_activeDropdown}`);
+  
+  if (!navBar || !dropdown) return;
+  
+  // Don't close if clicking inside nav bar or dropdown
+  if (navBar.contains(e.target) || dropdown.contains(e.target)) return;
+  
+  closeRightNavDropdown();
+});
+
+function loadLibraryFolders(dropdown) {
+  // Placeholder - integrate with existing library navigation
+  dropdown.innerHTML = `
+    <div class="folder-item" onclick="navigateToLibrarySection('all')">
+      <img src="/static/icon-rb-file.png" class="folder-item-icon" alt="">
+      <span>All Tracks</span>
+    </div>
+    <div class="folder-item" onclick="navigateToLibrarySection('playlists')">
+      <img src="/static/icon-rb-folder.png" class="folder-item-icon" alt="">
+      <span>Playlists</span>
+    </div>
+  `;
+}
+
+function loadFileBrowserFolders(dropdown) {
+  // Integrate with existing file browser
+  dropdown.innerHTML = `
+    <div class="folder-item" onclick="fbNavigateTo('/Volumes'); closeRightNavDropdown();">
+      <img src="/static/icon-rb-folder.png" class="folder-item-icon" alt="">
+      <span>/Volumes</span>
+    </div>
+  `;
+}
+
+function navigateToLibrarySection(section) {
+  closeRightNavDropdown();
+  // Integrate with existing library navigation
+  console.log('Navigate to:', section);
+}
+
 function toggleFileBrowser() {
   const panel = document.getElementById('fb-panel');
   const btn   = document.getElementById('fb-toggle-btn');
@@ -4473,6 +4561,75 @@ function toggleToolDrawerPin() {
   }
   _syncToolDrawerPinState();
 }
+
+/* ── Tool Panel Expand/Collapse ──────────────────────────────────────────── */
+let _expandedTool = null;
+
+function expandToolPanel(toolId) {
+  const panel = document.getElementById('tools-panel');
+  const allBtns = document.querySelectorAll('#tools-panel .tool-btn');
+  const targetBtn = document.querySelector(`#tools-panel .tool-btn[data-step="${toolId}"]`);
+  
+  if (!panel || !targetBtn) return;
+  
+  // If clicking the already-expanded tool, collapse it
+  if (_expandedTool === toolId) {
+    collapseToolPanel();
+    return;
+  }
+  
+  // Expand panel
+  panel.classList.add('expanded');
+  document.body.classList.add('tool-expanded');
+  
+  // Mark target as active, others as collapsed
+  allBtns.forEach(btn => {
+    if (btn.dataset.step === toolId) {
+      btn.classList.add('active');
+      btn.classList.remove('collapsed');
+    } else {
+      btn.classList.add('collapsed');
+      btn.classList.remove('active');
+    }
+  });
+  
+  _expandedTool = toolId;
+  
+  // Still open the tool drawer for the content
+  openToolDrawer(toolId);
+}
+
+function collapseToolPanel() {
+  const panel = document.getElementById('tools-panel');
+  const allBtns = document.querySelectorAll('#tools-panel .tool-btn');
+  
+  if (!panel) return;
+  
+  panel.classList.remove('expanded');
+  document.body.classList.remove('tool-expanded');
+  allBtns.forEach(btn => {
+    btn.classList.remove('collapsed');
+    btn.classList.remove('active');
+  });
+  
+  _expandedTool = null;
+  closeToolDrawer();
+}
+
+// Click outside to collapse
+document.addEventListener('click', (e) => {
+  if (!_expandedTool) return;
+  
+  const panel = document.getElementById('tools-panel');
+  const drawer = document.getElementById('tool-drawer');
+  
+  if (!panel || !drawer) return;
+  
+  // Don't close if clicking inside panel or drawer
+  if (panel.contains(e.target) || drawer.contains(e.target)) return;
+  
+  collapseToolPanel();
+});
 
 function openToolDrawer(stepId) {
   const drawer = document.getElementById('tool-drawer');

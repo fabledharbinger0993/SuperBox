@@ -1261,19 +1261,19 @@
 
   <!-- File Tools -->
   <div class="tool-nav-section">File Tools</div>
-  <button class="tool-btn" data-step="step-process" onclick="openToolDrawer('step-process')" title="Tag Tracks — Detect BPM &amp; Key">
+  <button class="tool-btn" data-step="step-process" onclick="expandToolPanel('step-process')" title="Tag Tracks — Detect BPM &amp; Key">
     <img src="/static/icon-tag.png" class="tool-icon" alt="Tag Tracks">
     <span class="tool-label">Tag Tracks</span>
   </button>
-  <button class="tool-btn" data-step="step-rename" onclick="openToolDrawer('step-rename')" title="Rename Tracks">
+  <button class="tool-btn" data-step="step-rename" onclick="expandToolPanel('step-rename')" title="Rename Tracks">
     <img src="/static/icon-filename.png" class="tool-icon" alt="Rename">
     <span class="tool-label">Rename</span>
   </button>
-  <button class="tool-btn" data-step="step-convert" onclick="openToolDrawer('step-convert')" title="Convert Audio">
+  <button class="tool-btn" data-step="step-convert" onclick="expandToolPanel('step-convert')" title="Convert Audio">
     <img src="/static/icon-convert.png" class="tool-icon" alt="Convert">
     <span class="tool-label">Convert</span>
   </button>
-  <button class="tool-btn" data-step="step-normalize" onclick="openToolDrawer('step-normalize')" title="Normalize Volume">
+  <button class="tool-btn" data-step="step-normalize" onclick="expandToolPanel('step-normalize')" title="Normalize Volume">
     <img src="/static/icon-normalize.png" class="tool-icon" alt="Normalize">
     <span class="tool-label">Normalize</span>
   </button>
@@ -1282,15 +1282,15 @@
 
   <!-- Organize -->
   <div class="tool-nav-section">Organize</div>
-  <button class="tool-btn" data-step="step-organize" onclick="openToolDrawer('step-organize')" title="Organize Files">
+  <button class="tool-btn" data-step="step-organize" onclick="expandToolPanel('step-organize')" title="Organize Files">
     <img src="/static/icon-organizer.png" class="tool-icon" alt="Organize">
     <span class="tool-label">Organize</span>
   </button>
-  <button class="tool-btn" data-step="step-duplicates" onclick="openToolDrawer('step-duplicates')" title="Find Duplicates">
+  <button class="tool-btn" data-step="step-duplicates" onclick="expandToolPanel('step-duplicates')" title="Find Duplicates">
     <img src="/static/icon-find-duplicate.png" class="tool-icon" alt="Duplicates">
     <span class="tool-label">Duplicates</span>
   </button>
-  <button class="tool-btn" data-step="step-novelty" onclick="openToolDrawer('step-novelty')" title="Find New Tracks">
+  <button class="tool-btn" data-step="step-novelty" onclick="expandToolPanel('step-novelty')" title="Find New Tracks">
     <img src="/static/icon-novelty.png" class="tool-icon" alt="Novelty">
     <span class="tool-label">Novelty</span>
   </button>
@@ -1338,6 +1338,24 @@
     <span class="tool-label">Glossary</span>
   </button>
 
+</div>
+
+<!-- ══ Right Navigation Bar ══════════════════════════════════════════════════ -->
+<div id="nav-bar-right">
+  <button id="nav-btn-library" class="nav-right-btn" onclick="toggleRightNavDropdown('library')" title="Library">
+    <img src="/static/icon-rb-file.png" class="nav-right-icon" alt="Library">
+    <span class="nav-right-label">Library</span>
+  </button>
+  <button id="nav-btn-files" class="nav-right-btn" onclick="toggleRightNavDropdown('files')" title="Files">
+    <img src="/static/icon-rb-folder.png" class="nav-right-icon" alt="Files">
+    <span class="nav-right-label">Files</span>
+  </button>
+  
+  <!-- Library dropdown -->
+  <div id="dropdown-library" class="folder-dropdown"></div>
+  
+  <!-- Files dropdown -->
+  <div id="dropdown-files" class="folder-dropdown"></div>
 </div>
 
 <div id="owl-hover-panel"
