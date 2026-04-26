@@ -88,12 +88,9 @@ if __name__ == '__main__':
             print('RekitBox: server failed to start', file=sys.stderr)
             sys.exit(1)
 
-    # Splash: show /splash on first launch only (sentinel written by Flask route)
+    # Splash: play intro video on every launch if the file exists
     _splash_video = _ROOT / 'static' / 'rekitbox-splash.mp4'
-    _splash_sentinel = Path.home() / '.rekordbox-toolkit' / 'splash_played'
-    start_url = f'http://127.0.0.1:{_PORT}/splash' if (
-        _splash_video.exists() and not _splash_sentinel.exists()
-    ) else _LOCAL_URL
+    start_url = f'http://127.0.0.1:{_PORT}/splash' if _splash_video.exists() else _LOCAL_URL
 
     import webview
 

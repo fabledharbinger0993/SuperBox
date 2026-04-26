@@ -2043,7 +2043,6 @@ def index():
 
 
 # ── Splash screen ─────────────────────────────────────────────────────────────
-_SPLASH_SENTINEL = Path.home() / ".rekordbox-toolkit" / "splash_played"
 
 _SPLASH_HTML = """\
 <!DOCTYPE html>
@@ -2094,13 +2093,6 @@ _SPLASH_HTML = """\
 
 @app.route("/splash")
 def splash():
-    if _SPLASH_SENTINEL.exists():
-        return redirect("/")
-    try:
-        _SPLASH_SENTINEL.parent.mkdir(parents=True, exist_ok=True)
-        _SPLASH_SENTINEL.touch()
-    except OSError:
-        pass
     return render_template_string(_SPLASH_HTML)
 
 
