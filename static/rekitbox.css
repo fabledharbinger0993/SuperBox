@@ -3781,7 +3781,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   right: 0;
   bottom: var(--scan-bar-h);
   z-index: 5;
-  background: url('/static/disco-queens.jpg') center / cover no-repeat #07050f;
+  background: linear-gradient(to bottom, #000000 0%, #0a0018 60%, #110025 100%);
   display: flex;
   align-items: stretch;
   justify-content: stretch;
@@ -3791,14 +3791,14 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 /* le-visible is no-op — editor is always visible */
 #library-editor-overlay.le-visible { opacity: 1; }
 
-/* Dark vignette — deepens the edges, lets the center magenta glow breathe */
+/* Crisp icon watermark — nearly transparent, centred, not blurred */
 #library-editor-overlay::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 70% 60% at 50% 50%,
-    rgba(4,1,12,.5) 0%,
-    rgba(4,1,12,.85) 100%);
+  background:
+    url('/static/icon-rekitbox-app.png') center / 420px 420px no-repeat;
+  opacity: 0.045;
   pointer-events: none;
   z-index: 0;
 }
