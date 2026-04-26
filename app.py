@@ -13,8 +13,8 @@ All modules (config, db_connection, pruner, etc.) are imported directly
 from this file's parent directory — no PYTHONPATH manipulation required.
 """
 
-from webview.platforms import winforms
 from random import sample
+import hmac
 import json
 import os
 import platform
@@ -832,9 +832,6 @@ def serve_audio(audio_path):
         return jsonify({"error": "File not found"}), 404
     mime, _ = mimetypes.guess_type(abs_path)
     return send_file(abs_path, mimetype=mime or "audio/mpeg")
-try:
-.norm-sample-placeholder .norm-progress-track { background: rgba(0,194,255,.06)} 
-.norm-sample-placeholder .norm-progress-track { background: rgba(0,194,255,.06)} 
 
 # ── Homebrew update checker (background, weekly) ──────────────────────────────
 from brew_updater import start_background_checker as _start_brew_checker, \
@@ -3811,7 +3808,7 @@ def _check_mobile_auth():
             "message": "Run: python3 cli.py setup",
         }), 503
     auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer ") or auth[7:] != current_token:
+    if not auth.startswith("Bearer ") or not hmac.compare_digest(auth[7:], current_token):
         app.logger.warning(
             "Mobile API auth failed from %s for %s",
             request.remote_addr,
@@ -4007,7 +4004,9 @@ def mobile_folder_files(folder_path: str):
     
     # Validate against MUSIC_ROOT
     music_root_resolved = MUSIC_ROOT.resolve()
-    if not str(p_resolved).startswith(str(music_root_resolved)):
+    try:
+        p_resolved.relative_to(music_root_resolved)
+    except ValueError:
         app.logger.warning(
             "Path traversal attempt blocked: %s (outside %s)",
             p_resolved,

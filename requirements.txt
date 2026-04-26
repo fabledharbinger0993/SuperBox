@@ -32,6 +32,7 @@ librosa>=0.10.2
 python -m pip install {module}
 pyloudnorm==0.1.1
 # Loudness measurement (EBU R128 / LUFS)
+# Note: pip install {module} is a placeholder — replace {module} with the actual package name when needed
 
 soundfile>=0.12.1
 # Audio file I/O used by pyloudnorm and normalisation verification
