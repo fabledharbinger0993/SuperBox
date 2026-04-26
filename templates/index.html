@@ -128,7 +128,21 @@
 <!-- ══ Main ════════════════════════════════════════════════════════════════ -->
 <main data-rekki-droppable>
 
-  <p class="section-title">Core Pipeline — each tool feeds the next</p>
+  <!-- Library/Playlist Workspace -->
+  <div id="library-workspace" style="padding: 40px; text-align: center;">
+    <h2 style="color: var(--text-muted); font-size: 1.2rem; margin-bottom: 16px;">
+      Library & Playlist Workspace
+    </h2>
+    <p style="color: var(--text-dim); font-size: .9rem; max-width: 600px; margin: 0 auto 24px; line-height: 1.6;">
+      Full library browser and playlist editor coming soon. For now, access all tools through the <strong style="color: var(--accent);">Toolkit</strong> button in the left sidebar.
+    </p>
+    <button class="btn btn-neon" onclick="openToolkitModal()" style="font-size: .9rem; padding: 10px 24px;">
+      Open Toolkit →
+    </button>
+  </div>
+
+  <!-- Hidden section title (used by toolkit modal) -->
+  <p class="section-title" style="display:none;">Core Pipeline — each tool feeds the next</p>
 
    <!-- ── Step 1: Audit ──────────────────────────────────────────────────── -->
 <div id="step-audit" style="display:none"></div>
@@ -1246,6 +1260,14 @@
 <!-- ══ Tool Nav ══════════════════════════════════════════════════════════════ -->
 <div id="tools-panel">
 
+  <!-- Toolkit Button -->
+  <button class="tool-btn toolkit-btn" id="toolkit-btn" onclick="openToolkitModal()" title="Open Toolkit — All RekitBox Tools">
+    <img src="/static/icon-toolkit.png" class="tool-icon" alt="Toolkit" onerror="this.src='/static/icon-start-wizard.png'">
+    <span class="tool-label">Toolkit</span>
+  </button>
+
+  <div class="tool-nav-divider"></div>
+
   <!-- Library -->
   <div class="tool-nav-section">Library</div>
   <button class="tool-btn active" id="rail-btn-library" onclick="leScrollTop()" title="Library &amp; Playlist Editor">
@@ -2336,6 +2358,24 @@
         <div id="rekki-conn-dot" title="Rekki scripted helper status"></div>
         <button id="rekki-send" onclick="rekkiSendMessage()">Send ↵</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Toolkit Modal ═══════════════════════════════════════════════════════ -->
+<div id="toolkit-modal" class="toolkit-modal" style="display:none;">
+  <div class="toolkit-backdrop" onclick="closeToolkitModal()"></div>
+  <div class="toolkit-panel">
+    <div class="toolkit-header">
+      <button class="toolkit-close-btn" onclick="closeToolkitModal()" title="Close Toolkit (Esc)">×</button>
+      <h2 class="toolkit-title">RekitBox Toolkit</h2>
+      <p class="toolkit-subtitle">All tools — run individually or chain into pipelines</p>
+    </div>
+    <div class="toolkit-content" id="toolkit-content">
+      <!-- Tool cards will be moved here dynamically or statically -->
+      <p style="color: var(--text-muted); text-align: center; padding: 40px;">
+        Loading toolkit...
+      </p>
     </div>
   </div>
 </div>

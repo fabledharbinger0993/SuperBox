@@ -6318,10 +6318,48 @@ async function rekkiMenuTag() {
   _rekkiSetStatus(`Tagged: ${ctx.label || ctx.type}`);
 }
 
+// ── Toolkit Modal ─────────────────────────────────────────────────────────────
+
+let _toolkitPopulated = false;
+
+function openToolkitModal() {
+  const modal = document.getElementById('toolkit-modal');
+  const content = document.getElementById('toolkit-content');
+  if (!modal || !content) return;
+  
+  if (!_toolkitPopulated) {
+    _toolkitPopulated = true;
+    // Clear placeholder paragraph before migrating cards
+    content.innerHTML = '';
+    const main = document.querySelector('main');
+    const sectionTitle = main.querySelector('.section-title');
+    if (sectionTitle) sectionTitle.style.display = 'none';
+    Array.from(main.querySelectorAll('.card')).forEach(card => content.appendChild(card));
+  }
+  
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeToolkitModal() {
+  const modal = document.getElementById('toolkit-modal');
+  if (!modal) return;
+  
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    // Close toolkit modal first if open
+    const toolkitModal = document.getElementById('toolkit-modal');
+    if (toolkitModal && toolkitModal.style.display === 'flex') {
+      closeToolkitModal();
+      return;
+    }
+    
     const menu = document.getElementById('rekki-ctx-menu');
     if (menu && !menu.classList.contains('hidden')) { menu.classList.add('hidden'); return; }
     if (_rekkiOpen) { toggleRekkiPanel(); return; }
