@@ -6,6 +6,7 @@ Falls back directly to main.py if the splash stack is unavailable.
 import importlib
 import os
 import sys
+import threading
 from pathlib import Path
 
 
@@ -51,23 +52,29 @@ def play_splash_and_continue(video_path, main_entry):
             self.player.stateChanged.connect(self._on_state)
             self._on_finish = on_finish
             self._finished = False
-            # Safety timeout: force finish after 30 seconds even if video hangs
-            QTimer.singleShot(30000, self._timeout)
+            # Safety timeout via OS-level thread — fires even in background processes
+            # (QTimer is not reliable when the process is nohup'd / backgrounded on macOS)
+            self._watchdog = threading.Timer(30.0, self._timeout)
+            self._watchdog.daemon = True
+            self._watchdog.start()
             self.player.play()
 
         def _timeout(self):
-            """Force finish if video hangs — prevents infinite wait"""
+            """Force finish if video hangs — fires via OS thread, works when backgrounded"""
             if not self._finished:
+                self._finished = True
                 self._on_finish()
 
         def _on_status(self, status):
             if status == QMediaPlayer.EndOfMedia and not self._finished:
                 self._finished = True
+                self._watchdog.cancel()
                 QTimer.singleShot(300, self._on_finish)
 
         def _on_state(self, state):
             if state == QMediaPlayer.StoppedState and not self._finished:
                 self._finished = True
+                self._watchdog.cancel()
                 QTimer.singleShot(300, self._on_finish)
 
     app = QApplication(sys.argv)

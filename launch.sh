@@ -86,9 +86,9 @@ if command -v tailscale &>/dev/null; then
   tailscale up --accept-routes >> "$LOG" 2>&1 &
 fi
 
-# ── Launch splash animation, then main window ─────────────────────────────
-# splash_player.py plays the animation and then launches main.py
-nohup "$VENV/bin/python" "$SCRIPT_DIR/splash_player.py" >> "$LOG" 2>&1 &
+# ── Launch RekitBox ──────────────────────────────────────────────────────
+# main.py handles splash internally (with OS-level watchdog timeout)
+nohup "$VENV/bin/python" "$SCRIPT_DIR/main.py" >> "$LOG" 2>&1 &
 
 # ── Close Terminal window if launched interactively (not via Automator) ───
 # Automator runs via do shell script (no TTY), so this block is skipped there.
