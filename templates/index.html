@@ -2386,5 +2386,46 @@
   <button onclick="rekkiMenuTag()" role="menuitem">◈ Tag this item</button>
 </div>
 
+<!-- ══ Floating Tool Modal ════════════════════════════════════════════════ -->
+<div id="tool-float-modal-backdrop" onclick="closeToolFloatModal()"></div>
+<div id="tool-float-modal">
+  <div id="tool-float-modal-header">
+    <img id="tool-float-modal-icon" src="" alt="">
+    <div class="tool-float-title-wrap">
+      <span id="tool-float-modal-title"></span>
+      <span id="tool-float-modal-badge" class="risk-badge" style="display:none"></span>
+    </div>
+    <button id="tool-float-modal-close" onclick="closeToolFloatModal()" title="Close — tool keeps running">×</button>
+  </div>
+  <div id="tool-float-modal-body"></div>
+  <div id="tool-float-modal-footer">
+    <div id="tool-float-modal-actions">
+      <button class="tfm-ctrl-btn interrupt" id="tfm-interrupt-btn" onclick="interruptScan()">⏸ Interrupt</button>
+      <button class="tfm-ctrl-btn emergency" id="tfm-emergency-btn" onclick="emergencyStop()">⚡ Emergency Stop</button>
+    </div>
+    <div id="tool-float-modal-status">
+      <span id="tfm-idle-label">Ready</span>
+      <span id="tfm-title"></span>
+      <div id="tfm-spinner"></div>
+      <span class="tfm-stat" id="tfm-remaining-wrap" style="display:none">
+        <span class="tfm-stat-label">Remaining</span>
+        <span class="tfm-stat-val" id="tfm-remaining">—</span>
+      </span>
+      <span class="tfm-stat" id="tfm-clean-wrap" style="display:none">
+        <span class="tfm-stat-label">Clean</span>
+        <span class="tfm-stat-val safe" id="tfm-clean">0</span>
+      </span>
+      <span class="tfm-stat" id="tfm-edited-wrap" style="display:none">
+        <span class="tfm-stat-label">Edited</span>
+        <span class="tfm-stat-val safe" id="tfm-edited">0</span>
+      </span>
+      <span class="tfm-stat" id="tfm-errors-wrap" style="display:none">
+        <span class="tfm-stat-label">Errors</span>
+        <span class="tfm-stat-val danger" id="tfm-errors">0</span>
+      </span>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

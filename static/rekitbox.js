@@ -1187,6 +1187,7 @@ function showScanBar(title) {
   document.getElementById('scan-bar-dismiss').style.display = 'none';
   document.getElementById('scan-bar').classList.add('active');
   document.body.classList.add('scan-active');
+  _syncToolModalScanState();
 }
 function updateScanBar(p) {
   document.getElementById('sb-remaining').textContent = p.remaining.toLocaleString();
@@ -1198,6 +1199,7 @@ function updateScanBar(p) {
     document.getElementById('sb-quarantined').textContent = p.quarantined.toLocaleString();
     document.getElementById('sb-quarantine-wrap').style.display = '';
   }
+  _mirrorScanBarToModal();
 }
 function finishScanBar() {
   document.getElementById('scan-bar-spinner').classList.remove('active');
@@ -1207,6 +1209,7 @@ function finishScanBar() {
   _emergencyArmed = false;
   clearTimeout(_emergencyArmTimer);
   document.getElementById('scan-bar-dismiss').style.display = 'inline-block';
+  _syncToolModalScanState();
 }
 function dismissScanBar() {
   document.getElementById('scan-bar').classList.remove('active');
@@ -4522,7 +4525,7 @@ function closeDbPanel() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && _dbPanelActive) closeDbPanel();
-  if (e.key === 'Escape' && _toolDrawerStep) closeToolDrawer();
+  if (e.key === 'Escape' && _toolFloatActive) closeToolFloatModal();
 });
 
 /* ══ Library & Playlist Editor ════════════════════════════════════════════ */
@@ -4622,146 +4625,195 @@ function libBuildGenreSelect() {
   if (cur) sel.value = cur;
 }
 
-/* ── Tool Drawer ──────────────────────────────────────────────────────── */
-let _toolDrawerStep = null;
-let _toolDrawerPinned = localStorage.getItem('rb_drawer_pinned') === '1';
+/* ── Tool Drawer (legacy stubs — drawer is hidden, float modal is used) ── */
+let _toolDrawerStep   = null;
+let _toolDrawerPinned = false;
+function _syncToolDrawerPinState() {}
+function toggleToolDrawerPin() {}
 
-function _syncToolDrawerPinState() {
-  const drawer = document.getElementById('tool-drawer');
-  const pinBtn = document.getElementById('tool-drawer-pin');
-  if (!drawer || !pinBtn) return;
+/* ── Floating Tool Modal ─────────────────────────────────────────────── */
+let _toolFloatActive     = null;   // currently displayed toolId
+let _toolFloatPrevParent = null;   // DOM parent the card was borrowed from
 
-  const isExpanded = drawer.classList.contains('open');
-  pinBtn.textContent = _toolDrawerPinned ? 'Unpin' : 'Pin';
-  pinBtn.title = _toolDrawerPinned ? 'Unpin tool drawer' : 'Pin tool drawer open';
-  pinBtn.setAttribute('aria-pressed', _toolDrawerPinned ? 'true' : 'false');
+function openToolFloatModal(toolId) {
+  const modal    = document.getElementById('tool-float-modal');
+  const backdrop = document.getElementById('tool-float-modal-backdrop');
+  if (!modal) return;
 
-  if (!_toolDrawerStep && _toolDrawerPinned) {
-    document.getElementById('tool-drawer-title').textContent = 'Tool Drawer';
-  }
-}
+  // Return any previously borrowed card before borrowing a new one
+  if (_toolFloatActive) _returnFloatCard();
 
-function toggleToolDrawerPin() {
-  _toolDrawerPinned = !_toolDrawerPinned;
-  localStorage.setItem('rb_drawer_pinned', _toolDrawerPinned ? '1' : '0');
-  const drawer = document.getElementById('tool-drawer');
-  if (!drawer) return;
-  
-  if (_toolDrawerPinned) {
-    drawer.classList.add('open');
-  } else {
-    // Only unpin if no tool step is open
-    if (!_toolDrawerStep) {
-      drawer.classList.remove('open');
+  const card = document.getElementById(toolId);
+  if (!card) return;
+
+  _toolFloatActive    = toolId;
+  _toolFloatPrevParent = card.parentNode;
+
+  // Populate modal header
+  const navBtn  = document.querySelector(`#tools-panel .tool-btn[data-step="${toolId}"]`);
+  const iconImg = navBtn?.querySelector('img') || card.querySelector('.card-icon img');
+  const badge   = card.querySelector('.risk-badge');
+  const labelEl = navBtn?.querySelector('.tool-label');
+  const titleEl = card.querySelector('.card-title');
+  const titleTxt = labelEl?.textContent?.trim()
+    || titleEl?.textContent?.trim()
+    || toolId.replace('step-', '').replace(/-/g, ' ');
+
+  const mIcon  = document.getElementById('tool-float-modal-icon');
+  const mTitle = document.getElementById('tool-float-modal-title');
+  const mBadge = document.getElementById('tool-float-modal-badge');
+  if (mIcon)  { mIcon.src = iconImg?.src || ''; mIcon.alt = titleTxt; }
+  if (mTitle) mTitle.textContent = titleTxt;
+  if (mBadge) {
+    if (badge) {
+      mBadge.textContent = badge.textContent;
+      mBadge.className   = badge.className;
+      mBadge.style.display = '';
+    } else {
+      mBadge.style.display = 'none';
     }
   }
-  _syncToolDrawerPinState();
+
+  // Move card into modal body
+  const body = document.getElementById('tool-float-modal-body');
+  if (body) body.appendChild(card);
+
+  // Show modal + backdrop
+  modal.style.display = 'flex';
+  if (backdrop) backdrop.classList.add('active');
+
+  // Sync scan bar state into modal footer
+  _syncToolModalScanState();
+
+  // Mark nav button active
+  document.querySelectorAll('#tools-panel .tool-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.step === toolId);
+  });
+  _expandedTool = toolId;
+}
+
+function closeToolFloatModal() {
+  const modal    = document.getElementById('tool-float-modal');
+  const backdrop = document.getElementById('tool-float-modal-backdrop');
+  if (!modal) return;
+
+  modal.style.display = 'none';
+  if (backdrop) backdrop.classList.remove('active');
+
+  _returnFloatCard();
+  document.querySelectorAll('#tools-panel .tool-btn').forEach(b => b.classList.remove('active'));
+  _expandedTool = null;
+}
+
+function _returnFloatCard() {
+  if (!_toolFloatActive) return;
+  const card = document.getElementById(_toolFloatActive);
+  if (card && _toolFloatPrevParent) _toolFloatPrevParent.appendChild(card);
+  _toolFloatActive    = null;
+  _toolFloatPrevParent = null;
 }
 
 /* ── Tool Panel Expand/Collapse ──────────────────────────────────────────── */
 let _expandedTool = null;
 
 function expandToolPanel(toolId) {
-  const panel = document.getElementById('tools-panel');
-  const allBtns = document.querySelectorAll('#tools-panel .tool-btn');
-  const targetBtn = document.querySelector(`#tools-panel .tool-btn[data-step="${toolId}"]`);
-  
-  if (!panel || !targetBtn) return;
-  
-  // If clicking the already-expanded tool, collapse it
   if (_expandedTool === toolId) {
-    collapseToolPanel();
+    closeToolFloatModal();
     return;
   }
-  
-  // Expand panel
-  panel.classList.add('expanded');
-  document.body.classList.add('tool-expanded');
-  
-  // Mark target as active, others as collapsed
-  allBtns.forEach(btn => {
-    if (btn.dataset.step === toolId) {
-      btn.classList.add('active');
-      btn.classList.remove('collapsed');
-    } else {
-      btn.classList.add('collapsed');
-      btn.classList.remove('active');
-    }
-  });
-  
-  _expandedTool = toolId;
-  
-  // Still open the tool drawer for the content
-  openToolDrawer(toolId);
+  openToolFloatModal(toolId);
 }
 
 function collapseToolPanel() {
-  const panel = document.getElementById('tools-panel');
-  const allBtns = document.querySelectorAll('#tools-panel .tool-btn');
-  
-  if (!panel) return;
-  
-  panel.classList.remove('expanded');
-  document.body.classList.remove('tool-expanded');
-  allBtns.forEach(btn => {
-    btn.classList.remove('collapsed');
-    btn.classList.remove('active');
-  });
-  
-  _expandedTool = null;
-  closeToolDrawer();
+  closeToolFloatModal();
 }
 
-// Click outside to collapse
-document.addEventListener('click', (e) => {
-  if (!_expandedTool) return;
-  
-  const panel = document.getElementById('tools-panel');
-  const drawer = document.getElementById('tool-drawer');
-  
-  if (!panel || !drawer) return;
-  
-  // Don't close if clicking inside panel or drawer
-  if (panel.contains(e.target) || drawer.contains(e.target)) return;
-  
-  collapseToolPanel();
-});
+/* ── Floating modal drag ─────────────────────────────────────────────────── */
+function _initToolFloatModalDrag() {
+  const modal  = document.getElementById('tool-float-modal');
+  const header = document.getElementById('tool-float-modal-header');
+  if (!modal || !header) return;
+
+  let dragging = false, startX = 0, startY = 0, startL = 0, startT = 0;
+
+  header.addEventListener('mousedown', (e) => {
+    if (e.target.closest('button')) return;
+    dragging = true;
+    const rect = modal.getBoundingClientRect();
+    // Materialise explicit position, drop CSS transform centering
+    modal.style.transform = 'none';
+    modal.style.left = rect.left + 'px';
+    modal.style.top  = rect.top  + 'px';
+    startX = e.clientX; startY = e.clientY;
+    startL = rect.left;  startT = rect.top;
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const newL = Math.max(0, Math.min(window.innerWidth  - 100, startL + e.clientX - startX));
+    const newT = Math.max(0, Math.min(window.innerHeight -  40, startT + e.clientY - startY));
+    modal.style.left = newL + 'px';
+    modal.style.top  = newT + 'px';
+  });
+
+  document.addEventListener('mouseup', () => { dragging = false; });
+}
+
+/* ── Modal scan-bar mirror ───────────────────────────────────────────────── */
+function _syncToolModalScanState() {
+  const isActive  = document.getElementById('scan-bar')?.classList.contains('active');
+  const actionsEl = document.getElementById('tool-float-modal-actions');
+  const idleLabel = document.getElementById('tfm-idle-label');
+  if (!actionsEl) return;
+
+  if (isActive) {
+    actionsEl.classList.add('active');
+    _mirrorScanBarToModal();
+    if (idleLabel) idleLabel.style.display = 'none';
+  } else {
+    actionsEl.classList.remove('active');
+    if (idleLabel) idleLabel.style.display = '';
+    ['tfm-remaining-wrap', 'tfm-clean-wrap', 'tfm-edited-wrap', 'tfm-errors-wrap'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    const tfmSpinner = document.getElementById('tfm-spinner');
+    if (tfmSpinner) tfmSpinner.classList.remove('active');
+    const tfmTitle = document.getElementById('tfm-title');
+    if (tfmTitle) tfmTitle.textContent = '';
+  }
+}
+
+function _mirrorScanBarToModal() {
+  const map = [
+    ['sb-remaining', 'tfm-remaining', 'tfm-remaining-wrap'],
+    ['sb-clean',     'tfm-clean',     'tfm-clean-wrap'],
+    ['sb-edited',    'tfm-edited',    'tfm-edited-wrap'],
+    ['sb-errors',    'tfm-errors',    'tfm-errors-wrap'],
+  ];
+  map.forEach(([srcId, destId, wrapId]) => {
+    const src  = document.getElementById(srcId);
+    const dest = document.getElementById(destId);
+    const wrap = document.getElementById(wrapId);
+    if (src && dest) dest.textContent = src.textContent;
+    if (wrap) wrap.style.display = '';
+  });
+  const title    = document.getElementById('scan-bar-title');
+  const tfmTitle = document.getElementById('tfm-title');
+  if (title && tfmTitle) tfmTitle.textContent = title.textContent;
+  const spinner    = document.getElementById('scan-bar-spinner');
+  const tfmSpinner = document.getElementById('tfm-spinner');
+  if (spinner && tfmSpinner) tfmSpinner.classList.toggle('active', spinner.classList.contains('active'));
+}
 
 function openToolDrawer(stepId) {
-  const drawer = document.getElementById('tool-drawer');
-  if (!drawer) return;
-  drawer.classList.add('open');
-  _toolDrawerStep = stepId;
-
-  const tab = document.querySelector(`.step-tab[data-target="${stepId}"]`);
-  const title = tab ? tab.textContent.trim().replace(/^[^\w]+/, '') : stepId.replace('step-', '');
-  document.getElementById('tool-drawer-title').textContent = title;
-
-  document.querySelectorAll('.step-tab').forEach(b => b.classList.toggle('active', b.dataset.target === stepId));
-  document.querySelectorAll('#tools-panel .tool-btn[data-step]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.step === stepId);
-  });
-  _syncToolDrawerPinState();
-
-  const drawerBody = document.getElementById('tool-drawer-body');
-  if (drawerBody) drawerBody.scrollTop = 0;
-  setTimeout(() => {
-    const card = document.getElementById(stepId);
-    if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  }, 30);
+  // Redirect legacy calls to float modal
+  openToolFloatModal(stepId);
 }
 
 function closeToolDrawer() {
-  _toolDrawerStep = null;
-  document.getElementById('tool-drawer-title').textContent = '';
-  document.querySelectorAll('#tools-panel .tool-btn[data-step]').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.step-tab').forEach(b => b.classList.remove('active'));
-  
-  // Only collapse drawer if it's not pinned
-  if (!_toolDrawerPinned) {
-    document.getElementById('tool-drawer')?.classList.remove('open');
-  }
-  _syncToolDrawerPinState();
+  closeToolFloatModal();
 }
 
 function leSetStatus(label, count, totalCount) {
@@ -6326,6 +6378,9 @@ function openToolkitModal() {
   const modal = document.getElementById('toolkit-modal');
   const content = document.getElementById('toolkit-content');
   if (!modal || !content) return;
+
+  // Return any borrowed card before populating the toolkit
+  if (_toolFloatActive) closeToolFloatModal();
   
   if (!_toolkitPopulated) {
     _toolkitPopulated = true;
@@ -6382,6 +6437,9 @@ document.addEventListener('DOMContentLoaded', () => {
   _rekkiAvatarInit();
   _rekkiRefreshStatus();
   _rekkiBootHistory();
+
+  // Floating tool modal drag
+  _initToolFloatModalDrag();
 
   // Sidebar resize handles
   document.querySelectorAll('.sidebar-resize-handle').forEach(handle => {
