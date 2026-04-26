@@ -5446,22 +5446,8 @@ document.addEventListener('DOMContentLoaded', () => {
       leCloseCreate();
     }
   });
-  const rh = document.getElementById('le-resize-handle');
-  if (rh) {
-    let dragging = false, startX, startW;
-    rh.addEventListener('mousedown', e => {
-      dragging = true; startX = e.clientX;
-      startW = document.getElementById('le-sidebar').offsetWidth;
-      document.body.style.cursor = 'col-resize';
-    });
-    document.addEventListener('mousemove', e => {
-      if (!dragging) return;
-      const w = Math.max(160, Math.min(400, startW + e.clientX - startX));
-      document.getElementById('le-sidebar').style.width = w + 'px';
-    });
-    document.addEventListener('mouseup', () => { dragging = false; document.body.style.cursor = ''; });
-  }
 });
+
 
 function _leEsc(str) {
   return String(str ?? '')

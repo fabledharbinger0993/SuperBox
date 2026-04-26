@@ -4051,16 +4051,6 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 .le-tree-children { display: none; }
 .le-tree-children.le-tree-children-open { display: block; }
 
-/* ── Resize handle ──────────────────────────────────────────────────────── */
-.le-resize-handle {
-  width: 3px;
-  cursor: col-resize;
-  background: rgba(160, 30, 200, 0.18);
-  flex-shrink: 0;
-  transition: background .2s;
-}
-.le-resize-handle:hover { background: rgba(217, 70, 239, 0.6); }
-
 /* ── Track list pane ────────────────────────────────────────────────────── */
 .le-main {
   flex: 1;
