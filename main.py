@@ -82,21 +82,18 @@ class _Api:
 
 
 if __name__ == '__main__':
-    # Play splash video if available (skips if dependencies missing or video not found)
-    try:
-        from splash_player import play_splash_and_continue
-        splash_path = _ROOT / 'static' / 'rekitbox-splash.mp4'
-        if splash_path.exists():
-            # This will play the splash and exec back to this script when done
-            play_splash_and_continue(str(splash_path), __file__)
-    except Exception:
-        pass  # Continue without splash if it fails
-    
     if not _server_running():
         threading.Thread(target=_start_server, daemon=True).start()
         if not _wait_for_server():
             print('RekitBox: server failed to start', file=sys.stderr)
             sys.exit(1)
+
+    # Splash: show /splash on first launch only (sentinel written by Flask route)
+    _splash_video = _ROOT / 'static' / 'rekitbox-splash.mp4'
+    _splash_sentinel = Path.home() / '.rekordbox-toolkit' / 'splash_played'
+    start_url = f'http://127.0.0.1:{_PORT}/splash' if (
+        _splash_video.exists() and not _splash_sentinel.exists()
+    ) else _LOCAL_URL
 
     import webview
 
@@ -104,7 +101,7 @@ if __name__ == '__main__':
 
     window = webview.create_window(
         title='RekitBox',
-        url=_LOCAL_URL,
+        url=start_url,
         width=1400,
         height=900,
         min_size=(900, 600),

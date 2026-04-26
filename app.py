@@ -31,7 +31,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, request, send_file, send_from_directory, g
+from flask import Flask, Response, jsonify, redirect, render_template, render_template_string, request, send_file, send_from_directory, g
 from flask_sock import Sock
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -2040,6 +2040,68 @@ except Exception:
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+# ── Splash screen ─────────────────────────────────────────────────────────────
+_SPLASH_SENTINEL = Path.home() / ".rekordbox-toolkit" / "splash_played"
+
+_SPLASH_HTML = """\
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>RekitBox</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      background: #07070f;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    video {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+    }
+    video.fade-out { opacity: 0; }
+  </style>
+</head>
+<body>
+  <video id="splash" autoplay playsinline>
+    <source src="/static/rekitbox-splash.mp4" type="video/mp4">
+  </video>
+  <script>
+    var v = document.getElementById('splash');
+    var done = false;
+    function finish() {
+      if (done) return;
+      done = true;
+      v.classList.add('fade-out');
+      setTimeout(function() { window.location.replace('/'); }, 550);
+    }
+    v.addEventListener('ended', finish);
+    v.addEventListener('error', function() { window.location.replace('/'); });
+    setTimeout(finish, 35000);
+  </script>
+</body>
+</html>
+"""
+
+
+@app.route("/splash")
+def splash():
+    if _SPLASH_SENTINEL.exists():
+        return redirect("/")
+    try:
+        _SPLASH_SENTINEL.parent.mkdir(parents=True, exist_ok=True)
+        _SPLASH_SENTINEL.touch()
+    except OSError:
+        pass
+    return render_template_string(_SPLASH_HTML)
 
 
 @app.route("/api/status")
