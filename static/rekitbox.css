@@ -311,26 +311,6 @@ main .card {
 .risk-badge.warn   { background: var(--warn-dim);   color: var(--warn);   border: 1px solid var(--warn-border); }
 .risk-badge.danger { background: var(--danger-dim); color: var(--danger); border: 1px solid var(--danger-border); }
 
-/* ── Per-card Rekki button ─────────────────────────────────────────────── */
-.rekki-card-btn {
-  flex-shrink: 0;
-  margin-left: 4px;
-  padding: 2px 6px;
-  background: none;
-  border: 1px solid rgba(168,85,247,.3);
-  border-radius: 20px;
-  color: rgba(168,85,247,.75);
-  font-size: .7rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
-}
-.rekki-card-btn:hover {
-  background: rgba(168,85,247,.15);
-  border-color: rgba(168,85,247,.7);
-  color: #c084fc;
-}
-
 /* ── Expandable explanations ───────────────────────────────────────────── */
 .explainers { border-top: 1px solid var(--border); }
 details { border-bottom: 1px solid var(--border); }
@@ -3388,40 +3368,6 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 }
 .norm-sample-placeholder .norm-progress-fill { width: 0% !important; }
 .norm-sample-placeholder .norm-progress-track { background: rgba(0,194,255,.06); }
-
-/* ── Welcome: Mode selection cards ─────────────────────────────────────── */
-.welcome-mode-cards {
-  display: flex;
-  gap: 14px;
-  margin-top: 18px;
-  flex-wrap: wrap;
-}
-.wbtn-mode {
-  flex: 1; min-width: 180px;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
-  padding: 18px 16px;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color .15s, background .15s, box-shadow .15s;
-  color: var(--text);
-}
-.wbtn-mode:hover {
-  border-color: var(--accent);
-  background: var(--accent-dim);
-}
-.wbtn-mode.selected {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 25%, transparent);
-}
-.wbtn-mode-icon { font-size: 1.8rem; flex-shrink: 0; line-height: 1; }
-.wbtn-mode-name { font-weight: 700; font-size: .95rem; margin-bottom: 4px; }
-.wbtn-mode-desc { font-size: .78rem; color: var(--text-muted); line-height: 1.45; }
 
 /* ── Tool icon: db-tool-btn inherits shared .tool-icon opacity rules ──── */
 

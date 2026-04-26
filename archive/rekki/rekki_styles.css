@@ -1,0 +1,21 @@
+/* ARCHIVED Rekki styles from rekitbox.css */
+
+/* ── Per-card Rekki button ─────────────────────────────────────────────── */
+.rekki-card-btn {
+  flex-shrink: 0;
+  margin-left: 4px;
+  padding: 2px 6px;
+  background: none;
+  border: 1px solid rgba(168,85,247,.3);
+  border-radius: 20px;
+  color: rgba(168,85,247,.75);
+  font-size: .7rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.rekki-card-btn:hover {
+  background: rgba(168,85,247,.15);
+  border-color: rgba(168,85,247,.7);
+  color: #c084fc;
+}
