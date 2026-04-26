@@ -343,6 +343,7 @@ summary {
   padding: 7px 12px;
   font-size: .75rem; color: var(--text-muted);
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
   transition: color .15s;
 }
@@ -801,7 +802,7 @@ body.log-open #scan-bar { bottom: var(--log-h); }
 }
 .dupes-load-existing > summary {
   font-size: .78rem; color: var(--text-dim); cursor: pointer;
-  list-style: none; user-select: none;
+  list-style: none; -webkit-user-select: none; user-select: none;
 }
 .dupes-load-existing > summary::-webkit-details-marker { display: none; }
 .dupes-load-existing > summary::before { content: '▸ '; }
@@ -1203,6 +1204,7 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
   width: calc(100% - 8px);
   cursor: pointer;
   transition: all .2s cubic-bezier(.4,0,.2,1);
+  -webkit-user-select: none;
   user-select: none;
   text-align: center;
 }
@@ -1323,6 +1325,7 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
   border: none;
   cursor: pointer;
   transition: all .15s;
+  -webkit-user-select: none;
   user-select: none;
   text-align: center;
 }
@@ -1676,6 +1679,7 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
   position: fixed; inset: 0; z-index: 11000;
   background: rgba(0,0,0,.55);
   display: flex; align-items: center; justify-content: center;
+  -webkit-backdrop-filter: blur(3px);
   backdrop-filter: blur(3px);
 }
 #path-backdrop.hidden { display: none; }
@@ -1751,6 +1755,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
   cursor: pointer;
   box-shadow: 0 0 4px rgba(100, 120, 140, 0.15);
   transition: background .15s, border-color .15s, box-shadow .15s, color .15s;
+  -webkit-user-select: none;
   user-select: none;
   white-space: normal;
   word-break: break-word;
@@ -2107,6 +2112,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
   color: rgba(130, 60, 230, 0.55);
   pointer-events: none;
   letter-spacing: .07em;
+  -webkit-user-select: none;
   user-select: none;
   font-family: var(--mono);
   transition: opacity .15s, color .15s;
@@ -2192,6 +2198,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
   padding: 6px 10px;
   cursor: grab;
   transition: background .1s;
+  -webkit-user-select: none;
   user-select: none;
 }
 .fb-item:hover    { background: var(--surface-hi); }
@@ -2225,6 +2232,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
   display: none;
   position: fixed; inset: 0; z-index: 10000;
   background: rgba(0,0,0,.55);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 #rekitgo-backdrop.open { display: block; }
@@ -2608,6 +2616,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
   font-size: .83rem;
   color: var(--text-muted);
   transition: background .15s, color .15s;
+  -webkit-user-select: none;
   user-select: none;
 }
 .pipe-wiz-stack-item:hover { background: var(--surface-hi); color: var(--text); }
@@ -2772,6 +2781,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
   color: rgba(170, 110, 255, 0.75);
   letter-spacing: .04em;
   pointer-events: none;
+  -webkit-user-select: none;
   user-select: none;
   text-align: center;
   line-height: 1.4;
@@ -3434,6 +3444,7 @@ header #rekki-home::after {
   object-fit: contain;
   border-radius: 50%;
   display: block;
+  -webkit-user-select: none;
   user-select: none;
   -webkit-user-drag: element;
   transition: filter .2s ease, transform .2s ease;
@@ -3481,6 +3492,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   flex-direction: column;
   gap: 2px;
   min-width: 200px;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 #rekki-ctx-menu.hidden { display: none; }
@@ -3602,6 +3614,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   color: rgba(255,255,255,.22);
   letter-spacing: .06em;
   margin: 6px 0 4px;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -3840,8 +3853,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   padding: 0 20px;
   height: 52px;
   background: rgba(10, 4, 20, 0.78);
-  backdrop-filter: blur(18px) saturate(1.4);
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
   border-bottom: 1px solid rgba(200, 60, 240, 0.22);
   flex-shrink: 0;
   box-shadow: 0 1px 0 rgba(220, 80, 255, 0.1);
@@ -3901,8 +3914,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   padding: 10px 18px;
   background: rgba(8, 3, 16, 0.84);
   border-bottom: 1px solid rgba(160, 30, 200, 0.18);
-  backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 .le-create-bar.hidden { display: none; }
 .le-create-label {
@@ -3985,8 +3998,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   flex-direction: column;
   overflow-y: auto;
   background: rgba(8, 3, 16, 0.82);
-  backdrop-filter: blur(24px) saturate(1.3);
   -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  backdrop-filter: blur(24px) saturate(1.3);
   border-right: 1px solid rgba(160, 30, 200, 0.2);
   padding: 10px 0;
   scrollbar-width: thin;
@@ -4064,8 +4077,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   padding: 0 14px;
   height: 30px;
   background: rgba(10, 4, 20, 0.75);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(160, 30, 200, 0.18);
   flex-shrink: 0;
   font-size: .66rem;
@@ -4073,6 +4086,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   letter-spacing: .07em;
   text-transform: uppercase;
   color: rgba(200, 130, 240, 0.5);
+  -webkit-user-select: none;
   user-select: none;
 }
 .le-track-header .le-col { cursor: pointer; transition: color .12s; }
@@ -4087,8 +4101,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   scrollbar-width: thin;
   scrollbar-color: rgba(180, 40, 220, 0.25) transparent;
   background: rgba(4, 1, 10, 0.55);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .le-track-row {
@@ -4196,8 +4210,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   padding: 5px 18px;
   border-top: 1px solid rgba(160, 30, 200, 0.18);
   background: rgba(8, 3, 16, 0.82);
-  backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
   font-size: .74rem;
   color: rgba(200, 130, 240, 0.5);
   flex-shrink: 0;
@@ -4254,8 +4268,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   inset: 0;
   background: rgba(4, 1, 12, 0.72);
   z-index: 600;
-  backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 #le-export-modal {
   position: fixed;
@@ -4443,8 +4457,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   padding: 0 16px;
   height: 44px;
   background: rgba(6, 2, 14, 0.88);
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(150, 30, 200, 0.2);
   flex-shrink: 0;
   overflow-x: auto;
@@ -4489,8 +4503,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   font-size: .74rem;
   max-width: 130px;
   cursor: pointer;
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(200,130,240,0.5)'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
@@ -4565,8 +4579,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   display: flex;
   flex-direction: column;
   background: rgba(7, 2, 16, 0.97);
-  backdrop-filter: blur(28px) saturate(1.2);
   -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  backdrop-filter: blur(28px) saturate(1.2);
   border-left: 1px solid rgba(140, 25, 190, 0.4);
   box-shadow: -8px 0 32px rgba(100, 20, 160, 0.25);
   transform: translateX(calc(100% - var(--tool-drawer-mini-w)));
@@ -4714,6 +4728,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   border-radius: 6px;
   cursor: pointer;
   transition: background .15s;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -4806,8 +4821,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   position: absolute;
   inset: 0;
   background: rgba(4, 2, 14, 0.85);
-  backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   animation: sb-backdrop-in 0.25s ease;
 }
 
@@ -4922,8 +4937,8 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   inset: 0;
   z-index: 11999;
   background: rgba(4, 2, 14, 0.45);
-  backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
 }
 #tool-float-modal-backdrop.active { display: block; }
 
@@ -4952,6 +4967,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
   background: rgba(28, 18, 50, 0.98);
   border-bottom: 1px solid rgba(140, 100, 255, 0.2);
   cursor: grab;
+  -webkit-user-select: none;
   user-select: none;
   flex-shrink: 0;
 }
