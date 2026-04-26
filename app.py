@@ -13,6 +13,8 @@ All modules (config, db_connection, pruner, etc.) are imported directly
 from this file's parent directory — no PYTHONPATH manipulation required.
 """
 
+from webview.platforms import winforms
+from random import sample
 import json
 import os
 import platform
@@ -831,14 +833,8 @@ def serve_audio(audio_path):
     mime, _ = mimetypes.guess_type(abs_path)
     return send_file(abs_path, mimetype=mime or "audio/mpeg")
 try:
-    from rekki.recall import recall_memory, create_memory, format_recalled_memory
-    from rekki.db import get_memory_db
-    from rekki.review import run_tribunal
-    _REKKI_MEMORY_ENABLED = True
-except Exception as _rekki_import_err:  # pragma: no cover
-    _REKKI_MEMORY_ENABLED = False
-    run_tribunal = None  # type: ignore[assignment]
-    print(f"[rekki] memory disabled — import failed: {_rekki_import_err}")
+.norm-sample-placeholder .norm-progress-track { background: rgba(0,194,255,.06)} 
+.norm-sample-placeholder .norm-progress-track { background: rgba(0,194,255,.06)} 
 
 # ── Homebrew update checker (background, weekly) ──────────────────────────────
 from brew_updater import start_background_checker as _start_brew_checker, \
@@ -1599,195 +1595,6 @@ def api_rekki_discover_music():
         "total": len(discovered),
         "library_source": library_source,
     })
-
-
-@app.route("/api/rekki/chat", methods=["POST"])
-def api_rekki_chat():
-    if not _rekki_enabled():
-        return jsonify({"ok": False, "error": "Rekki is disabled in Rural mode."}), 403
-
-    data = request.get_json(silent=True) or {}
-    user_message = str(data.get("message", "")).strip()
-    source = str(data.get("source", "main")).strip() or "main"
-
-    if not user_message:
-        return jsonify({"ok": False, "error": "message is required"}), 400
-
-    context = _rekki_context_snapshot()
-
-    try:
-        reply = _rekki_scripted_reply(user_message, source, context)
-
-        # ── HologrA.I.m: persist chat + create memory after every response ───
-        if _REKKI_MEMORY_ENABLED:
-            try:
-                db = get_memory_db()
-                db.insert_chat_message(role="user", content=user_message, source=source)
-                db.insert_chat_message(role="assistant", content=reply, source=source)
-                create_memory(
-                    core_insight=reply[:200],
-                    confidence_score=0.7,
-                    tags=["chat"],
-                    congress_engaged=False,
-                )
-            except Exception as _persist_err:
-                print(f"[rekki] memory persistence failed: {_persist_err}")
-
-        return jsonify({
-            "ok": True,
-            "name": "Rekki",
-            "provider": "scripted-local",
-            "model": _REKKI_SCRIPTED_MODEL,
-            "requested_model": _REKKI_SCRIPTED_MODEL,
-            "reply": reply,
-            "context": context,
-            "memory_enabled": _REKKI_MEMORY_ENABLED,
-            "external_calls_blocked": True,
-        })
-    except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 502
-
-
-@app.route("/api/rekki/infer-context", methods=["POST"])
-def api_rekki_infer_context():
-    data = request.get_json(silent=True) or {}
-    scrape = data.get("scrape") or {}
-
-    element_text = str(scrape.get("elementText", "")).strip()[:500]
-    parent_chain = scrape.get("parentChain", [])
-    siblings = scrape.get("siblings", [])
-    section = str(scrape.get("sectionHeading", "")).strip()[:120]
-    tool_panel = str(scrape.get("toolPanel", "")).strip()[:80]
-    existing_attrs = scrape.get("existingAttributes", {})
-    page_state = scrape.get("pageState", {})
-
-    _ = (element_text, parent_chain, siblings, section, tool_panel, existing_attrs, page_state)
-
-    try:
-        inferred = _rekki_infer_context_local(scrape)
-        return jsonify({"ok": True, "context": inferred})
-    except Exception as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 502
-
-
-@app.route("/api/rekki/automation", methods=["POST"])
-def api_rekki_automation():
-    data = request.get_json(silent=True) or {}
-    action = str(data.get("action", "")).strip().lower()
-    model = _REKKI_SCRIPTED_MODEL
-    profile = str(data.get("profile") or os.environ.get("REKIT_AGENT_PROFILE", _REKKI_PROFILE)).strip()
-
-    ok, output, code = _rekki_automation_action(action, model, profile)
-    status_ok, status_text, status_code = _rekki_automation_status(model, profile)
-    http_code = 200 if ok else (code if code in {400, 404} else 502)
-    return jsonify({
-        "ok": ok,
-        "action": action,
-        "provider": "scripted-local",
-        "requested_model": model,
-        "model": model,
-        "profile": profile,
-        "output": output,
-        "code": code,
-        "status_ok": status_ok,
-        "status_text": status_text,
-        "status_code": status_code,
-        "external_calls_blocked": True,
-    }), http_code
-
-
-@app.route("/api/rekki/congress/review", methods=["POST"])
-def api_rekki_congress_review():
-    """Background Congress review — called fire-and-forget by the JS after every tool run.
-    Validates the payload and starts run_tribunal() in a daemon thread.
-    Always returns {ok: true} immediately so the client never waits.
-    """
-    if not _REKKI_MEMORY_ENABLED or run_tribunal is None:
-        return jsonify({"ok": True, "skipped": "memory disabled"})
-
-    data = request.get_json(silent=True) or {}
-    tool_name  = str(data.get("tool") or "unknown").strip()[:80]
-    exit_code  = int(data.get("exit_code") if data.get("exit_code") is not None else 0)
-    log_lines  = [str(l)[:300] for l in (data.get("log_lines") or []) if str(l).strip()]
-    report_text = str(data.get("report") or "")[:2000]
-
-    import threading
-    t = threading.Thread(
-        target=run_tribunal,
-        args=(tool_name, exit_code, log_lines, report_text),
-        daemon=True,
-    )
-    t.start()
-    return jsonify({"ok": True})
-
-
-def _stream(
-    cmd: list[str],
-    library_root: str = "",
-    step_name: str = "",
-    prelude_lines: list[str] | None = None,
-    cleanup_paths: list[Path] | None = None,
-):
-    """
-    Generator that yields SSE-formatted lines from a subprocess.
-    Each event is a JSON object:
-      {"line": "..."}          — a line of output
-      {"done": true, "exit_code": N}  — command finished
-
-    Registers the process in _active_procs dict with a unique request ID
-    so /api/cancel endpoints can send signals to it mid-run. Uses thread-safe
-    dictionary to support concurrent SSE streams without race conditions.
-    """
-    request_id = str(uuid.uuid4())
-    _library_root = library_root
-    _step_name    = step_name
-    try:
-        for line in prelude_lines or []:
-            yield f"data: {json.dumps({'line': line})}\n\n"
-
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            cwd=str(REPO_ROOT),
-            env=_subprocess_env(),
-        )
-        with _proc_lock:
-            _active_procs[request_id] = process
-        try:
-            for line in iter(process.stdout.readline, ""):
-                yield f"data: {json.dumps({'line': line.rstrip()})}\n\n"
-            process.wait()
-            if _step_name and _library_root:
-                mark_step_complete(_library_root, _step_name, process.returncode)
-            yield f"data: {json.dumps({'done': True, 'exit_code': process.returncode})}\n\n"
-        finally:
-            with _proc_lock:
-                _active_procs.pop(request_id, None)
-    except Exception as exc:
-        with _proc_lock:
-            _active_procs.pop(request_id, None)
-        yield f"data: {json.dumps({'line': f'[SERVER ERROR] {exc}', 'done': True, 'exit_code': 1})}\n\n"
-    finally:
-        for path in cleanup_paths or []:
-            try:
-                path.unlink(missing_ok=True)
-            except OSError as exc:
-                app.logger.warning("SSE cleanup failed for %s: %s", path, exc)
-                # Attempt to move to a quarantine location instead of leaving in place
-                try:
-                    from config import REPORTS_DIR  # noqa: PLC0415
-                    quarantine_dir = REPORTS_DIR.parent / "quarantine"
-                    quarantine_dir.mkdir(exist_ok=True)
-                    dest = quarantine_dir / f"cleanup_failed_{path.name}"
-                    path.rename(dest)
-                    app.logger.info("Moved uncleanable temp file to quarantine: %s", dest)
-                except Exception:
-                    pass  # Give up gracefully
-
-
 def _sse_response(
     cmd: list[str],
     library_root: str = "",

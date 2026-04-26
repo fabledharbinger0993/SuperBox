@@ -1,0 +1,36 @@
+{
+  "extends": [
+    "development"
+  ],
+  "hints": {
+    "compat-api/css": [
+      "default",
+      {
+        "ignore": [
+          "scrollbar-width",
+          "scrollbar-width: none",
+          "scrollbar-color",
+          "scrollbar-width: thin",
+          "border-color: color-mix(in srgb, var(--accent) 40%, transparent)",
+          "min-height: auto"
+        ]
+      }
+    ],
+    "compat-api/html": [
+      "default",
+      {
+        "ignore": [
+          "meta[name=theme-color]"
+        ]
+      }
+    ],
+    "detect-css-reflows/composite": "off",
+    "button-type": "off"
+  },
+  "browserslist": [
+    "defaults",
+    "not ie 11",
+    "not and_ff <= 150",
+    "not firefox <= 150"
+  ]
+}
