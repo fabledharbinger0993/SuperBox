@@ -111,39 +111,7 @@ pip install -r "$SCRIPT_DIR/requirements.txt" --quiet
 
 ok "All Python packages installed"
 
-# ── Ollama (local AI — required for Rekki) ────────────────────────────────
-step "Ollama (local AI)"
-
-if ! command -v ollama &>/dev/null; then
-  info "Installing Ollama via Homebrew..."
-  "$BREW" install --cask ollama
-  ok "Ollama installed"
-else
-  ok "Ollama already installed ($(ollama --version 2>&1 | head -1))"
-fi
-
-# Start Ollama server if not already running
-if ! pgrep -x ollama &>/dev/null; then
-  info "Starting Ollama server..."
-  nohup ollama serve > /dev/null 2>&1 &
-  # Give it a moment to bind
-  sleep 3
-fi
-
-# Pull default Rekki model
-REKKI_MODEL="${REKIT_AGENT_MODEL:-qwen2.5-coder:7b}"
-step "Rekki AI model  ($REKKI_MODEL)"
-
-if ollama list 2>/dev/null | grep -q "^${REKKI_MODEL}"; then
-  ok "$REKKI_MODEL already present"
-else
-  info "Pulling $REKKI_MODEL — this downloads ~4 GB on first run."
-  info "Grab a coffee. This only happens once."
-  echo ""
-  ollama pull "$REKKI_MODEL"
-  ok "$REKKI_MODEL ready"
-fi
-
+pip install "mcp[cli]"
 # ── Create launcher .app ─────────────────────────────────────────────────
 step "Creating RekitBox.app launcher"
 

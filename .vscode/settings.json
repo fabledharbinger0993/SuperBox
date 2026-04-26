@@ -13,5 +13,7 @@
 	"html.validate.styles": false,
 	"htmlhint.options": {
 		"inline-style-disabled": false
-	}
+	},
+	"python-envs.defaultEnvManager": "ms-python.python:conda",
+	"python-envs.defaultPackageManager": "ms-python.python:conda"
 }
