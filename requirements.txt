@@ -50,6 +50,10 @@ pywebview>=5.0
 # Native OS window (WKWebView on macOS) — replaces the browser launch step.
 # Enables real drag-and-drop path delivery and a proper .app experience.
 
+PyQt5>=5.15
+# Multimedia widgets for splash video playback on launch.
+# Falls back gracefully if not available (skips splash and launches directly).
+
 pyinstaller>=6.0
 # Bundles Python + all deps into a standalone .app.  Run build.sh to produce
 # dist/RekitBox.app.  Not needed at runtime — dev/build tool only.

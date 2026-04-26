@@ -50,14 +50,24 @@ def play_splash_and_continue(video_path, main_entry):
             self.player.mediaStatusChanged.connect(self._on_status)
             self.player.stateChanged.connect(self._on_state)
             self._on_finish = on_finish
+            self._finished = False
+            # Safety timeout: force finish after 30 seconds even if video hangs
+            QTimer.singleShot(30000, self._timeout)
             self.player.play()
 
+        def _timeout(self):
+            """Force finish if video hangs — prevents infinite wait"""
+            if not self._finished:
+                self._on_finish()
+
         def _on_status(self, status):
-            if status == QMediaPlayer.EndOfMedia:
+            if status == QMediaPlayer.EndOfMedia and not self._finished:
+                self._finished = True
                 QTimer.singleShot(300, self._on_finish)
 
         def _on_state(self, state):
-            if state == QMediaPlayer.StoppedState:
+            if state == QMediaPlayer.StoppedState and not self._finished:
+                self._finished = True
                 QTimer.singleShot(300, self._on_finish)
 
     app = QApplication(sys.argv)
