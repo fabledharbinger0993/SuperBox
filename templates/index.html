@@ -78,7 +78,7 @@
 </header>
 
 <!-- ══ RekitBox update modal ══════════════════════════════════════════════════ -->
-<div id="rkb-update-overlay" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(4,2,14,0.82);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;">
+<div id="rkb-update-overlay" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(4,2,14,0.82);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
   <div style="position:relative;width:clamp(300px,38vw,480px);background:rgba(12,8,28,0.98);border:1px solid rgba(140,100,255,0.35);border-radius:18px;padding:32px 28px 24px;box-shadow:0 12px 60px rgba(80,40,200,0.5);">
     <div style="font-size:1.5rem;margin-bottom:10px;">⬆</div>
     <h2 id="rkb-update-title" style="font-family:system-ui,sans-serif;font-size:1rem;font-weight:700;color:#c4b5fd;margin:0 0 10px;letter-spacing:.04em;">RekitBox Update Available</h2>
@@ -404,7 +404,7 @@
       <!-- Action bar -->
       <div class="prune-action-bar">
         <span class="prune-selected-count" id="prune-selected-summary">Select files above to continue.</span>
-        <label style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-dim);cursor:pointer;user-select:none">
+        <label style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-dim);cursor:pointer;-webkit-user-select:none;user-select:none">
           <input type="checkbox" id="prune-permanent-cb" style="accent-color:var(--danger)"
                onchange="document.getElementById('btn-prune-start').textContent = this.checked ? 'Delete Permanently →' : 'Move to Trash →'">
           Delete permanently
@@ -983,7 +983,7 @@
 
 
   <!-- ── Pipeline step-confirm gate (standalone fixed overlay) ─────────────── -->
-  <div id="pipe-confirm-gate" style="display:none;position:fixed;bottom:calc(var(--log-h) + var(--scan-bar-h) + 16px);left:50%;transform:translateX(-50%);width:min(600px,92vw);z-index:1100;padding:14px 16px;border-radius:8px;border:1px solid var(--pipe-gate-border, rgba(251,191,36,.35));background:var(--pipe-gate-bg, rgba(251,191,36,.06));backdrop-filter:blur(8px);box-shadow:0 8px 32px rgba(0,0,0,.6);">
+  <div id="pipe-confirm-gate" style="display:none;position:fixed;bottom:calc(var(--log-h) + var(--scan-bar-h) + 16px);left:50%;transform:translateX(-50%);width:min(600px,92vw);z-index:1100;padding:14px 16px;border-radius:8px;border:1px solid var(--pipe-gate-border, rgba(251,191,36,.35));background:var(--pipe-gate-bg, rgba(251,191,36,.06));-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 8px 32px rgba(0,0,0,.6);">
     <div style="display:flex;align-items:flex-start;gap:12px;">
       <span id="pipe-gate-icon" style="font-size:1.3rem;line-height:1">✓</span>
       <div style="flex:1">

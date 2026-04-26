@@ -36,6 +36,9 @@ pyloudnorm==0.1.1
 soundfile>=0.12.1
 # Audio file I/O used by pyloudnorm and normalisation verification
 
+sounddevice>=0.4.6
+# Audio playback used by the preview/monitoring feature in app.py
+
 pyacoustid==1.3
 # Acoustic fingerprinting wrapper; requires fpcalc binary (see above)
 
