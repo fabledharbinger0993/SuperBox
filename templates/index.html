@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/static/rekitbox.css">
 <link rel="icon" type="image/png" href="/static/RB_LOGO.png">
 <!-- PWA -->
-<link rel="manifest" href="/static/manifest.json">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="RekitGo">
@@ -37,7 +37,7 @@
 <header>
   <div class="brand">
     <img src="/static/rekitbox-header.png" alt="RekitBox"
-         style="height:36px;object-fit:contain;object-position:left;mix-blend-mode:screen;flex-shrink:0;">
+         >
     <div id="rekki-home" title="Rekki — drag onto anything or click to chat">
       <img id="rekki-avatar" src="/static/icon-rekki.png" alt="Rekki" draggable="true">
     </div>
@@ -48,31 +48,24 @@
       <div class="dot" id="rb-dot"></div>
       <span id="rb-label">Checking…</span>
     </div>
-    <div class="status-pill" id="backup-pill" data-rekki-context='{"type":"status-pill","label":"Backup Status","description":"Shows when your Rekordbox database was last backed up. No backup means your library is unprotected — drop me here to understand the risk.","tool":"audit","severity":"warn"}' style="display:none">
-      <div class="dot" style="background:var(--text-dim)"></div>
+    <div class="status-pill" id="backup-pill" data-rekki-context='{"type":"status-pill","label":"Backup Status","description":"Shows when your Rekordbox database was last backed up. No backup means your library is unprotected — drop me here to understand the risk.","tool":"audit","severity":"warn"}'>
+      <div class="dot"></div>
       <span id="backup-label"></span>
     </div>
-    <div class="status-pill" id="release-pill" data-rekki-context='{"type":"status-pill","label":"Update Available","description":"A new version of RekitBox is available. Drop me here to understand what changed or whether to update now.","tool":null,"severity":"info"}' style="display:none">
-      <div class="dot" style="background:var(--accent)"></div>
+    <div class="status-pill" id="release-pill" data-rekki-context='{"type":"status-pill","label":"Update Available","description":"A new version of RekitBox is available. Drop me here to understand what changed or whether to update now.","tool":null,"severity":"info"}'>
+      <div class="dot"></div>
       <span id="release-label"></span>
     </div>
-    <button id="view-output-btn" onclick="reopenLog()"
-      style="display:none; background:var(--accent-dim); border:1px solid var(--accent);
-             color:var(--accent); border-radius:5px; padding:4px 12px; font-size:.78rem;
-             letter-spacing:.04em; cursor:pointer;">
+    <button type="button" id="view-output-btn" onclick="reopenLog()">
       ▸ View Output
     </button>
-    <button id="tools-header-btn" onclick="openToolkitModal()" title="Open Toolkit — All RekitBox Tools"
-      style="background:rgba(109,184,212,.08); border:1px solid rgba(109,184,212,.3);
-             color:var(--accent); border-radius:6px; padding:5px 13px; font-size:.78rem;
-             font-weight:600; letter-spacing:.04em; cursor:pointer;
-             display:flex; align-items:center; gap:6px;">
+    <button type="button" id="tools-header-btn" onclick="openToolkitModal()" title="Open Toolkit — All RekitBox Tools">
       🛠 Tools
     </button>
-    <button id="settings-btn" onclick="openSettings()" title="Archive &amp; Log Settings">
+    <button type="button" id="settings-btn" onclick="openSettings()" title="Archive &amp; Log Settings">
       ⚙ Settings
     </button>
-    <button id="quit-btn" onclick="quitRekitBox()"
+    <button type="button" id="quit-btn" onclick="quitRekitBox()"
       title="Shut down the RekitBox server">
       ⏻ Quit
     </button>
@@ -80,14 +73,14 @@
 </header>
 
 <!-- ══ RekitBox update modal ══════════════════════════════════════════════════ -->
-<div id="rkb-update-overlay" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(4,2,14,0.82);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);align-items:center;justify-content:center;">
-  <div style="position:relative;width:clamp(300px,38vw,480px);background:rgba(12,8,28,0.98);border:1px solid rgba(140,100,255,0.35);border-radius:18px;padding:32px 28px 24px;box-shadow:0 12px 60px rgba(80,40,200,0.5);">
-    <div style="font-size:1.5rem;margin-bottom:10px;">⬆</div>
-    <h2 id="rkb-update-title" style="font-family:system-ui,sans-serif;font-size:1rem;font-weight:700;color:#c4b5fd;margin:0 0 10px;letter-spacing:.04em;">RekitBox Update Available</h2>
-    <p id="rkb-update-body" style="font-family:system-ui,sans-serif;font-size:.85rem;color:rgba(210,205,235,0.85);line-height:1.6;margin:0 0 22px;"></p>
-    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-      <button id="rkb-update-skip" onclick="rkbUpdateSkip()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(200,195,225,0.8);border-radius:8px;padding:8px 18px;font-size:.82rem;cursor:pointer;">Continue with current</button>
-      <button id="rkb-update-go" onclick="rkbUpdateGo()" style="background:rgba(120,80,255,0.25);border:1px solid rgba(140,100,255,0.45);color:#c4b5fd;border-radius:8px;padding:8px 18px;font-size:.82rem;font-weight:600;cursor:pointer;"></button>
+<div id="rkb-update-overlay">
+  <div id="rkb-update-dialog">
+    <div class="rkb-update-icon">⬆</div>
+    <h2 id="rkb-update-title">RekitBox Update Available</h2>
+    <p id="rkb-update-body"></p>
+    <div id="rkb-update-actions">
+      <button type="button" id="rkb-update-skip" onclick="rkbUpdateSkip()">Continue with current</button>
+      <button type="button" id="rkb-update-go" onclick="rkbUpdateGo()"></button>
     </div>
   </div>
 </div>
@@ -96,40 +89,40 @@
 <div id="rekitbox-update-banner">
   <span class="brew-icon">⬆</span>
   <span class="brew-msg" id="rekitbox-update-msg">A new version of RekitBox is available.</span>
-  <a id="rekitbox-update-link" href="#" target="_blank" rel="noopener" class="brew-btn" style="text-decoration:none">Download</a>
-  <button class="brew-dismiss" onclick="rekitboxUpdateDismiss()" title="Dismiss">✕</button>
+  <a id="rekitbox-update-link" href="#" target="_blank" rel="noopener" class="brew-btn">Download</a>
+  <button type="button" class="brew-dismiss" onclick="rekitboxUpdateDismiss()" title="Dismiss">✕</button>
 </div>
 
 <!-- ══ Brew update banner ═══════════════════════════════════════════════════ -->
 <div id="brew-banner">
   <span class="brew-icon">🍺</span>
   <span class="brew-msg" id="brew-msg">Homebrew updates available.</span>
-  <button class="brew-btn" onclick="runBrewUpgrade()">Update Now</button>
-  <button class="brew-link" onclick="brewCheckNow()">Check Again</button>
-  <button class="brew-dismiss" onclick="brewDismiss()" title="Dismiss until next check">✕</button>
+  <button type="button" class="brew-btn" onclick="runBrewUpgrade()">Update Now</button>
+  <button type="button" class="brew-link" onclick="brewCheckNow()">Check Again</button>
+  <button type="button" class="brew-dismiss" onclick="brewDismiss()" title="Dismiss until next check">✕</button>
 </div>
 
 <!-- ══ Workflow rail ════════════════════════════════════════════════════════ -->
 <nav class="workflow-rail" id="workflow-rail">
-  <button class="step-tab active" data-target="step-process">
+  <button type="button" class="step-tab active" data-target="step-process">
     <span class="step-num">🏷</span> Tag Tracks
   </button>
-  <button class="step-tab" data-target="step-rename">
+  <button type="button" class="step-tab" data-target="step-rename">
     <span class="step-num">📝</span> Rename
   </button>
-  <button class="step-tab" data-target="step-convert">
+  <button type="button" class="step-tab" data-target="step-convert">
     <span class="step-num">🔄</span> Convert
   </button>
-  <button class="step-tab" data-target="step-normalize">
+  <button type="button" class="step-tab" data-target="step-normalize">
     <span class="step-num">📢</span> Normalize
   </button>
-  <button class="step-tab" data-target="step-organize">
+  <button type="button" class="step-tab" data-target="step-organize">
     <span class="step-num">🗂</span> Organize
   </button>
-  <button class="step-tab" data-target="step-duplicates">
+  <button type="button" class="step-tab" data-target="step-duplicates">
     <span class="step-num">✂</span> Duplicates
   </button>
-  <button class="step-tab" data-target="step-novelty">
+  <button type="button" class="step-tab" data-target="step-novelty">
     <span class="step-num">★</span> Novelty
   </button>
 </nav>
@@ -138,26 +131,26 @@
 <main data-rekki-droppable>
 
   <!-- Library/Playlist Workspace -->
-  <div id="library-workspace" style="padding: 40px; text-align: center;">
-    <h2 style="color: var(--text-muted); font-size: 1.2rem; margin-bottom: 16px;">
+  <div id="library-workspace">
+    <h2>
       Library & Playlist Workspace
     </h2>
-    <p style="color: var(--text-dim); font-size: .9rem; max-width: 600px; margin: 0 auto 24px; line-height: 1.6;">
-      Full library browser and playlist editor coming soon. For now, access all tools through the <strong style="color: var(--accent);">Toolkit</strong> button in the left sidebar.
+    <p>
+      Full library browser and playlist editor coming soon. For now, access all tools through the <strong>Toolkit</strong> button in the left sidebar.
     </p>
-    <button class="btn btn-neon" onclick="openToolkitModal()" style="font-size: .9rem; padding: 10px 24px;">
+    <button type="button" class="btn btn-neon" onclick="openToolkitModal()">
       Open Toolkit →
     </button>
   </div>
 
   <!-- Hidden section title (used by toolkit modal) -->
-  <p class="section-title" style="display:none;">Core Pipeline — each tool feeds the next</p>
+  <p class="section-title section-title-hidden">Core Pipeline — each tool feeds the next</p>
 
    <!-- ── Step 1: Audit ──────────────────────────────────────────────────── -->
-<div id="step-audit" style="display:none"></div>
+<div id="step-audit"></div>
 
     <!-- ── Step 2: Process (tags only) ────────────────────────────────────── -->
-  <div class="card" id="step-process" data-rekki-context='{"type":"tool-card","tool_name":"audio_processor","label":"Tag Tracks","description":"I write BPM and musical key into each audio file. Drop me here to check what needs tagging, what was skipped, or if something went wrong.","severity":"safe"}' style="--card-watermark:url('/static/icon-tag.png')">
+  <div class="card" id="step-process" data-rekki-context='{"type":"tool-card","tool_name":"audio_processor","label":"Tag Tracks","description":"I write BPM and musical key into each audio file. Drop me here to check what needs tagging, what was skipped, or if something went wrong.","severity":"safe"}'"">
     <div class="card-head">
       <div class="card-icon caution"><img src="/static/icon-tag.png" alt="Tag Tracks"></div>
       <div class="card-meta">
@@ -165,7 +158,7 @@
         <div class="card-blurb">Reads each audio file and writes BPM and musical key into the file's tags. Skips files that already have tags — won't overwrite your Mix In Key work unless you ask it to.</div>
       </div>
       <span class="risk-badge caution">Writes Tags</span>
-      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
+      <button type="button" class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <div class="explainers">
@@ -221,7 +214,7 @@
           <label class="checkbox-label">
             <input type="checkbox" id="process-no-key"> Skip key detection
           </label>
-          <label class="checkbox-label" id="process-retry-errored-row" style="display:none">
+          <label class="checkbox-label" id="process-retry-errored-row">
             <input type="checkbox" id="process-retry-errored">
             <span>Retry errored tracks only <span class="field-badge caution" id="process-retry-count"></span></span>
           </label>
@@ -241,14 +234,14 @@
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-neon" onclick="runProcess()">Detect BPM &amp; Key</button>
+        <button type="button" class="btn btn-neon" onclick="runProcess()">Detect BPM &amp; Key</button>
       </div>
     </div>
   </div>
 
 
     <!-- ── Duplicate Tracks — unified scan + review + prune ─────────────── -->
-  <div class="card" id="step-duplicates" data-rekki-context='{"type":"tool-card","tool_name":"duplicate_detector","label":"Duplicate Tracks","description":"I use acoustic fingerprinting to find identical recordings regardless of filename or format. Drop me here to understand match confidence or review results.","severity":"warn"}' style="--card-watermark:url('/static/icon-find-duplicate.png')">
+  <div class="card" id="step-duplicates" data-rekki-context='{"type":"tool-card","tool_name":"duplicate_detector","label":"Duplicate Tracks","description":"I use acoustic fingerprinting to find identical recordings regardless of filename or format. Drop me here to understand match confidence or review results.","severity":"warn"}'"">
     <div class="card-head">
       <div class="card-icon safe"><img src="/static/icon-find-duplicate.png" alt="Duplicate Tracks"></div>
       <div class="card-meta">
@@ -256,7 +249,7 @@
         <div class="card-blurb">Acoustic fingerprinting finds identical recordings regardless of filename, format, or bitrate. Scan, review, and prune in one panel.</div>
       </div>
       <span class="risk-badge safe" id="dupes-risk-badge">Read-Only Scan</span>
-      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
+      <button type="button" class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <!-- ── Phase 1: Scan config ────────────────────────────────────────── -->
@@ -295,7 +288,7 @@
         </div>
         <div class="field">
           <label>Parallel Workers <span class="label-hint">— fpcalc processes to run simultaneously (your Mac has 8 cores)</span></label>
-          <select id="dupes-workers" class="select-styled">
+          <select id="dupes-workers" aria-label="Parallel workers" class="select-styled">
             <option value="1">1 — sequential (safe, slowest)</option>
             <option value="2">2 workers</option>
             <option value="4" selected>4 workers (recommended)</option>
@@ -336,7 +329,7 @@
             </label>
           </div>
           <!-- Fuzzy threshold slider — shown when fuzzy or all is selected -->
-          <div class="fuzzy-threshold-row" id="fuzzy-threshold-row" style="display:none">
+          <div class="fuzzy-threshold-row" id="fuzzy-threshold-row">
             <label class="fuzzy-threshold-label" for="fuzzy-threshold">
               Similarity threshold: <strong id="fuzzy-threshold-val">85%</strong>
             </label>
@@ -347,7 +340,7 @@
           </div>
         </div>
         <div class="btn-row">
-          <button class="btn btn-neon" onclick="runDuplicates()">Scan for Duplicates</button>
+          <button type="button" class="btn btn-neon" onclick="runDuplicates()">Scan for Duplicates</button>
         </div>
 
         <!-- Load existing report (for re-review without re-scanning) -->
@@ -357,8 +350,8 @@
             <div class="prune-report-row">
               <input type="text" id="prune-csv-path" class="folder-zone-text"
                      placeholder="~/rekordbox-toolkit/duplicate_report.csv"
-                     style="flex:1;font-size:.8rem">
-              <button class="btn btn-ghost" onclick="loadPruneReport()">Load</button>
+                     class="flex-1">
+              <button type="button" class="btn btn-ghost" onclick="loadPruneReport()">Load</button>
             </div>
           </div>
         </details>
@@ -366,7 +359,7 @@
     </div>
 
     <!-- ── Phase 2: Review &amp; Prune (hidden until scan/load completes) ── -->
-    <div id="dupes-results-phase" style="display:none">
+    <div id="dupes-results-phase">
 
       <!-- Stats bar -->
       <div class="dupes-stats-bar">
@@ -377,17 +370,17 @@
           <span class="dupes-stat-sep">·</span>
           <span class="dupes-stat dupes-stat-accent" id="dupes-stat-size">— recoverable</span>
         </div>
-        <button class="btn btn-ghost btn-xs" onclick="resetDupesScan()">↩ New Scan</button>
+        <button type="button" class="btn btn-ghost btn-xs" onclick="resetDupesScan()">↩ New Scan</button>
       </div>
 
       <!-- Select All controls -->
       <div class="prune-selectall-row">
-        <button class="prune-selectall-btn" id="sa-best-btn" onclick="selectAllBest()">
-          <span class="sa-dot" style="background:var(--safe)"></span>
+        <button type="button" class="prune-selectall-btn" id="sa-best-btn" onclick="selectAllBest()">
+          <span class="sa-dot"></span>
           Select All Best Copies
         </button>
-        <button class="prune-selectall-btn" id="sa-lower-btn" onclick="selectAllLower()">
-          <span class="sa-dot" style="background:var(--danger)"></span>
+        <button type="button" class="prune-selectall-btn" id="sa-lower-btn" onclick="selectAllLower()">
+          <span class="sa-dot"></span>
           Select All Lower Quality
         </button>
         <span class="prune-count-label" id="prune-count-label">0 files selected</span>
@@ -397,21 +390,21 @@
       <div id="prune-groups"></div>
 
       <!-- Pagination -->
-      <div id="prune-pagination" style="display:none;align-items:center;gap:12px;padding:10px 0;margin-top:4px">
-        <button class="btn" id="prune-prev-btn" onclick="_loadPrunePage(prunePage-1)">← Prev</button>
-        <span id="prune-page-info" style="font-size:.82rem;color:var(--text-dim);flex:1;text-align:center"></span>
-        <button class="btn" id="prune-next-btn" onclick="_loadPrunePage(prunePage+1)">Next →</button>
+      <div id="prune-pagination">
+        <button type="button" class="btn" id="prune-prev-btn" onclick="_loadPrunePage(prunePage-1)">← Prev</button>
+        <span id="prune-page-info"></span>
+        <button type="button" class="btn" id="prune-next-btn" onclick="_loadPrunePage(prunePage+1)">Next →</button>
       </div>
 
       <!-- Action bar -->
       <div class="prune-action-bar">
         <span class="prune-selected-count" id="prune-selected-summary">Select files above to continue.</span>
-        <label style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--text-dim);cursor:pointer;-webkit-user-select:none;user-select:none">
-          <input type="checkbox" id="prune-permanent-cb" style="accent-color:var(--danger)"
+        <label class="prune-action-label">
+          <input type="checkbox" id="prune-permanent-cb"
                onchange="document.getElementById('btn-prune-start').textContent = this.checked ? 'Delete Permanently →' : 'Move to Trash →'">
           Delete permanently
         </label>
-        <button class="btn btn-prune-danger" id="btn-prune-start"
+        <button type="button" class="btn btn-prune-danger" id="btn-prune-start"
                 onclick="pruneStep1()" disabled>
           Move to Trash →
         </button>
@@ -422,7 +415,7 @@
       </div>
 
       <!-- Inline status shown after a prune attempt -->
-      <div id="prune-status-msg" style="display:none;margin-top:12px;padding:10px 14px;border-radius:6px;font-size:.83rem;font-weight:600;"></div>
+      <div id="prune-status-msg"></div>
     </div>
   </div>
 
@@ -433,53 +426,53 @@
   <!-- Step 1 — bottom-right. "What you're doing." Proceed button bottom-right. -->
   <div class="confirm-panel" id="confirm-step1">
     <div class="confirm-panel-head">
-      <img src="/static/RB_LOGO.png" alt="" class="rb-logo-icon">
+      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="rb-logo-icon">
       <div class="confirm-step-num">1</div>
       <div class="confirm-panel-title">Confirm Selection</div>
-      <button class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
+      <button type="button" class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
     </div>
     <div class="confirm-panel-body">
       <p>You're about to remove <strong id="c1-count">—</strong> files from the RekordBox database.</p>
       <p class="confirm-detail" id="c1-mode-note">Files will be moved to a recovery folder in Trash. Nothing is permanently deleted.</p>
     </div>
     <div class="confirm-panel-footer">
-      <button class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
-      <button class="btn btn-warn-action" onclick="pruneStep2()">Review the file list →</button>
+      <button type="button" class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
+      <button type="button" class="btn btn-warn-action" onclick="pruneStep2()">Review the file list →</button>
     </div>
   </div>
 
   <!-- Step 2 — top-left. File list + execute. -->
   <div class="confirm-panel" id="confirm-step2">
     <div class="confirm-panel-head">
-      <img src="/static/RB_LOGO.png" alt="" class="rb-logo-icon">
+      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="rb-logo-icon">
       <div class="confirm-step-num">2</div>
       <div class="confirm-panel-title">Review &amp; Execute</div>
-      <button class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
+      <button type="button" class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
     </div>
     <div class="confirm-file-list" id="c2-file-list"></div>
-    <div class="confirm-panel-body" style="padding-top:10px;padding-bottom:6px">
+    <div class="confirm-panel-body confirm-body-pt">
       <p class="confirm-detail">These files will be moved to Trash. Their database entries will be removed. A timestamped backup of <code>master.db</code> is created automatically. RekordBox must be closed.</p>
     </div>
     <div class="confirm-panel-footer">
-      <button class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
-      <span style="flex:1"></span>
-      <button class="btn btn-prune-danger" id="btn-execute-prune" onclick="executePrune()">Execute — Move to Trash</button>
+      <button type="button" class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
+      <span class="footer-flex-spacer"></span>
+      <button type="button" class="btn btn-prune-danger" id="btn-execute-prune" onclick="executePrune()">Execute — Move to Trash</button>
     </div>
-    <div class="rb-block-msg" id="prune-final-rb-block" style="margin:0 14px 10px">
+    <div class="rb-block-msg" id="prune-final-rb-block">
       <span>⚠</span> RekordBox is open. Close it to proceed.
     </div>
   </div>
 
 
   <!-- DB tool stubs — content lives in #db-panel; IDs kept for STATE_STEP_MAP -->
-  <div id="step-relocate" style="display:none"></div>
-  <div id="step-import"   style="display:none"></div>
-  <div id="step-link"     style="display:none"></div>
+  <div id="step-relocate"></div>
+  <div id="step-import"></div>
+  <div id="step-link"></div>
 
-  <p class="section-title" style="margin-top:48px">Optional &amp; Transformative — run after the core pipeline is clean</p>
+  <p class="section-title section-title-mt">Optional &amp; Transformative — run after the core pipeline is clean</p>
 
     <!-- ── Step 5: Normalize ───────────────────────────────────────────────── -->
-  <div class="card" id="step-normalize" data-rekki-context='{"type":"tool-card","tool_name":"normalizer","label":"Normalize Loudness","description":"I rewrite audio files to hit -8.0 LUFS — the DJ standard. This is destructive and changes the actual file. Drop me here to check what was changed or if something sounds wrong.","severity":"warn"}' style="--card-watermark:url('/static/icon-normalize.png')">
+  <div class="card" id="step-normalize" data-rekki-context='{"type":"tool-card","tool_name":"normalizer","label":"Normalize Loudness","description":"I rewrite audio files to hit -8.0 LUFS — the DJ standard. This is destructive and changes the actual file. Drop me here to check what was changed or if something sounds wrong.","severity":"warn"}'"">
     <div class="card-head">
       <div class="card-icon danger"><img src="/static/icon-normalize.png" alt="Normalize"></div>
       <div class="card-meta">
@@ -487,7 +480,7 @@
         <div class="card-blurb">Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard. <strong>This rewrites the actual audio file.</strong></div>
       </div>
       <span class="risk-badge danger">Rewrites Audio</span>
-      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
+      <button type="button" class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <div class="explainers">
@@ -572,13 +565,13 @@
         </select>
       </div>
       <div class="btn-row">
-        <button class="btn btn-neon" onclick="runNormalize()">Normalize Loudness</button>
+        <button type="button" class="btn btn-neon" onclick="runNormalize()">Normalize Loudness</button>
       </div>
     </div>
   </div>
 
 
-  <div class="card" id="step-convert" data-rekki-context='{"type":"tool-card","tool_name":"converter","label":"Convert Format","description":"I convert audio between MP3, WAV, AIFF, and FLAC. Drop me here to check conversion status, format compatibility, or why a track failed to convert.","severity":"info"}' style="--card-watermark:url('/static/icon-convert.png')">
+  <div class="card" id="step-convert" data-rekki-context='{"type":"tool-card","tool_name":"converter","label":"Convert Format","description":"I convert audio between MP3, WAV, AIFF, and FLAC. Drop me here to check conversion status, format compatibility, or why a track failed to convert.","severity":"info"}'"">
     <div class="card-head">
       <div class="card-icon"><img src="/static/icon-convert.png" alt="Convert"></div>
       <div class="card-meta">
@@ -586,7 +579,7 @@
         <div class="card-blurb">Convert one or more source folders to a different audio format. Supports MP3, WAV, AIFF, and FLAC. Metadata is preserved.</div>
       </div>
       <span class="risk-badge caution">Rewrites Files</span>
-      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
+      <button type="button" class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <div class="explainers">
@@ -635,7 +628,7 @@
         </div>
         <div class="field">
           <label>Target Format</label>
-          <select id="convert-format">
+          <select id="convert-format" aria-label="Target format">
             <option value="mp3">MP3 (320 kbps)</option>
             <option value="wav">WAV (lossless, uncompressed)</option>
             <option value="aiff">AIFF (lossless, Mac native)</option>
@@ -645,7 +638,7 @@
       </div>
       <div class="field">
         <label>Parallel Workers <span class="label-hint">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
-        <select id="convert-workers" class="select-styled">
+        <select id="convert-workers" aria-label="Parallel workers" class="select-styled">
           <option value="1">1 — sequential (safe, slowest)</option>
           <option value="2">2 workers</option>
           <option value="4" selected>4 workers (recommended)</option>
@@ -654,7 +647,7 @@
         </select>
       </div>
       <div class="btn-row">
-        <button class="btn btn-neon" id="btn-convert" onclick="runConvert()">Start Converting</button>
+        <button type="button" class="btn btn-neon" id="btn-convert" onclick="runConvert()">Start Converting</button>
       </div>
     </div>
   </div>
@@ -662,7 +655,7 @@
 
 
     <!-- ── Organize Library ──────────────────────────────────────────────── -->
-  <div class="card" id="step-organize" data-rekki-context='{"type":"tool-card","tool_name":"library_organizer","label":"Organize Library","description":"I move tracks into Artist/Album/Track folder structure. Drop me here to understand what was moved, merged, or if anything ended up in the wrong place.","severity":"warn"}' style="--card-watermark:url('/static/icon-organizer.png')">
+  <div class="card" id="step-organize" data-rekki-context='{"type":"tool-card","tool_name":"library_organizer","label":"Organize Library","description":"I move tracks into Artist/Album/Track folder structure. Drop me here to understand what was moved, merged, or if anything ended up in the wrong place.","severity":"warn"}'"">
     <div class="card-head">
       <div class="card-icon"><img src="/static/icon-organizer.png" alt="Organize"></div>
       <div class="card-meta">
@@ -670,14 +663,14 @@
         <div class="card-blurb">Scans one or more folders (no matter how deeply nested) and moves or copies every track to the correct Artist / Album / Track location. Merges duplicate artist folders, creates missing folders, and prunes empty ones.</div>
       </div>
       <span class="risk-badge warn" id="organize-risk-badge">Moves Files</span>
-      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
+      <button type="button" class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
 
     <div class="explainers">
       <details>
         <summary>What structure does this create?</summary>
         <div class="explain-body">
-          <pre style="font-size:.8rem;line-height:1.6;margin:0">Target Root/
+          <pre>Target Root/
 ├── Artist Name/
 │   └── Album or Release Name/
 │       └── track.mp3
@@ -687,7 +680,7 @@
 └── Live Sets &amp; Mixes/    ← duration ≥ mix threshold
     └── 2024/
         └── mix.mp3</pre>
-          <p style="margin-top:8px">Joint releases (e.g. "Artist A &amp; Artist B") get their own folder under that combined name. Tracks without an album tag sit directly in the artist folder.</p>
+          <p class="organize-note">Joint releases (e.g. "Artist A &amp; Artist B") get their own folder under that combined name. Tracks without an album tag sit directly in the artist folder.</p>
         </div>
       </details>
       <details>
@@ -717,7 +710,7 @@
         <!-- Left pane: Source folders (pill zone) -->
         <div class="audit-card compact-drop-card">
           <div class="audit-panel-title">
-            <img src="/static/icon-organizer.png" alt="" class="audit-panel-icon">
+            <img src="/static/icon-organizer.png" alt="Library organizer" class="audit-panel-icon">
             Source Folders — where to scan
           </div>
           <p class="audit-panel-blurb">Add every folder you want reorganised. Files are walked recursively — add top-level roots, not individual artist folders.</p>
@@ -738,7 +731,7 @@
         <!-- Right pane: Target (single-path zone) -->
         <div class="audit-card compact-drop-card">
           <div class="audit-panel-title">
-            <img src="/static/icon-organizer.png" alt="" class="audit-panel-icon">
+            <img src="/static/icon-organizer.png" alt="Library organizer" class="audit-panel-icon">
             Target — organised library root
           </div>
           <p class="audit-panel-blurb">The root where files will be moved or copied into the Artist / Album / Track hierarchy. Must be writable.</p>
@@ -758,7 +751,7 @@
       <div class="field-row">
         <div class="field">
           <label>Mode</label>
-          <select id="organize-mode" onchange="orgUpdateMode(this.value)" class="select-styled">
+          <select id="organize-mode" aria-label="Organisation mode" onchange="orgUpdateMode(this.value)" class="select-styled">
             <option value="assimilate" selected>Full Library Assimilation — move files, clean up source</option>
             <option value="integrate">Full Library Integration — copy files only, source untouched</option>
           </select>
@@ -767,7 +760,7 @@
       <div class="field-row">
         <div class="field">
           <label>Mix Threshold <span class="label-hint">— tracks longer than this go to Live Sets &amp; Mixes</span></label>
-          <select id="organize-mix-threshold" class="select-styled">
+          <select id="organize-mix-threshold" aria-label="Similarity threshold" class="select-styled">
             <option value="10">10 minutes</option>
             <option value="15" selected>15 minutes (default)</option>
             <option value="20">20 minutes</option>
@@ -777,21 +770,21 @@
         </div>
         <div class="field">
           <label>Parallel Workers <span class="label-hint">— I/O threads</span></label>
-          <select id="organize-workers" class="select-styled">
+          <select id="organize-workers" aria-label="Parallel workers" class="select-styled">
             <option value="1" selected>1 — sequential (safe)</option>
             <option value="2">2 workers</option>
             <option value="4">4 workers</option>
           </select>
         </div>
       </div>
-      <div class="field" style="margin-top:4px">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;">
-          <input type="checkbox" id="organize-dry-run" checked style="width:16px;height:16px;accent-color:var(--accent);">
+      <div class="field organize-dry-field">
+        <label class="organize-dry-label">
+          <input type="checkbox" id="organize-dry-run" checked>
           Dry Run — preview without touching any files <span class="label-hint">(recommended — uncheck to execute)</span>
         </label>
       </div>
       <div class="btn-row">
-        <button class="btn btn-neon" id="btn-organize" onclick="runOrganize()">Scan &amp; Organize</button>
+        <button type="button" class="btn btn-neon" id="btn-organize" onclick="runOrganize()">Scan &amp; Organize</button>
       </div>
 
       <!-- ── Rekordbox library migration ──────────────────────────────────── -->
@@ -799,9 +792,9 @@
         <div class="migrate-db-header" onclick="toggleMigrateSection()">
           <span class="migrate-db-chevron" id="migrate-db-chevron">▸</span>
           <strong>Move Rekordbox Library to Drive</strong>
-          <span class="risk-badge danger" style="margin-left:auto">Moves DB + Symlink</span>
+          <span class="risk-badge danger migrate-risk-right">Moves DB + Symlink</span>
         </div>
-        <div class="migrate-db-body" id="migrate-db-body" style="display:none">
+        <div class="migrate-db-body" id="migrate-db-body">
           <p class="migrate-db-blurb">
             Moves <code>~/Library/Pioneer/rekordbox/</code> (master.db, playlists, analysis) to
             <code>&lt;drive&gt;/Pioneer/rekordbox/</code> and replaces the original with a symlink.
@@ -809,11 +802,11 @@
             <strong>Rekordbox must be closed.</strong>
           </p>
           <div class="migrate-db-confirm-row" id="migrate-db-step1">
-            <label class="checkbox-label" style="color:var(--warn);font-weight:600;">
+            <label class="checkbox-label migrate-confirm-label">
               <input type="checkbox" id="migrate-confirm-cb" onchange="migrateCbChanged()">
               I understand this moves my Rekordbox database to the target drive
             </label>
-            <button class="btn btn-danger-outline" id="btn-migrate-db" disabled
+            <button type="button" class="btn btn-danger-outline" id="btn-migrate-db" disabled
                     onclick="runMigrateDb()">
               Move Library to Drive →
             </button>
@@ -825,10 +818,10 @@
 
 
 
-  <p class="section-title" style="margin-top:48px">Cross-Library Rescue — find unique tracks on other drives</p>
+  <p class="section-title section-title-mt">Cross-Library Rescue — find unique tracks on other drives</p>
 
     <!-- ── Novelty Scanner ───────────────────────────────────────────────── -->
-  <div class="card" id="step-novelty" data-rekki-context='{"type":"tool-card","tool_name":"novelty_scanner","label":"Novelty Scanner","description":"I find tracks on a source drive that do not exist in your library and copy them over. Drop me here to understand what was found or what was skipped.","severity":"safe"}' style="--card-watermark:url('/static/icon-novelty.png')">
+  <div class="card" id="step-novelty" data-rekki-context='{"type":"tool-card","tool_name":"novelty_scanner","label":"Novelty Scanner","description":"I find tracks on a source drive that do not exist in your library and copy them over. Drop me here to understand what was found or what was skipped.","severity":"safe"}'"">
     <div class="card-head">
       <div class="card-icon"><img src="/static/icon-novelty.png" alt="Novelty Scanner"></div>
       <div class="card-meta">
@@ -836,7 +829,7 @@
         <div class="card-blurb">Scans a source drive for tracks that don't exist anywhere in your home library and copies every one of them across. When in doubt, it copies. Use this to safely rescue one-of-a-kind recordings from backup drives before anything gets lost.</div>
       </div>
       <span class="risk-badge safe">SAFE</span>
-      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
+      <button type="button" class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
     <div class="explainers">
       <details>
@@ -893,8 +886,8 @@
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="btn-novelty" onclick="runNovelty()">
-          <img src="/static/icon-novelty.png" style="width:16px;height:16px;filter:brightness(0) invert(1)" alt="">
+        <button type="button" class="btn btn-primary" id="btn-novelty" onclick="runNovelty()">
+          <img src="/static/icon-novelty.png" class="icon-sm-invert" alt="Novelty scanner">
           Scan for Novel Tracks
         </button>
       </div>
@@ -907,14 +900,14 @@
 
 
   <!-- ── Rename ──────────────────────────────────────────────────────────── -->
-  <div class="card" id="step-rename" data-rekki-context='{"type":"tool-card","tool_name":"renamer","label":"Rename Files","description":"I clean up filenames using metadata tags into Artist: Title format. Drop me here to review rename proposals, check what was flagged, or understand why a filename changed.","severity":"info"}' style="--card-watermark:url('/static/icon-filename.png?v=2.0.0')">
+  <div class="card" id="step-rename" data-rekki-context='{"type":"tool-card","tool_name":"renamer","label":"Rename Files","description":"I clean up filenames using metadata tags into Artist: Title format. Drop me here to review rename proposals, check what was flagged, or understand why a filename changed.","severity":"info"}'"">
     <div class="card-head">
       <div class="card-icon caution"><img src="/static/icon-filename.png?v=2.0.0" alt="Rename Files"></div>
       <div class="card-meta">
         <div class="card-title">Rename Files</div>
         <div class="card-blurb">Clean up file names using metadata tags. Generates "Artist: Title" format, removes underscores, numbers, processing markers (PN, IDs) — keeps all metadata searchable in Rekordbox.</div>
       </div>
-      <button class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
+      <button type="button" class="rekki-card-btn" onclick="_rekkiEngageWithCard(this)" title="Ask Rekki about this tool">&#x2726;</button>
     </div>
     <details class="explain-block">
       <summary>How it works</summary>
@@ -952,11 +945,11 @@
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn" id="btn-rename-probe" onclick="runRenameProbe()">
+        <button type="button" class="btn" id="btn-rename-probe" onclick="runRenameProbe()">
           Probe Ambiguities
         </button>
-        <button class="btn btn-primary" id="btn-rename" onclick="runRename()">
-          <img src="/static/icon-filename.png?v=2.0.0" style="width:16px;height:16px;filter:brightness(0) invert(1)" alt="">
+        <button type="button" class="btn btn-primary" id="btn-rename" onclick="runRename()">
+          <img src="/static/icon-filename.png?v=2.0.0" class="icon-sm-invert" alt="Rename files">
           Clean File Names
         </button>
       </div>
@@ -985,18 +978,18 @@
 
 
   <!-- ── Pipeline step-confirm gate (standalone fixed overlay) ─────────────── -->
-  <div id="pipe-confirm-gate" style="display:none;position:fixed;bottom:calc(var(--log-h) + var(--scan-bar-h) + 16px);left:50%;transform:translateX(-50%);width:min(600px,92vw);z-index:1100;padding:14px 16px;border-radius:8px;border:1px solid var(--pipe-gate-border, rgba(251,191,36,.35));background:var(--pipe-gate-bg, rgba(251,191,36,.06));-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);box-shadow:0 8px 32px rgba(0,0,0,.6);">
-    <div style="display:flex;align-items:flex-start;gap:12px;">
-      <span id="pipe-gate-icon" style="font-size:1.3rem;line-height:1">✓</span>
-      <div style="flex:1">
-        <div id="pipe-gate-title" style="font-weight:600;color:var(--text);margin-bottom:4px">Step complete</div>
-        <div id="pipe-gate-body" style="color:var(--text-muted);line-height:1.5;font-size:.82rem;margin-bottom:12px"></div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <button class="btn btn-neon" id="pipe-btn-finish" onclick="pipeGateAction('finish')" style="padding:6px 18px;display:none;gap:7px"><img src="/static/icon-restart-from-interrupt.png" style="width:18px;height:18px;object-fit:contain"> Finish</button>
-          <button class="btn btn-neon" id="pipe-btn-redo" onclick="pipeGateAction('redo')" style="padding:6px 14px;display:none;gap:7px"><img src="/static/icon-restart-step.png" style="width:18px;height:18px;object-fit:contain"> Re-do</button>
-          <button class="btn" id="pipe-btn-skip" onclick="pipeGateAction('skip')" style="padding:6px 14px;display:none;border-color:var(--caution);color:var(--caution);gap:7px"><img src="/static/icon-skip-to-next-step.png" style="width:18px;height:18px;object-fit:contain"> Skip</button>
-          <button class="btn" onclick="pipeGateAction('stop')" style="color:var(--danger);border-color:var(--danger);padding:6px 14px;gap:7px"><img src="/static/icon-interrupt-plus-stop-wizard.png" style="width:18px;height:18px;object-fit:contain"> Stop</button>
-          <span id="pipe-gate-next-label" style="font-size:.78rem;color:var(--text-dim);margin-left:4px"></span>
+  <div id="pipe-confirm-gate">
+    <div id="pipe-gate-row">
+      <span id="pipe-gate-icon">✓</span>
+      <div id="pipe-gate-content">
+        <div id="pipe-gate-title">Step complete</div>
+        <div id="pipe-gate-body"></div>
+        <div id="pipe-gate-actions">
+          <button type="button" class="btn btn-neon" id="pipe-btn-finish" onclick="pipeGateAction('finish')"><img src="/static/icon-restart-from-interrupt.png" class="pipe-gate-icon-btn" alt=""> Finish</button>
+          <button type="button" class="btn btn-neon" id="pipe-btn-redo" onclick="pipeGateAction('redo')"><img src="/static/icon-restart-step.png" class="pipe-gate-icon-btn" alt=""> Re-do</button>
+          <button type="button" class="btn" id="pipe-btn-skip" onclick="pipeGateAction('skip')"><img src="/static/icon-skip-to-next-step.png" class="pipe-gate-icon-btn" alt=""> Skip</button>
+          <button type="button" class="btn pipe-btn-stop" onclick="pipeGateAction('stop')"><img src="/static/icon-interrupt-plus-stop-wizard.png" class="pipe-gate-icon-btn" alt=""> Stop</button>
+          <span id="pipe-gate-next-label"></span>
         </div>
       </div>
     </div>
@@ -1008,80 +1001,80 @@
   <div id="pipeline-wizard">
 
     <!-- ── Shared header banner ───────────────────────────────────────────── -->
-    <div style="padding:16px 24px 0;text-align:center;flex-shrink:0">
-      <img src="/static/rekitbox-header.png" alt="RekitBox" style="height:38px;object-fit:contain;opacity:.9">
+    <div class="pipe-wiz-header-center">
+      <img src="/static/rekitbox-header.png" alt="RekitBox" id="pipe-wiz-header-img">
     </div>
 
     <!-- ── Phase 1: Build your pipeline ──────────────────────────────────── -->
     <div id="pipe-wiz-p1">
       <div class="pipe-wiz-header">
-        <img src="/static/RB_LOGO.png" alt="" style="width:26px;height:26px;object-fit:contain;opacity:.7;mix-blend-mode:screen;flex-shrink:0">
-        <div style="flex:1">
+        <img src="/static/RB_LOGO.png" alt="" role="presentation" class="pipe-wiz-logo">
+        <div class="pipe-wiz-title-col">
           <div class="pipe-wiz-title">Pipeline Wizard</div>
           <div class="pipe-wiz-sub">Choose your steps and order, then configure each one.</div>
         </div>
-        <button class="welcome-close" onclick="closePipelineWizard()" title="Close">✕</button>
+        <button type="button" class="welcome-close" onclick="closePipelineWizard()" title="Close">✕</button>
       </div>
 
       <!-- Checkpoint resume banner (hidden until a checkpoint is detected on open) -->
-      <div id="pipe-resume-banner" class="hidden" style="margin:0 16px 6px;padding:10px 14px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);border-radius:6px;font-size:.82rem;display:flex;align-items:center;gap:12px;flex-shrink:0;">
-        <span style="font-size:1.1rem;flex-shrink:0">🔖</span>
-        <div style="flex:1;min-width:0">
-          <div id="pipe-resume-text" style="font-weight:600;color:var(--caution);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Checkpoint found</div>
-          <div id="pipe-resume-sub" style="color:var(--text-muted);font-size:.75rem;margin-top:1px">Resume from last saved step?</div>
+      <div id="pipe-resume-banner" class="hidden">
+        <span class="pipe-resume-bookmark">🔖</span>
+        <div class="pipe-resume-body">
+          <div id="pipe-resume-text">Checkpoint found</div>
+          <div id="pipe-resume-sub">Resume from last saved step?</div>
         </div>
-        <button class="btn btn-neon" onclick="resumeFromCheckpoint()" style="padding:5px 14px;font-size:.8rem;flex-shrink:0">Resume</button>
-        <button class="btn" onclick="discardCheckpoint()" style="padding:5px 12px;font-size:.8rem;border-color:var(--text-dim);color:var(--text-dim);flex-shrink:0">Discard</button>
+        <button type="button" class="btn btn-neon pipe-resume-btn" onclick="resumeFromCheckpoint()">Resume</button>
+        <button type="button" class="btn pipe-resume-discard" onclick="discardCheckpoint()">Discard</button>
       </div>
 
       <div class="pipe-wiz-body">
 
         <!-- Left: available steps -->
         <div class="pipe-wiz-available">
-          <div class="pipe-col-label" style="margin-bottom:8px">Available steps — click to add</div>
-          <button onclick="pipelineLoadRecommended()" style="width:100%;margin-bottom:10px;padding:8px 12px;background:#111;border:1px solid #333;border-radius:6px;cursor:pointer;font-size:.78rem;font-weight:700;letter-spacing:.08em;color:#fff;text-shadow:0 0 8px rgba(255,255,255,.8),0 0 20px rgba(255,255,255,.4);transition:background .15s,border-color .15s">★ Load recommended order</button>
+          <div class="pipe-col-label">Available steps — click to add</div>
+          <button type="button" onclick="pipelineLoadRecommended()" class="btn-pipe-load-recommended">★ Load recommended order</button>
 
-          <button class="pipe-action-btn" onclick="pipelineAddStep('audit')" title="DB snapshot + full physical filesystem scan">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('audit')" title="DB snapshot + full physical filesystem scan">
             <img src="/static/icon-audit.png" class="pipe-action-icon" alt="Library Audit">
             <span class="pipe-action-text"><strong>Library Audit</strong><span>DB snapshot + physical filesystem inventory</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('process')" title="Write BPM and Key tags into every file">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('process')" title="Write BPM and Key tags into every file">
             <img src="/static/icon-tag.png" class="pipe-action-icon" alt="Tag Tracks">
             <span class="pipe-action-text"><strong>Tag Tracks</strong><span>Writes BPM and musical key into each file</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('duplicates')" title="Find identical recordings no matter how they're named">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('duplicates')" title="Find identical recordings no matter how they're named">
             <img src="/static/icon-find-duplicate.png" class="pipe-action-icon" alt="Find Duplicates">
             <span class="pipe-action-text"><strong>Find Duplicates</strong><span>Scans for files that are the same recording</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('prune')" title="Remove the copies confirmed in Find Duplicates">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('prune')" title="Remove the copies confirmed in Find Duplicates">
             <img src="/static/icon-prune.png" class="pipe-action-icon" alt="Prune Duplicates">
             <span class="pipe-action-text"><strong>Prune Duplicates</strong><span>Remove copies found by Find Duplicates</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('relocate')" title="Update RekordBox after files have moved">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('relocate')" title="Update RekordBox after files have moved">
             <img src="/static/icon-move.png" class="pipe-action-icon" alt="Fix Broken Paths">
             <span class="pipe-action-text"><strong>Fix Broken Paths</strong><span>Update RekordBox after files have moved</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('import')" title="Add new audio files into the RekordBox database">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('import')" title="Add new audio files into the RekordBox database">
             <img src="/static/icon-import.png" class="pipe-action-icon" alt="Import Tracks">
             <span class="pipe-action-text"><strong>Import Tracks</strong><span>Add new audio files to RekordBox database</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('link')" title="Link imported tracks to playlists by folder name">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('link')" title="Link imported tracks to playlists by folder name">
             <img src="/static/icon-link.png" class="pipe-action-icon" alt="Link Playlists">
             <span class="pipe-action-text"><strong>Link Playlists</strong><span>Connect tracks to playlists by folder name</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('normalize')" title="Re-encode tracks that are too loud or too quiet">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('normalize')" title="Re-encode tracks that are too loud or too quiet">
             <img src="/static/icon-normalize.png" class="pipe-action-icon" alt="Balance Loudness">
             <span class="pipe-action-text"><strong>Balance Loudness</strong><span>Brings every track to the same volume level</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('convert')" title="Change every file to your chosen audio format">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('convert')" title="Change every file to your chosen audio format">
             <img src="/static/icon-convert.png" class="pipe-action-icon" alt="Convert Format">
             <span class="pipe-action-text"><strong>Convert Format</strong><span>Changes files to AIFF, MP3, WAV, or FLAC</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('organize')" title="Move files into Artist / Album / Track folders">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('organize')" title="Move files into Artist / Album / Track folders">
             <img src="/static/icon-organizer.png" class="pipe-action-icon" alt="Organize Library">
             <span class="pipe-action-text"><strong>Organize Library</strong><span>Moves files into Artist / Album / Track order</span></span>
           </button>
-          <button class="pipe-action-btn" onclick="pipelineAddStep('novelty')" title="Copy tracks that exist only on the source drive">
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('novelty')" title="Copy tracks that exist only on the source drive">
             <img src="/static/icon-novelty.png" class="pipe-action-icon" alt="Novelty Scan">
             <span class="pipe-action-text"><strong>Novelty Scan</strong><span>Copy unique tracks from source into library</span></span>
           </button>
@@ -1090,43 +1083,43 @@
 
         <!-- Right: pipeline queue -->
         <div class="pipe-wiz-queue-col">
-          <div class="pipe-col-label" style="margin-bottom:10px">
+          <div class="pipe-col-label">
             Your pipeline — runs top to bottom
-            <button onclick="pipelineClear()" style="float:right;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:.8rem;padding:0" title="Remove all steps">Clear all</button>
+            <button type="button" onclick="pipelineClear()" class="btn-pipe-clear" title="Remove all steps">Clear all</button>
           </div>
           <div id="pipeline-queue" class="pipeline-queue">
             <div class="pipe-empty" id="pipe-empty-msg">
               No steps added yet.<br>
-              <span style="font-size:.8rem;color:var(--text-dim)">Click an action on the left to start building.</span>
+              <span class="pipe-empty-hint">Click an action on the left to start building.</span>
             </div>
           </div>
         </div>
 
       </div>
 
-      <div id="pipe-recommended-note" class="hidden" style="margin:0 20px 0;padding:10px 14px;background:var(--surface-hi);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;font-size:.78rem;line-height:1.5;color:var(--text-dim);flex-shrink:0">
-        <strong style="color:var(--text)">Why this order?</strong> Tag first so BPM/key are ready for duplicate detection. Find duplicates before deleting. Prune after reviewing. Relocate so DB paths are correct. Organize once clean. Normalize last.
+      <div id="pipe-recommended-note" class="hidden">
+        <strong>Why this order?</strong> Tag first so BPM/key are ready for duplicate detection. Find duplicates before deleting. Prune after reviewing. Relocate so DB paths are correct. Organize once clean. Normalize last.
       </div>
 
       <!-- ── Rekki wizard voice strip ───────────────────────────────── -->
       <div id="rekki-wiz-strip-p1" class="rekki-wiz-strip">
         <img src="/static/icon-rekki.png" class="rekki-wiz-avatar" alt="Rekki" onerror="this.style.display='none'">
         <div id="rekki-wiz-msg-p1" class="rekki-wiz-msg">Building a pipeline? Tell me what you're trying to fix and I'll suggest the right steps.</div>
-        <button class="rekki-wiz-reply-btn" onclick="_rekkiWizardOpenChat('p1')" title="Chat with Rekki">Ask &rarr;</button>
+        <button type="button" class="rekki-wiz-reply-btn" onclick="_rekkiWizardOpenChat('p1')" title="Chat with Rekki">Ask &rarr;</button>
       </div>
 
       <div class="pipe-wiz-footer">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:500">
-          <input type="checkbox" id="wiz-dry-run" checked style="width:15px;height:15px;accent-color:var(--accent)">
+        <label class="wiz-label-lg">
+          <input type="checkbox" id="wiz-dry-run" checked>
           Dry Run — preview only
         </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;color:var(--text-muted)">
-          <input type="checkbox" id="wiz-confirm-steps" style="width:14px;height:14px;accent-color:var(--caution)">
+        <label class="wiz-label-sm">
+          <input type="checkbox" id="wiz-confirm-steps">
           Confirm between steps
         </label>
-        <div style="margin-left:auto;display:flex;gap:10px">
-          <button class="btn" onclick="closePipelineWizard()">Cancel</button>
-          <button class="btn btn-neon" onclick="pipeWizNext()">Configure Steps →</button>
+        <div class="wiz-p1-footer-right">
+          <button type="button" class="btn" onclick="closePipelineWizard()">Cancel</button>
+          <button type="button" class="btn btn-neon" onclick="pipeWizNext()">Configure Steps →</button>
         </div>
       </div>
     </div>
@@ -1134,75 +1127,60 @@
     <!-- ── Phase 2: Configure each step (redesigned split-panel) ────────── -->
     <div id="pipe-wiz-p2" class="hidden">
       <div class="pipe-wiz-header">
-        <img src="/static/RB_LOGO.png" alt="" style="width:26px;height:26px;object-fit:contain;opacity:.7;mix-blend-mode:screen;flex-shrink:0">
-        <div style="flex:1">
+        <img src="/static/RB_LOGO.png" alt="" role="presentation" class="pipe-wiz-logo">
+        <div class="pipe-wiz-title-col">
           <div class="pipe-wiz-title">Configure Steps</div>
           <div class="pipe-wiz-sub">Select a step from the list to configure it. All required fields must be filled before running.</div>
         </div>
-        <button class="welcome-close" onclick="closePipelineWizard()" title="Close">✕</button>
+        <button type="button" class="welcome-close" onclick="closePipelineWizard()" title="Close">✕</button>
       </div>
 
       <!-- Split body: narrow sidebar + large config panel -->
-      <div class="pipe-wiz-p2-body" style="display:flex;flex:1;overflow:hidden;min-height:0;">
+      <div class="pipe-wiz-p2-body">
 
         <!-- LEFT: scrollable ordered step sidebar -->
-        <div id="pipe-wiz-stack"
-             style="width:210px;flex-shrink:0;overflow-y:auto;border-right:1px solid var(--border);
-                    padding:10px 0;display:flex;flex-direction:column;gap:4px;">
+        <div id="pipe-wiz-stack">
           <!-- populated by pipeWizBuildConfigs() -->
         </div>
 
         <!-- RIGHT: single active config panel -->
-        <div id="pipe-wiz-active-cfg"
-             style="flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
-          <div style="color:var(--text-dim);font-size:.84rem;margin:auto;text-align:center;">
-            Select a step on the left to configure it.
-          </div>
+        <div id="pipe-wiz-active-cfg">
+          <div class="pipe-wiz-cfg-hint">Select a step on the left to configure it.</div>
         </div>
 
       </div>
 
       <!-- Completion progress strip -->
-      <div id="wiz-progress-strip"
-           style="padding:6px 20px;border-top:1px solid var(--border);font-size:.75rem;
-                  color:var(--text-dim);display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <div id="wiz-progress-strip">
         <span id="wiz-progress-label">0 / 0 steps ready</span>
-        <div style="flex:1;height:3px;background:var(--surface-hi);border-radius:2px;overflow:hidden;">
-          <div id="wiz-progress-bar"
-               style="height:100%;width:0%;background:var(--accent);border-radius:2px;transition:width .3s;"></div>
-        </div>
+        <div class="wiz-progress-track"><div id="wiz-progress-bar"></div></div>
       </div>
 
       <!-- ── Rekki wizard voice strip ───────────────────────────────── -->
       <div id="rekki-wiz-strip-p2" class="rekki-wiz-strip">
         <img src="/static/icon-rekki.png" class="rekki-wiz-avatar" alt="Rekki" onerror="this.style.display='none'">
         <div id="rekki-wiz-msg-p2" class="rekki-wiz-msg">Select a step on the left to see what I know about it.</div>
-        <button class="rekki-wiz-reply-btn" onclick="_rekkiWizardOpenChat('p2')" title="Chat with Rekki">Ask &rarr;</button>
+        <button type="button" class="rekki-wiz-reply-btn" onclick="_rekkiWizardOpenChat('p2')" title="Chat with Rekki">Ask &rarr;</button>
       </div>
 
-      <div class="pipe-wiz-footer" style="position:relative;">
-        <button class="btn" onclick="pipeWizBack()">← Back</button>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:500">
-          <input type="checkbox" id="wiz-dry-run-2" checked style="width:15px;height:15px;accent-color:var(--accent)">
+      <div class="pipe-wiz-footer pipe-wiz-footer-rel">
+        <button type="button" class="btn" onclick="pipeWizBack()">← Back</button>
+        <label class="wiz-label-lg">
+          <input type="checkbox" id="wiz-dry-run-2" checked>
           Dry Run
         </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;color:var(--text-muted)">
-          <input type="checkbox" id="wiz-confirm-steps-2" style="width:14px;height:14px;accent-color:var(--caution)">
+        <label class="wiz-label-sm">
+          <input type="checkbox" id="wiz-confirm-steps-2">
           Confirm between steps
         </label>
-        <div style="margin-left:auto;position:relative;">
+        <div class="wiz-next-wrap">
           <!-- "Please fill required fields" tooltip -->
-          <div id="wiz-next-tooltip"
-               style="display:none;position:absolute;bottom:calc(100% + 8px);right:0;
-                      white-space:nowrap;background:rgba(239,68,68,.15);
-                      border:1px solid rgba(239,68,68,.5);color:var(--danger);
-                      border-radius:6px;padding:6px 12px;font-size:.78rem;font-weight:600;
-                      pointer-events:none;z-index:10;">
+          <div id="wiz-next-tooltip">
             Please make required selections
           </div>
-          <button class="btn btn-neon" id="wiz-run-btn" onclick="pipeWizRun()"
-                  style="gap:8px;transition:box-shadow .3s;">
-            <img src="/static/icon-start-wizard.png" style="width:18px;height:18px;object-fit:contain">
+          <button type="button" class="btn btn-neon" id="wiz-run-btn" onclick="pipeWizRun()"
+                 >
+            <img src="/static/icon-start-wizard.png" class="pipe-gate-icon-btn" alt="">
             Run Pipeline
           </button>
         </div>
@@ -1216,36 +1194,31 @@
 <div id="report-modal-backdrop" class="hidden">
   <div id="report-modal">
     <div class="rmod-header">
-      <img src="/static/RB_LOGO.png" alt="" class="rb-logo-icon">
+      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="rb-logo-icon">
       <div class="rmod-header-text">
         <h2 id="rmod-title">Step Complete</h2>
         <p class="rmod-save-path" id="rmod-save-path"></p>
       </div>
-      <button class="welcome-close" onclick="closeReportModal()" title="Close">✕</button>
+      <button type="button" class="welcome-close" onclick="closeReportModal()" title="Close">✕</button>
     </div>
     <div class="rmod-body">
       <pre id="rmod-pre"></pre>
     </div>
-    <div id="rmod-error-actions" class="rmod-error-actions" style="display:none">
+    <div id="rmod-error-actions" class="rmod-error-actions">
       <div class="rmod-ea-title">Suggested next steps</div>
       <div id="rmod-ea-btns" class="rmod-ea-btns"></div>
     </div>
     <div class="rmod-footer">
-      <button class="welcome-got-it" onclick="closeReportModal(true)">✓ Got it</button>
+      <button type="button" class="welcome-got-it" onclick="closeReportModal(true)">✓ Got it</button>
     </div>
   </div>
 </div>
 
 <!-- ══ Footer ════════════════════════════════════════════════════════════════ -->
-<footer style="
-  max-width:1080px; margin:64px auto 0; padding:40px 28px 48px;
-  border-top:1px solid var(--border);
-  display:flex; flex-direction:column; align-items:center; gap:16px;
-">
-  <img src="/static/logo-guthrie.png" alt="Guthrie Entertainment"
-       style="width:160px;height:160px;object-fit:contain;mix-blend-mode:screen;opacity:.85;">
-  <span style="font-size:.82rem;color:var(--text-dim);letter-spacing:.06em;text-align:center;">
-    <strong style="color:var(--text-muted);letter-spacing:.08em;">REKITBOX</strong>
+<footer>
+  <img src="/static/logo-guthrie.png" alt="Guthrie Entertainment" class="footer-logo">
+  <span class="footer-tagline">
+    <strong>REKITBOX</strong>
     &nbsp;·&nbsp; Guthrie Entertainment LLC &nbsp;·&nbsp; Osos Discos
   </span>
 </footer>
@@ -1257,9 +1230,9 @@
   <div class="sidebar-resize-handle"></div>
   <div id="fb-header">
     <div id="fb-breadcrumb-row">
-      <button class="fb-nav-btn" id="fb-up-btn"   onclick="fbUp()"   title="Go up">↑</button>
+      <button type="button" class="fb-nav-btn" id="fb-up-btn"   onclick="fbUp()"   title="Go up">↑</button>
       <div id="fb-breadcrumb"></div>
-      <button class="fb-nav-btn" id="fb-home-btn"  onclick="fbHome()" title="Volumes">⌂</button>
+      <button type="button" class="fb-nav-btn" id="fb-home-btn"  onclick="fbHome()" title="Volumes">⌂</button>
     </div>
   </div>
   <div id="fb-list"></div>
@@ -1270,7 +1243,7 @@
 <div id="tools-panel">
 
   <!-- Toolkit Button -->
-  <button class="tool-btn toolkit-btn" id="toolkit-btn" onclick="openToolkitModal()" title="Open Toolkit — All RekitBox Tools">
+  <button type="button" class="tool-btn toolkit-btn" id="toolkit-btn" onclick="openToolkitModal()" title="Open Toolkit — All RekitBox Tools">
     <img src="/static/icon-toolkit.png" class="tool-icon" alt="Toolkit" onerror="this.src='/static/icon-start-wizard.png'">
     <span class="tool-label">Toolkit</span>
   </button>
@@ -1279,11 +1252,11 @@
 
   <!-- Library -->
   <div class="tool-nav-section">Library</div>
-  <button class="tool-btn active" id="rail-btn-library" onclick="leScrollTop()" title="Library &amp; Playlist Editor">
+  <button type="button" class="tool-btn active" id="rail-btn-library" onclick="leScrollTop()" title="Library &amp; Playlist Editor">
     <img src="/static/icon-rb-file.png" class="tool-icon" alt="Library">
     <span class="tool-label">Library</span>
   </button>
-  <button id="fb-toggle-btn" onclick="toggleFileBrowser()" class="tool-btn" title="Browse files (⌘B)">
+  <button type="button" id="fb-toggle-btn" onclick="toggleFileBrowser()" class="tool-btn" title="Browse files (⌘B)">
     <img src="/static/icon-rb-folder.png" class="tool-icon" alt="Browse Files">
     <span class="tool-label">Files</span>
   </button>
@@ -1292,19 +1265,19 @@
 
   <!-- File Tools -->
   <div class="tool-nav-section">File Tools</div>
-  <button class="tool-btn" data-step="step-process" onclick="expandToolPanel('step-process')" title="Tag Tracks — Detect BPM &amp; Key">
+  <button type="button" class="tool-btn" data-step="step-process" onclick="expandToolPanel('step-process')" title="Tag Tracks — Detect BPM &amp; Key">
     <img src="/static/icon-tag.png" class="tool-icon" alt="Tag Tracks">
     <span class="tool-label">Tag Tracks</span>
   </button>
-  <button class="tool-btn" data-step="step-rename" onclick="expandToolPanel('step-rename')" title="Rename Tracks">
+  <button type="button" class="tool-btn" data-step="step-rename" onclick="expandToolPanel('step-rename')" title="Rename Tracks">
     <img src="/static/icon-filename.png" class="tool-icon" alt="Rename">
     <span class="tool-label">Rename</span>
   </button>
-  <button class="tool-btn" data-step="step-convert" onclick="expandToolPanel('step-convert')" title="Convert Audio">
+  <button type="button" class="tool-btn" data-step="step-convert" onclick="expandToolPanel('step-convert')" title="Convert Audio">
     <img src="/static/icon-convert.png" class="tool-icon" alt="Convert">
     <span class="tool-label">Convert</span>
   </button>
-  <button class="tool-btn" data-step="step-normalize" onclick="expandToolPanel('step-normalize')" title="Normalize Volume">
+  <button type="button" class="tool-btn" data-step="step-normalize" onclick="expandToolPanel('step-normalize')" title="Normalize Volume">
     <img src="/static/icon-normalize.png" class="tool-icon" alt="Normalize">
     <span class="tool-label">Normalize</span>
   </button>
@@ -1313,15 +1286,15 @@
 
   <!-- Organize -->
   <div class="tool-nav-section">Organize</div>
-  <button class="tool-btn" data-step="step-organize" onclick="expandToolPanel('step-organize')" title="Organize Files">
+  <button type="button" class="tool-btn" data-step="step-organize" onclick="expandToolPanel('step-organize')" title="Organize Files">
     <img src="/static/icon-organizer.png" class="tool-icon" alt="Organize">
     <span class="tool-label">Organize</span>
   </button>
-  <button class="tool-btn" data-step="step-duplicates" onclick="expandToolPanel('step-duplicates')" title="Find Duplicates">
+  <button type="button" class="tool-btn" data-step="step-duplicates" onclick="expandToolPanel('step-duplicates')" title="Find Duplicates">
     <img src="/static/icon-find-duplicate.png" class="tool-icon" alt="Duplicates">
     <span class="tool-label">Duplicates</span>
   </button>
-  <button class="tool-btn" data-step="step-novelty" onclick="expandToolPanel('step-novelty')" title="Find New Tracks">
+  <button type="button" class="tool-btn" data-step="step-novelty" onclick="expandToolPanel('step-novelty')" title="Find New Tracks">
     <img src="/static/icon-novelty.png" class="tool-icon" alt="Novelty">
     <span class="tool-label">Novelty</span>
   </button>
@@ -1330,19 +1303,19 @@
 
   <!-- Database -->
   <div class="tool-nav-section">Database</div>
-  <button class="tool-btn db-tool-btn" id="rail-btn-audit" onclick="openDbPanel('audit')" title="Audit Library" data-rekki-context='{"type":"tool-card","tool_name":"audit","label":"Audit Library","description":"I take a full database snapshot and cross-check it against the physical filesystem. Drop me here to understand library health or recent audit results.","severity":"info"}'>
+  <button type="button" class="tool-btn db-tool-btn" id="rail-btn-audit" onclick="openDbPanel('audit')" title="Audit Library" data-rekki-context='{"type":"tool-card","tool_name":"audit","label":"Audit Library","description":"I take a full database snapshot and cross-check it against the physical filesystem. Drop me here to understand library health or recent audit results.","severity":"info"}'>
     <img src="/static/icon-audit.png" class="tool-icon" alt="Audit">
     <span class="tool-label">Audit</span>
   </button>
-  <button class="tool-btn db-tool-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths" data-rekki-context='{"type":"tool-card","tool_name":"relocator","label":"Relocate Paths","description":"I update Rekordbox when files have moved on disk. Drop me here if tracks are showing as missing or to check relocate status.","severity":"warn"}'>
+  <button type="button" class="tool-btn db-tool-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths" data-rekki-context='{"type":"tool-card","tool_name":"relocator","label":"Relocate Paths","description":"I update Rekordbox when files have moved on disk. Drop me here if tracks are showing as missing or to check relocate status.","severity":"warn"}'>
     <img src="/static/icon-move.png" class="tool-icon" alt="Relocate">
     <span class="tool-label">Relocate</span>
   </button>
-  <button class="tool-btn db-tool-btn" id="rail-btn-import" onclick="openDbPanel('import')" title="Import Tracks" data-rekki-context='{"type":"tool-card","tool_name":"importer","label":"Import Tracks","description":"I add new audio files into the Rekordbox database. Drop me here to understand what has been imported, what failed, or what is waiting.","severity":"info"}'>
+  <button type="button" class="tool-btn db-tool-btn" id="rail-btn-import" onclick="openDbPanel('import')" title="Import Tracks" data-rekki-context='{"type":"tool-card","tool_name":"importer","label":"Import Tracks","description":"I add new audio files into the Rekordbox database. Drop me here to understand what has been imported, what failed, or what is waiting.","severity":"info"}'>
     <img src="/static/icon-import.png" class="tool-icon" alt="Import">
     <span class="tool-label">Import</span>
   </button>
-  <button class="tool-btn db-tool-btn" id="rail-btn-link" onclick="openDbPanel('link')" title="Link Playlists" data-rekki-context='{"type":"tool-card","tool_name":"linker","label":"Link Playlists","description":"I connect imported tracks to Rekordbox playlists by folder name. Drop me here if playlist linkage is not working or to check link results.","severity":"info"}'>
+  <button type="button" class="tool-btn db-tool-btn" id="rail-btn-link" onclick="openDbPanel('link')" title="Link Playlists" data-rekki-context='{"type":"tool-card","tool_name":"linker","label":"Link Playlists","description":"I connect imported tracks to Rekordbox playlists by folder name. Drop me here if playlist linkage is not working or to check link results.","severity":"info"}'>
     <img src="/static/icon-link.png" class="tool-icon" alt="Link">
     <span class="tool-label">Link</span>
   </button>
@@ -1351,20 +1324,20 @@
 
   <!-- Utilities -->
   <div class="tool-nav-section">Utilities</div>
-  <button id="pipeline-btn" onclick="openPipelineWizard()" class="tool-btn" title="Pipeline Wizard">
+  <button type="button" id="pipeline-btn" onclick="openPipelineWizard()" class="tool-btn" title="Pipeline Wizard">
     <img src="/static/icon-start-wizard.png" class="tool-icon" alt="Pipeline">
     <span class="tool-label">Pipeline</span>
   </button>
-  <button id="rekitgo-btn" onclick="openRekitGo()" class="tool-btn" title="RekitGo — iOS companion app">
+  <button type="button" id="rekitgo-btn" onclick="openRekitGo()" class="tool-btn" title="RekitGo — iOS companion app">
     <img src="/static/icon-rekitgo.png" class="tool-icon" alt="RekitGo">
     <span class="tool-label">RekitGo</span>
     <span id="rekitgo-btn-dot" class="tool-dot"></span>
   </button>
-  <button id="lightbulb-btn" onclick="openWelcome()" class="tool-btn" title="About RekitBox">
+  <button type="button" id="lightbulb-btn" onclick="openWelcome()" class="tool-btn" title="About RekitBox">
     <img src="/static/icon-welcome-info.png" class="tool-icon" alt="About">
     <span class="tool-label">About</span>
   </button>
-  <button id="owl-btn" onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()" onclick="owlClick()" class="tool-btn" title="Glossary &amp; Concepts">
+  <button type="button" id="owl-btn" onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()" onclick="owlClick()" class="tool-btn" title="Glossary &amp; Concepts">
     <img src="/static/icon-site-key.png" class="tool-icon owl-icon" alt="Glossary">
     <span class="tool-label">Glossary</span>
   </button>
@@ -1373,11 +1346,11 @@
 
 <!-- ══ Right Navigation Bar ══════════════════════════════════════════════════ -->
 <div id="nav-bar-right">
-  <button id="nav-btn-library" class="nav-right-btn" onclick="toggleRightNavDropdown('library')" title="Library">
+  <button type="button" id="nav-btn-library" class="nav-right-btn" onclick="toggleRightNavDropdown('library')" title="Library">
     <img src="/static/icon-rb-file.png" class="nav-right-icon" alt="Library">
     <span class="nav-right-label">Library</span>
   </button>
-  <button id="nav-btn-files" class="nav-right-btn" onclick="toggleRightNavDropdown('files')" title="Files">
+  <button type="button" id="nav-btn-files" class="nav-right-btn" onclick="toggleRightNavDropdown('files')" title="Files">
     <img src="/static/icon-rb-folder.png" class="nav-right-icon" alt="Files">
     <span class="nav-right-label">Files</span>
   </button>
@@ -1407,9 +1380,9 @@
     
     <!-- Header -->
     <div class="settings-header">
-      <img src="/static/RB_LOGO.png" alt="" style="width:22px;height:22px;object-fit:contain;opacity:.55;flex-shrink:0;mix-blend-mode:screen;">
+      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="icon-wiz-start">
       <h2>⚙ Archive &amp; Log Settings</h2>
-      <button class="settings-close" onclick="closeSettings()">✕</button>
+      <button type="button" class="settings-close" onclick="closeSettings()">✕</button>
     </div>
 
     <!-- Body -->
@@ -1448,17 +1421,14 @@
         </div>
 
         <!-- Excluded dirs -->
-        <div style="margin-top:18px; padding-top:18px; border-top:1px solid var(--border);">
-          <label style="display:block; font-size:.82rem; color:var(--text-muted); margin-bottom:6px;">
+        <div class="settings-section-sep">
+          <label class="settings-excl-label">
             🚫 Excluded folder names
-            <span style="color:var(--text-dim); font-weight:400;"> — one per line, folder name only (not full path)</span>
+            <span class="settings-excl-hint"> — one per line, folder name only (not full path)</span>
           </label>
           <textarea id="settings-excluded-dirs" rows="4"
-            style="width:100%; background:var(--surface); border:1px solid var(--border-hi);
-                   color:var(--text); border-radius:6px; padding:8px 10px; font-family:var(--mono);
-                   font-size:.8rem; resize:vertical;"
                  placeholder="cache&#10;DJMT PRIMARY_PROCESSING_LOGIC&#10;POST PROCESS ZIP ARCHIVE"></textarea>
-          <div style="font-size:.75rem; color:var(--text-dim); margin-top:4px;">
+          <div class="settings-excl-note">
             Folders with these names are skipped during all scans (Tag Tracks, Normalize, Convert, Audit). Use this to exclude nested drive copies, app data, or any non-music folder inside your music root.
           </div>
         </div>
@@ -1482,7 +1452,7 @@
     </div>
 
     <!-- RekitBox Mode (mirrors welcome wizard choice) -->
-    <div class="settings-section" style="border-top:1px solid var(--border);margin-top:18px;padding-top:18px;">
+    <div class="settings-section settings-section-sep">
       <h3>RekitBox Mode</h3>
       <div class="settings-radio-group">
         <label class="settings-radio">
@@ -1504,8 +1474,8 @@
 
     <!-- Footer -->
     <div class="settings-footer">
-      <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
-      <button class="settings-save" onclick="saveSettings()">Save &amp; Restart</button>
+      <button type="button" class="settings-cancel" onclick="closeSettings()">Cancel</button>
+      <button type="button" class="settings-save" onclick="saveSettings()">Save &amp; Restart</button>
     </div>
 
   </div>
@@ -1517,18 +1487,18 @@
     <h3>What are you here to do?</h3>
     <p class="path-sub">Your library is ready when you are.</p>
     <div class="path-options">
-      <button class="path-opt" onclick="choosePath('manual')">
+      <button type="button" class="path-opt" onclick="choosePath('manual')">
         <span class="path-opt-icon">🎛</span>
         <span class="path-opt-title">Manual tools</span>
         <span class="path-opt-desc">Pick any tool on its own — convert files, find duplicates, fix paths, check library health. One thing at a time, full control.</span>
       </button>
-      <button class="path-opt" onclick="choosePath('pipeline')">
+      <button type="button" class="path-opt" onclick="choosePath('pipeline')">
         <span class="path-opt-icon">▶</span>
         <span class="path-opt-title">Build a pipeline</span>
         <span class="path-opt-desc">Design a step-by-step workflow and run it all at once — or just a few steps. Load the recommended order or build your own.</span>
       </button>
     </div>
-    <button class="path-skip" onclick="choosePath('manual')">skip, take me to the tools →</button>
+    <button type="button" class="path-skip" onclick="choosePath('manual')">skip, take me to the tools →</button>
   </div>
 </div>
 
@@ -1536,7 +1506,7 @@
 <div id="welcome-backdrop" class="hidden">
   <div id="welcome-modal">
     <div class="welcome-header">
-      <img src="/static/RB_LOGO.png" alt="" class="rb-logo-icon">
+      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="rb-logo-icon">
       <div class="welcome-header-text">
         <h2>Welcome to RekitBox</h2>
         <p>A free, open-source rekordbox library toolkit by Guthrie Entertainment LLC</p>
@@ -1550,7 +1520,7 @@
         <p class="welcome-step-sub">Before diving in, we need two quick decisions about what RekitBox is allowed to access. Takes about 30 seconds.</p>
       </div>
       <div class="welcome-footer">
-        <button class="welcome-got-it" onclick="welcomeShowStep('read')">Get Started →</button>
+        <button type="button" class="welcome-got-it" onclick="welcomeShowStep('read')">Get Started →</button>
       </div>
     </div>
 
@@ -1559,7 +1529,7 @@
       <div class="welcome-step-body">
         <div>
           <span class="welcome-perm-badge read">● Read Only</span>
-          <p class="welcome-step-title" style="margin-top:12px;">May RekitBox read your RekordBox database?</p>
+          <p class="welcome-step-title welcome-step-title-mt">May RekitBox read your RekordBox database?</p>
         </div>
         <p class="welcome-step-sub">Reading the database lets RekitBox see what tracks are in your library, where their files are, and whether any paths are broken. It never modifies anything at this stage.</p>
         <div class="welcome-tool-list">
@@ -1568,8 +1538,8 @@
           <div class="welcome-tool-item"><strong>🔎 Find Duplicates</strong><span>Uses DB metadata for smart pre-filtering before acoustic fingerprinting.</span></div>
         </div>
         <div class="welcome-btn-row">
-          <button class="wbtn-accept" onclick="welcomeGrantRead()">Allow Read Access</button>
-          <button class="wbtn-deny"   onclick="welcomeDenyRead()">Skip — limited mode</button>
+          <button type="button" class="wbtn-accept" onclick="welcomeGrantRead()">Allow Read Access</button>
+          <button type="button" class="wbtn-deny"   onclick="welcomeDenyRead()">Skip — limited mode</button>
         </div>
       </div>
     </div>
@@ -1579,7 +1549,7 @@
       <div class="welcome-step-body">
         <div>
           <span class="welcome-perm-badge write">● Read &amp; Write</span>
-          <p class="welcome-step-title" style="margin-top:12px;">May RekitBox write to your RekordBox database?</p>
+          <p class="welcome-step-title welcome-step-title-mt">May RekitBox write to your RekordBox database?</p>
         </div>
         <p class="welcome-step-sub">Some tools make changes to your library. RekitBox always creates a timestamped database backup before any write operation, and RekordBox must be closed first.</p>
         <div class="welcome-tool-list">
@@ -1589,8 +1559,8 @@
           <div class="welcome-tool-item"><strong>✂ Prune Duplicates</strong><span>Removes confirmed duplicates from the database and optionally the disk.</span></div>
         </div>
         <div class="welcome-btn-row">
-          <button class="wbtn-accept" onclick="welcomeGrantWrite()">Allow Write Access</button>
-          <button class="wbtn-deny"   onclick="welcomeDenyWrite()">Read-only mode</button>
+          <button type="button" class="wbtn-accept" onclick="welcomeGrantWrite()">Allow Write Access</button>
+          <button type="button" class="wbtn-deny"   onclick="welcomeDenyWrite()">Read-only mode</button>
         </div>
       </div>
     </div>
@@ -1601,14 +1571,14 @@
         <p class="welcome-step-title">Choose your RekitBox mode</p>
         <p class="welcome-step-sub">Controls whether the Rekki scripted helper is available. You can change this later in Settings.</p>
         <div class="welcome-mode-cards">
-          <button class="wbtn-mode" id="wbtn-suburban" onclick="welcomeSelectMode('suburban')">
+          <button type="button" class="wbtn-mode" id="wbtn-suburban" onclick="welcomeSelectMode('suburban')">
             <span class="wbtn-mode-icon">🏙️</span>
             <div>
               <div class="wbtn-mode-name">Suburban</div>
               <div class="wbtn-mode-desc">Rekki enabled in scripted local mode. No external model calls.</div>
             </div>
           </button>
-          <button class="wbtn-mode" id="wbtn-rural" onclick="welcomeSelectMode('rural')">
+          <button type="button" class="wbtn-mode" id="wbtn-rural" onclick="welcomeSelectMode('rural')">
             <span class="wbtn-mode-icon">🌾</span>
             <div>
               <div class="wbtn-mode-name">Rural</div>
@@ -1623,12 +1593,12 @@
     <div class="welcome-step" id="wstep-ready">
       <div class="welcome-step-body" id="wstep-ready-body"></div>
       <div class="welcome-footer">
-        <button class="welcome-got-it" onclick="completeSetup()">Start RekitBox →</button>
+        <button type="button" class="welcome-got-it" onclick="completeSetup()">Start RekitBox →</button>
       </div>
     </div>
 
     <!-- legacy placeholder kept so existing refs don't throw -->
-    <div class="welcome-body" style="display:none">
+    <div class="welcome-body welcome-body-hidden">
 
       <div class="welcome-section">
         <h3>Why this exists</h3>
@@ -1638,7 +1608,7 @@
 
       <div class="welcome-section">
         <h3>Core pipeline — each tool feeds the next</h3>
-        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:12px;">Run these in order on a fresh library. Each step's output is used as input by the steps that follow it.</p>
+        <p class="welcome-tool-blurb">Run these in order on a fresh library. Each step's output is used as input by the steps that follow it.</p>
 
         <p><strong>▣ Library Audit</strong> — two passes in one run. The <em>database pass</em> reads your Rekordbox database and flags orphaned entries, broken file paths, untagged tracks, and duplicates the DB already knows about. The <em>physical scan pass</em> walks your entire music drive and maps every audio file on disk — extension breakdown, total size, trash-adjacent files, and a complete file inventory. The combined report is written to JSON and feeds the Relocate, Import, and Prune tools downstream. Run this first, every time.</p>
 
@@ -1657,7 +1627,7 @@
 
       <div class="welcome-section">
         <h3>Optional &amp; transformative</h3>
-        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:12px;">Run after the core pipeline is clean. These tools modify audio files directly.</p>
+        <p class="welcome-tool-blurb">Run after the core pipeline is clean. These tools modify audio files directly.</p>
 
         <p><strong>📢 Normalize</strong> — measures the integrated loudness of each track using the EBU R128 standard (the same standard used in broadcast and streaming), and re-encodes any file that falls outside your target range. Every original is preserved as a <code>.bak</code> file until the new version is verified readable. Keeps energy consistent across your sets without touching gain in Rekordbox.</p>
 
@@ -1684,7 +1654,7 @@
             <div class="welcome-tool-desc">Pauses after each step completes and shows a gate panel before the next step begins. The gate is color-coded: green tint on success, red tint on failure. Four actions are available depending on outcome:</div>
           </div>
         </div>
-        <div class="welcome-compare-row" style="margin-top:10px;">
+        <div class="welcome-compare-row welcome-compare-mt">
           <div class="welcome-compare">
             <div class="welcome-compare-name">↻ Re-do</div>
             <div class="welcome-compare-desc">Runs the same step again from scratch. Useful if a step failed because Rekordbox was still open, or if you want to tweak a setting and retry before moving on.</div>
@@ -1770,8 +1740,8 @@
         <p>Every write operation in RekitBox creates a timestamped backup before touching anything. Database changes, audio rewrites, path updates — all logged and reversible. Files are moved to Trash rather than permanently deleted unless you explicitly choose otherwise. The goal is that nothing RekitBox has ever done to your library should be unrecoverable.</p>
         <p>Rekordbox must be closed before any write operation. RekitBox will warn you if it detects Rekordbox is running.</p>
         <p>No cloud. No accounts. No subscription. No internet dependency at runtime. Your library data stays on your machine.</p>
-        <p style="margin-top:10px; padding:10px 14px; background:var(--surface-hi); border:1px solid var(--border); border-radius:7px; font-size:.81rem; color:var(--text-muted);">
-          💡 You can revisit this window anytime — including the archive folder setup below — by clicking the <strong style="color:var(--text)">lightbulb icon</strong> in the bottom-right corner of the screen.
+        <p class="welcome-tip-block">
+          💡 You can revisit this window anytime — including the archive folder setup below — by clicking the <strong>lightbulb icon</strong> in the bottom-right corner of the screen.
         </p>
       </div>
 
@@ -1783,7 +1753,7 @@
 <!-- ══ Scan bar ═══════════════════════════════════════════════════════════ -->
 <div id="scan-bar" data-rekki-context='{"type":"scan-bar","label":"Scan Progress","description":"This shows the current scan progress — how many tracks remain, current rate, and elapsed time. Drop me here to ask about the active operation.","tool":null,"severity":"info"}'>
   <!-- Shown only when idle (no active scan) -->
-  <span id="scan-bar-idle" style="font-family:var(--mono);font-size:.72rem;color:var(--text-dim);letter-spacing:.05em;">RekitBox — Ready</span>
+  <span id="scan-bar-idle">RekitBox — Ready</span>
    <!-- Stat counters scroll horizontally when they overflow, so the action
        buttons in .scan-bar-right stay anchored to the right edge. -->
   <div class="scan-bar-scroll">
@@ -1804,7 +1774,7 @@
       <span class="scan-bar-val danger" id="sb-errors">0</span>
       <span class="scan-bar-note">(see report)</span>
     </div>
-    <div class="scan-bar-item" id="sb-quarantine-wrap" style="display:none">
+    <div class="scan-bar-item" id="sb-quarantine-wrap">
       <span class="scan-bar-label">Quarantined</span>
       <span class="scan-bar-val danger" id="sb-quarantined">0</span>
       <span class="scan-bar-note">(corrupt)</span>
@@ -1818,14 +1788,14 @@
   <div class="scan-bar-right">
     <span id="scan-bar-title"></span>
     <div id="scan-bar-spinner"></div>
-    <button class="scan-bar-view-btn" onclick="reopenLog()">▸ Output</button>
-    <button class="scan-bar-interrupt-btn" id="scan-bar-interrupt"
+    <button type="button" class="scan-bar-view-btn" onclick="reopenLog()">▸ Output</button>
+    <button type="button" class="scan-bar-interrupt-btn" id="scan-bar-interrupt"
             onclick="interruptScan()"
             title="Ask the scan to stop gracefully (keeps server running)">⏸ Interrupt</button>
-    <button class="scan-bar-emergency-btn" id="scan-bar-emergency"
+    <button type="button" class="scan-bar-emergency-btn" id="scan-bar-emergency"
             onclick="emergencyStop()"
             title="Force-kill this scan immediately (server stays running)">⚡ Emergency Stop</button>
-    <button class="scan-bar-dismiss" id="scan-bar-dismiss" style="display:none" onclick="dismissScanBar()" title="Dismiss">✕</button>
+    <button type="button" class="scan-bar-dismiss" id="scan-bar-dismiss" onclick="dismissScanBar()" title="Dismiss">✕</button>
   </div>
 </div>
 
@@ -1834,7 +1804,7 @@
   <div class="log-bar">
     <div class="log-bar-title"><strong id="log-cmd-label">Output</strong></div>
     <div id="log-spinner"></div>
-    <button class="log-close-btn" onclick="toggleLog()" title="Hide output — scan keeps running">−</button>
+    <button type="button" class="log-close-btn" onclick="toggleLog()" title="Hide output — scan keeps running">−</button>
   </div>
   <div id="log-output" data-rekki-context='{"type":"log-panel","label":"Output Log","description":"Live output from RekitBox tools. Drop me on a specific line to ask about it, or drop me here to discuss the recent output generally.","tool":null,"severity":"info"}'></div>
 </div>
@@ -1847,7 +1817,7 @@
   <div class="sidebar-resize-handle"></div>
   <div class="db-panel-header">
     <span id="db-panel-title">RekordBox DB Tools</span>
-    <button class="db-panel-close" onclick="closeDbPanel()" title="Close">✕</button>
+    <button type="button" class="db-panel-close" onclick="closeDbPanel()" title="Close">✕</button>
   </div>
   <div class="db-panel-body">
 
@@ -1875,19 +1845,19 @@
         </div>
         <div class="folder-pills" id="audit-pills"></div>
       </div>
-      <div class="field" style="margin-top:8px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <input type="checkbox" id="audit-save-physical" style="accent-color:var(--accent)">
+      <div class="field organize-note">
+        <label class="audit-save-label">
+          <input type="checkbox" id="audit-save-physical">
           Save physical file index to disk
         </label>
       </div>
-      <div id="dead-roots-banner" style="display:none" class="dead-roots-banner">
+      <div id="dead-roots-banner" class="dead-roots-banner">
         <strong>⚠ Dead library roots detected</strong>
         <div id="dead-roots-detail"></div>
       </div>
-      <div class="btn-row" style="margin-top:12px">
-        <button class="btn btn-neon" onclick="runAudit()">Run Audit</button>
-        <button class="btn btn-secondary" onclick="previewCanonicalPlan()">Preview Canonical Plan</button>
+      <div class="btn-row audit-btn-mt">
+        <button type="button" class="btn btn-neon" onclick="runAudit()">Run Audit</button>
+        <button type="button" class="btn btn-secondary" onclick="previewCanonicalPlan()">Preview Canonical Plan</button>
       </div>
     </div>
 
@@ -1900,7 +1870,7 @@
           <div class="db-panel-tool-blurb">Updates the database when you move or rename your music folders. <strong>RekordBox must be closed.</strong></div>
         </div>
       </div>
-      <div class="field" style="margin-top:10px">
+      <div class="field audit-row-mt">
         <label>Old Paths</label>
         <div class="folder-zone" id="relocate-old-zone">
           <div class="folder-zone-hint">
@@ -1928,8 +1898,8 @@
           </div>
         </div>
       </div>
-      <div class="btn-row" style="margin-top:12px">
-        <button class="btn btn-neon" id="btn-relocate" onclick="runRelocate()">Relocate Paths</button>
+      <div class="btn-row audit-btn-mt">
+        <button type="button" class="btn btn-neon" id="btn-relocate" onclick="runRelocate()">Relocate Paths</button>
       </div>
       <div class="rb-block-msg" id="relocate-rb-block">
         <span>⚠</span> RekordBox is open. Close it before relocating.
@@ -1945,7 +1915,7 @@
           <div class="db-panel-tool-blurb">Preview first to see what will be added, then import. <strong>RekordBox must be closed.</strong> A timestamped backup is created automatically.</div>
         </div>
       </div>
-      <div class="field" style="margin-top:10px">
+      <div class="field audit-row-mt">
         <label>Music Folder(s)</label>
         <div class="folder-zone" id="import-zone">
           <div class="folder-zone-hint">
@@ -1960,9 +1930,9 @@
         </div>
         <div class="folder-pills" id="import-pills"></div>
       </div>
-      <div class="btn-row" style="margin-top:12px">
-        <button class="btn btn-ghost" onclick="runImportDry()">Preview Import</button>
-        <button class="btn btn-neon" id="btn-import" onclick="runImport()">Import Tracks</button>
+      <div class="btn-row audit-btn-mt">
+        <button type="button" class="btn btn-ghost" onclick="runImportDry()">Preview Import</button>
+        <button type="button" class="btn btn-neon" id="btn-import" onclick="runImport()">Import Tracks</button>
       </div>
       <div class="rb-block-msg" id="import-rb-block">
         <span>⚠</span> RekordBox is open. Close it before importing.
@@ -1978,7 +1948,7 @@
           <div class="db-panel-tool-blurb">Matches imported tracks to RekordBox playlists based on the folders they live in.</div>
         </div>
       </div>
-      <div class="field" style="margin-top:10px">
+      <div class="field audit-row-mt">
         <label>Music Folder(s)</label>
         <div class="folder-zone" id="link-zone">
           <div class="folder-zone-hint">
@@ -1993,8 +1963,8 @@
         </div>
         <div class="folder-pills" id="link-pills"></div>
       </div>
-      <div class="btn-row" style="margin-top:12px">
-        <button class="btn btn-neon" id="btn-link" onclick="runLink()">Link Playlists</button>
+      <div class="btn-row audit-btn-mt">
+        <button type="button" class="btn btn-neon" id="btn-link" onclick="runLink()">Link Playlists</button>
       </div>
       <div class="rb-block-msg" id="link-rb-block">
         <span>⚠</span> RekordBox is open. Close it before linking.
@@ -2014,18 +1984,18 @@
     <!-- Header bar -->
     <div class="le-header">
       <div class="le-header-left">
-        <img src="/static/RB_LOGO.png" alt="" style="width:20px;height:20px;object-fit:contain;opacity:.5;mix-blend-mode:screen;">
+        <img src="/static/RB_LOGO.png" alt="" role="presentation" class="icon-rb-logo-sm">
         <span class="le-title">Library &amp; Playlist Editor</span>
       </div>
       <div class="le-header-center">
         <input type="text" id="le-search" placeholder="Search tracks…" autocomplete="off">
       </div>
       <div class="le-header-right">
-        <button class="le-header-btn" onclick="leStartCreate('playlist')" title="New Playlist">＋ Playlist</button>
-        <button class="le-header-btn" onclick="leStartCreate('folder')" title="New Folder">＋ Folder</button>
-        <button class="le-header-btn" id="le-rename-btn" onclick="leRenameActivePlaylist()" title="Rename selected playlist" disabled>Rename</button>
-        <button class="le-header-btn" id="le-delete-btn" onclick="leDeleteActivePlaylist()" title="Delete selected playlist" disabled>Delete</button>
-        <button class="le-header-btn le-export-btn" onclick="leOpenExportModal()" title="Export playlists to Pioneer USB drive">⬆ Export to USB</button>
+        <button type="button" class="le-header-btn" onclick="leStartCreate('playlist')" title="New Playlist">＋ Playlist</button>
+        <button type="button" class="le-header-btn" onclick="leStartCreate('folder')" title="New Folder">＋ Folder</button>
+        <button type="button" class="le-header-btn" id="le-rename-btn" onclick="leRenameActivePlaylist()" title="Rename selected playlist" disabled>Rename</button>
+        <button type="button" class="le-header-btn" id="le-delete-btn" onclick="leDeleteActivePlaylist()" title="Delete selected playlist" disabled>Delete</button>
+        <button type="button" class="le-header-btn le-export-btn" onclick="leOpenExportModal()" title="Export playlists to Pioneer USB drive">⬆ Export to USB</button>
       </div>
     </div>
 
@@ -2034,13 +2004,13 @@
       <div class="lf-group">
         <label class="lf-label">BPM</label>
         <input type="number" class="lf-input" id="lf-bpm-min" placeholder="Min" min="20" max="300" oninput="leApplyFilters()">
-        <span style="color:rgba(200,130,240,.35);font-size:.7rem">–</span>
+        <span class="le-range-sep">–</span>
         <input type="number" class="lf-input" id="lf-bpm-max" placeholder="Max" min="20" max="300" oninput="leApplyFilters()">
       </div>
       <div class="lf-sep"></div>
       <div class="lf-group">
         <label class="lf-label">Key</label>
-        <select class="lf-select" id="lf-key" onchange="leApplyFilters()">
+        <select class="lf-select" id="lf-key" aria-label="Filter by key" onchange="leApplyFilters()">
           <option value="">Any Key</option>
           <option value="1A">1A</option><option value="2A">2A</option><option value="3A">3A</option>
           <option value="4A">4A</option><option value="5A">5A</option><option value="6A">6A</option>
@@ -2055,7 +2025,7 @@
       <div class="lf-sep"></div>
       <div class="lf-group">
         <label class="lf-label">Genre</label>
-        <select class="lf-select" id="lf-genre" onchange="leApplyFilters()">
+        <select class="lf-select" id="lf-genre" aria-label="Filter by genre" onchange="leApplyFilters()">
           <option value="">Any Genre</option>
         </select>
       </div>
@@ -2063,37 +2033,37 @@
       <div class="lf-group">
         <label class="lf-label">Rating</label>
         <div id="lf-rating">
-          <button class="lf-star" data-min="1" onclick="leSetRatingFilter(1)" title="1★ or better">★</button>
-          <button class="lf-star" data-min="2" onclick="leSetRatingFilter(2)" title="2★ or better">★</button>
-          <button class="lf-star" data-min="3" onclick="leSetRatingFilter(3)" title="3★ or better">★</button>
-          <button class="lf-star" data-min="4" onclick="leSetRatingFilter(4)" title="4★ or better">★</button>
-          <button class="lf-star" data-min="5" onclick="leSetRatingFilter(5)" title="5★ only">★</button>
+          <button type="button" class="lf-star" data-min="1" onclick="leSetRatingFilter(1)" title="1★ or better">★</button>
+          <button type="button" class="lf-star" data-min="2" onclick="leSetRatingFilter(2)" title="2★ or better">★</button>
+          <button type="button" class="lf-star" data-min="3" onclick="leSetRatingFilter(3)" title="3★ or better">★</button>
+          <button type="button" class="lf-star" data-min="4" onclick="leSetRatingFilter(4)" title="4★ or better">★</button>
+          <button type="button" class="lf-star" data-min="5" onclick="leSetRatingFilter(5)" title="5★ only">★</button>
         </div>
       </div>
       <div class="lf-sep"></div>
       <div class="lf-group">
         <label class="lf-label">Color</label>
         <div id="lf-color-dots">
-          <button class="lf-color-dot active" data-color="-1" title="Any color" style="background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.4)" onclick="leSetColorFilter(-1)"></button>
-          <button class="lf-color-dot" data-color="1" title="Pink" style="background:#ff69b4" onclick="leSetColorFilter(1)"></button>
-          <button class="lf-color-dot" data-color="2" title="Red" style="background:#ef4444" onclick="leSetColorFilter(2)"></button>
-          <button class="lf-color-dot" data-color="3" title="Orange" style="background:#f97316" onclick="leSetColorFilter(3)"></button>
-          <button class="lf-color-dot" data-color="4" title="Yellow" style="background:#eab308" onclick="leSetColorFilter(4)"></button>
-          <button class="lf-color-dot" data-color="5" title="Green" style="background:#22c55e" onclick="leSetColorFilter(5)"></button>
-          <button class="lf-color-dot" data-color="6" title="Aqua" style="background:#06b6d4" onclick="leSetColorFilter(6)"></button>
-          <button class="lf-color-dot" data-color="7" title="Blue" style="background:#3b82f6" onclick="leSetColorFilter(7)"></button>
-          <button class="lf-color-dot" data-color="8" title="Purple" style="background:#a855f7" onclick="leSetColorFilter(8)"></button>
+          <button type="button" class="lf-color-dot active" data-color="-1" title="Any color" onclick="leSetColorFilter(-1)"></button>
+          <button type="button" class="lf-color-dot" data-color="1" title="Pink" onclick="leSetColorFilter(1)"></button>
+          <button type="button" class="lf-color-dot" data-color="2" title="Red" onclick="leSetColorFilter(2)"></button>
+          <button type="button" class="lf-color-dot" data-color="3" title="Orange" onclick="leSetColorFilter(3)"></button>
+          <button type="button" class="lf-color-dot" data-color="4" title="Yellow" onclick="leSetColorFilter(4)"></button>
+          <button type="button" class="lf-color-dot" data-color="5" title="Green" onclick="leSetColorFilter(5)"></button>
+          <button type="button" class="lf-color-dot" data-color="6" title="Aqua" onclick="leSetColorFilter(6)"></button>
+          <button type="button" class="lf-color-dot" data-color="7" title="Blue" onclick="leSetColorFilter(7)"></button>
+          <button type="button" class="lf-color-dot" data-color="8" title="Purple" onclick="leSetColorFilter(8)"></button>
         </div>
       </div>
       <div class="lf-sep"></div>
-      <button class="lf-clear-btn" onclick="leClearFilters()">Clear</button>
+      <button type="button" class="lf-clear-btn" onclick="leClearFilters()">Clear</button>
     </div>
 
     <div class="le-create-bar" id="le-create-bar">
       <span class="le-create-label" id="le-create-label">Create playlist</span>
       <input type="text" id="le-create-input" class="le-create-input" placeholder="Playlist name" autocomplete="off">
-      <button class="le-create-submit" onclick="leSubmitCreate()">Create</button>
-      <button class="le-create-cancel" onclick="leCloseCreate()">Cancel</button>
+      <button type="button" class="le-create-submit" onclick="leSubmitCreate()">Create</button>
+      <button type="button" class="le-create-cancel" onclick="leCloseCreate()">Cancel</button>
     </div>
 
     <!-- Three-pane body: sidebar | track list | tool drawer -->
@@ -2102,15 +2072,15 @@
       <!-- Left: Playlist tree -->
       <div class="le-sidebar" id="le-sidebar">
         <div class="le-sidebar-section">All Tracks</div>
-        <button class="le-tree-item le-tree-all active" onclick="leSelectAll()">
+        <button type="button" class="le-tree-item le-tree-all active" onclick="leSelectAll()">
           <span class="le-tree-icon">♫</span>
           <span class="le-tree-label">All Tracks</span>
           <span class="le-tree-count" id="le-all-count">—</span>
         </button>
         <div class="le-sidebar-section">Playlists</div>
         <div id="le-playlist-tree"></div>
-        <div class="le-sidebar-section" style="margin-top:auto;">History</div>
-        <button class="le-tree-item" onclick="leSelectHistory(this)">
+        <div class="le-sidebar-section le-sidebar-bottom">History</div>
+        <button type="button" class="le-tree-item" onclick="leSelectHistory(this)">
           <span class="le-tree-icon">⏱</span>
           <span class="le-tree-label">Recently Added</span>
         </button>
@@ -2131,15 +2101,15 @@
         </div>
         <div class="le-track-list" id="le-track-list">
           <div class="le-empty-state" id="le-empty-state">
-            <div style="font-size:2.5rem;margin-bottom:12px;">♫</div>
+            <div class="le-empty-music-icon">♫</div>
             <div>Loading library…</div>
           </div>
         </div>
         <div class="le-status-bar" id="le-status-bar">
           <span id="le-status-text">Loading…</span>
-          <button class="le-load-btn" id="le-remove-btn" onclick="leRemoveSelectionFromActivePlaylist()" disabled>Remove Selected</button>
-          <button class="le-load-btn le-add-btn" id="le-add-btn" onclick="leAddSelectionToActivePlaylist()" disabled>Add Selected</button>
-          <button class="le-load-btn" onclick="leLoadLibrary()">↺ Reload</button>
+          <button type="button" class="le-load-btn" id="le-remove-btn" onclick="leRemoveSelectionFromActivePlaylist()" disabled>Remove Selected</button>
+          <button type="button" class="le-load-btn le-add-btn" id="le-add-btn" onclick="leAddSelectionToActivePlaylist()" disabled>Add Selected</button>
+          <button type="button" class="le-load-btn" onclick="leLoadLibrary()">↺ Reload</button>
         </div>
       </div>
 
@@ -2147,8 +2117,8 @@
       <div id="tool-drawer">
         <div id="tool-drawer-header">
           <span id="tool-drawer-title"></span>
-          <button id="tool-drawer-pin" onclick="toggleToolDrawerPin()" title="Pin tool drawer open" aria-pressed="false">Pin</button>
-          <button id="tool-drawer-close" onclick="closeToolDrawer()" title="Close tool">✕</button>
+          <button type="button" id="tool-drawer-pin" onclick="toggleToolDrawerPin()" title="Pin tool drawer open" aria-pressed="false">Pin</button>
+          <button type="button" id="tool-drawer-close" onclick="closeToolDrawer()" title="Close tool">✕</button>
         </div>
         <div id="tool-drawer-body">
           <!-- workflow-rail and main are moved here by JS on DOMContentLoaded -->
@@ -2164,7 +2134,7 @@
 <div id="le-export-modal" class="hidden">
   <div class="le-export-header">
     <span class="le-export-title">Export to Pioneer USB</span>
-    <button class="le-close-btn" onclick="leCloseExportModal()">✕</button>
+    <button type="button" class="le-close-btn" onclick="leCloseExportModal()">✕</button>
   </div>
 
   <div id="le-export-body">
@@ -2181,8 +2151,8 @@
       <div class="le-export-section-label">
         Playlists
         <span class="le-export-sel-actions">
-          <button onclick="leExportSelectAll()" class="le-export-sel-btn">All</button>
-          <button onclick="leExportSelectNone()" class="le-export-sel-btn">None</button>
+          <button type="button" onclick="leExportSelectAll()" class="le-export-sel-btn">All</button>
+          <button type="button" onclick="leExportSelectNone()" class="le-export-sel-btn">None</button>
         </span>
       </div>
       <div id="le-export-playlists" class="le-export-playlist-list">
@@ -2203,8 +2173,8 @@
   </div>
 
   <div class="le-export-footer">
-    <button id="le-export-submit" class="le-create-submit" onclick="leStartExport()" disabled>Export</button>
-    <button class="le-create-cancel" onclick="leCloseExportModal()">Cancel</button>
+    <button type="button" id="le-export-submit" class="le-create-submit" onclick="leStartExport()" disabled>Export</button>
+    <button type="button" class="le-create-cancel" onclick="leCloseExportModal()">Cancel</button>
   </div>
 </div>
 
@@ -2217,7 +2187,7 @@
     <span class="rekitgo-title">
       <img src="/static/icon-rekitgo.png" class="rekitgo-title-icon" alt="RekitGo"> RekitGo
     </span>
-    <button class="rekitgo-close" onclick="closeRekitGo()">✕</button>
+    <button type="button" class="rekitgo-close" onclick="closeRekitGo()">✕</button>
   </div>
 
   <!-- Step indicator -->
@@ -2287,7 +2257,7 @@
     </p>
     <div class="rkg-qr-pair">
       <div>
-        <div class="rkg-qr-label">Tailscale <span style="font-weight:400;opacity:.6">(optional)</span></div>
+        <div class="rkg-qr-label">Tailscale <span class="rkg-optional-label">(optional)</span></div>
         <div id="rkg-qr-ts-ios" class="rkg-qr-box">
           <p class="rkg-qr-caption">App Store</p>
         </div>
@@ -2330,7 +2300,7 @@
         <span class="rekitgo-val rekitgo-mono" id="rekitgo-tailscale">—</span>
       </div>
     </div>
-    <p class="rekitgo-offline-msg" id="rekitgo-offline-msg" style="display:none">
+    <p class="rekitgo-offline-msg" id="rekitgo-offline-msg">
       RekitBox is running offline — local tools work normally.<br>
       Connect to Wi-Fi or install <strong>Tailscale</strong> for remote access.
     </p>
@@ -2338,9 +2308,9 @@
 
   <!-- Footer nav -->
   <div class="rkg-footer">
-    <button class="btn btn-ghost btn-xs" id="rkg-prev" onclick="rkgPrev()" style="visibility:hidden">← Back</button>
-    <span style="font-size:.72rem;color:var(--text-dim);" id="rkg-counter">1 / 4</span>
-    <button class="btn btn-primary btn-xs" id="rkg-next" onclick="rkgNext()">Next →</button>
+    <button type="button" class="btn btn-ghost btn-xs" id="rkg-prev" onclick="rkgPrev()" style="visibility:hidden">← Back</button>
+    <span class="rkg-counter" id="rkg-counter">1 / 4</span>
+    <button type="button" class="btn btn-primary btn-xs" id="rkg-next" onclick="rkgNext()">Next →</button>
   </div>
 
 </div>
@@ -2350,46 +2320,44 @@
   <video id="rekki-anim" muted playsinline>
     <source id="rekki-anim-src" src="/static/rekki-entrance.mp4" type="video/mp4">
   </video>
-  <button id="rekki-stage-close" onclick="toggleRekkiPanel()" aria-label="Close Rekki">✕</button>
+  <button type="button" id="rekki-stage-close" onclick="toggleRekkiPanel()" aria-label="Close Rekki">✕</button>
   <div id="rekki-chat-overlay">
     <div id="rekki-chat-log"></div>
     <div id="rekki-compose">
       <div id="rekki-ctx-chip" class="hidden">
         <span id="rekki-ctx-chip-label"></span>
-        <button onclick="rekkiClearChip()" aria-label="Clear context">✕</button>
+        <button type="button" onclick="rekkiClearChip()" aria-label="Clear context">✕</button>
       </div>
       <textarea id="rekki-input" placeholder="Drop me on anything, or ask me something…"></textarea>
       <div id="rekki-compose-foot">
         <span id="rekki-status"></span>
         <div id="rekki-conn-dot" title="Rekki scripted helper status"></div>
-        <button id="rekki-send" onclick="rekkiSendMessage()">Send ↵</button>
+        <button type="button" id="rekki-send" onclick="rekkiSendMessage()">Send ↵</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- ══ Toolkit Modal ═══════════════════════════════════════════════════════ -->
-<div id="toolkit-modal" class="toolkit-modal" style="display:none;">
+<div id="toolkit-modal" class="toolkit-modal">
   <div class="toolkit-backdrop" onclick="closeToolkitModal()"></div>
   <div class="toolkit-panel">
     <div class="toolkit-header">
-      <button class="toolkit-close-btn" onclick="closeToolkitModal()" title="Close Toolkit (Esc)">×</button>
+      <button type="button" class="toolkit-close-btn" onclick="closeToolkitModal()" title="Close Toolkit (Esc)">×</button>
       <h2 class="toolkit-title">RekitBox Toolkit</h2>
       <p class="toolkit-subtitle">All tools — run individually or chain into pipelines</p>
     </div>
     <div class="toolkit-content" id="toolkit-content">
       <!-- Tool cards will be moved here dynamically or statically -->
-      <p style="color: var(--text-muted); text-align: center; padding: 40px;">
-        Loading toolkit...
-      </p>
+      <p class="toolkit-empty-hint">Loading toolkit...</p>
     </div>
   </div>
 </div>
 
 <!-- ══ Rekki right-click context menu ══════════════════════════════════ -->
 <div id="rekki-ctx-menu" class="hidden" role="menu">
-  <button onclick="rekkiMenuExplain()" role="menuitem">✦ Explain via Rekki</button>
-  <button onclick="rekkiMenuTag()" role="menuitem">◈ Tag this item</button>
+  <button type="button" onclick="rekkiMenuExplain()" role="menuitem">✦ Explain via Rekki</button>
+  <button type="button" onclick="rekkiMenuTag()" role="menuitem">◈ Tag this item</button>
 </div>
 
 <!-- ══ Floating Tool Modal ════════════════════════════════════════════════ -->
@@ -2399,33 +2367,33 @@
     <img id="tool-float-modal-icon" src="" alt="">
     <div class="tool-float-title-wrap">
       <span id="tool-float-modal-title"></span>
-      <span id="tool-float-modal-badge" class="risk-badge" style="display:none"></span>
+      <span id="tool-float-modal-badge" class="risk-badge"></span>
     </div>
-    <button id="tool-float-modal-close" onclick="closeToolFloatModal()" title="Close — tool keeps running">×</button>
+    <button type="button" id="tool-float-modal-close" onclick="closeToolFloatModal()" title="Close — tool keeps running">×</button>
   </div>
   <div id="tool-float-modal-body"></div>
   <div id="tool-float-modal-footer">
     <div id="tool-float-modal-actions">
-      <button class="tfm-ctrl-btn interrupt" id="tfm-interrupt-btn" onclick="interruptScan()">⏸ Interrupt</button>
-      <button class="tfm-ctrl-btn emergency" id="tfm-emergency-btn" onclick="emergencyStop()">⚡ Emergency Stop</button>
+      <button type="button" class="tfm-ctrl-btn interrupt" id="tfm-interrupt-btn" onclick="interruptScan()">⏸ Interrupt</button>
+      <button type="button" class="tfm-ctrl-btn emergency" id="tfm-emergency-btn" onclick="emergencyStop()">⚡ Emergency Stop</button>
     </div>
     <div id="tool-float-modal-status">
       <span id="tfm-idle-label">Ready</span>
       <span id="tfm-title"></span>
       <div id="tfm-spinner"></div>
-      <span class="tfm-stat" id="tfm-remaining-wrap" style="display:none">
+      <span class="tfm-stat" id="tfm-remaining-wrap">
         <span class="tfm-stat-label">Remaining</span>
         <span class="tfm-stat-val" id="tfm-remaining">—</span>
       </span>
-      <span class="tfm-stat" id="tfm-clean-wrap" style="display:none">
+      <span class="tfm-stat" id="tfm-clean-wrap">
         <span class="tfm-stat-label">Clean</span>
         <span class="tfm-stat-val safe" id="tfm-clean">0</span>
       </span>
-      <span class="tfm-stat" id="tfm-edited-wrap" style="display:none">
+      <span class="tfm-stat" id="tfm-edited-wrap">
         <span class="tfm-stat-label">Edited</span>
         <span class="tfm-stat-val safe" id="tfm-edited">0</span>
       </span>
-      <span class="tfm-stat" id="tfm-errors-wrap" style="display:none">
+      <span class="tfm-stat" id="tfm-errors-wrap">
         <span class="tfm-stat-label">Errors</span>
         <span class="tfm-stat-val danger" id="tfm-errors">0</span>
       </span>
