@@ -63,14 +63,14 @@ body {
   line-height: 1.45;
   min-height: 100vh;
   padding-top: var(--header-h);
-  padding-left: var(--tool-nav-w);
+  padding-left: 0;
   padding-right: var(--nav-bar-right-w);
   padding-bottom: calc(var(--log-h) + var(--scan-bar-h) + 4px);
   transition: padding-left .25s cubic-bezier(.4,0,.2,1), padding-right .25s cubic-bezier(.4,0,.2,1);
 }
 body.scan-active { padding-bottom: calc(var(--log-h) + var(--scan-bar-h) * 2 + 4px); }
 body.tool-expanded {
-  padding-left: var(--tool-nav-expanded-w);
+  padding-left: 0;
 }
 body::before {
   content: '';
@@ -115,7 +115,7 @@ label { display: block; color: var(--text-muted); font-size: .78rem;
 
 /* ── Header ────────────────────────────────────────────────────────────── */
 header {
-  position: fixed; top: 0; left: var(--tool-nav-w); right: var(--nav-bar-right-w); z-index: 170;
+  position: fixed; top: 0; left: 0; right: var(--nav-bar-right-w); z-index: 170;
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface-hi) 88%, black), var(--surface));
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
@@ -124,7 +124,7 @@ header {
   transition: left .25s cubic-bezier(.4,0,.2,1);
 }
 body.tool-expanded header {
-  left: var(--tool-nav-expanded-w);
+  left: 0;
 }
 .brand {
   display: flex; align-items: center; gap: 10px;
@@ -214,12 +214,7 @@ body.tool-expanded header {
 
 /* ── Workflow rail ─────────────────────────────────────────────────────── */
 .workflow-rail {
-  position: sticky; top: var(--header-h); z-index: 90;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 0 28px;
-  display: flex; align-items: stretch; gap: 0;
-  overflow-x: auto;
+  display: none !important; /* Tool nav replaced by float modal — workflow-rail no longer needed in main window */
 }
 .workflow-rail::-webkit-scrollbar { display: none; }
 .step-tab {
@@ -1170,11 +1165,12 @@ details[open].dupes-load-existing > summary::before { content: '▾ '; }
 
 /* ══ Tool Nav ══════════════════════════════════════════════════════════════ */
 #tools-panel {
+  display: none !important;
   position: fixed;
   left: 0; top: var(--header-h); bottom: 0;
   width: var(--tool-nav-w);
   z-index: 180;
-  display: flex; flex-direction: column; align-items: stretch;
+  flex-direction: column; align-items: stretch;
   gap: 0;
   padding: 8px 0;
   background: var(--surface);
@@ -1732,7 +1728,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
 
 #session-pills-container {
   position: fixed;
-  left: calc(var(--tool-nav-w) + 16px);
+  left: 16px;
   bottom: calc(var(--scan-bar-h) + 8px);
   z-index: 9998;
   display: flex;
@@ -2146,7 +2142,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
 
 #fb-panel {
   position: fixed;
-  left: var(--tool-nav-w);
+  left: 0;
   top: 0; bottom: 0;
   width: var(--sidebar-w);
   background: var(--surface);
@@ -2154,7 +2150,7 @@ body.log-open #session-pills-container { bottom: calc(var(--log-h) + var(--scan-
   z-index: 158;
   display: flex; flex-direction: column;
   overflow: hidden;
-  transform: translateX(calc(-1 * (var(--sidebar-w) + var(--tool-nav-w))));
+  transform: translateX(calc(-1 * var(--sidebar-w)));
   transition: transform .25s cubic-bezier(.4,0,.2,1);
 }
 #fb-panel.fb-open { transform: translateX(0); }
@@ -3780,7 +3776,7 @@ body.rekki-dragging [data-rekki-droppable]:hover {
 /*    Backdrop: disco-queens.jpg full bleed. UI floats as frosted glass.     */
 #library-editor-overlay {
   position: fixed;
-  left: var(--tool-nav-w);
+  left: 0;
   top: var(--header-h);
   right: 0;
   bottom: var(--scan-bar-h);
