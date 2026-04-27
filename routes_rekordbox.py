@@ -19,7 +19,6 @@ from helpers import (
     _proc_lock,
     _active_procs,
     _sse_response,
-    _sse_done,
     _require_rb_closed,
     _get_library_root,
     _subprocess_env,
@@ -197,4 +196,8 @@ def api_migrate_pioneer_db():
     if not target:
         return jsonify({"error": "target is required"}), 400
     from db_migrator import migrate  # noqa: PLC0415
-    return Response(migrate(target), mimetype="text/event-stream")
+    return Response(
+        migrate(target),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

@@ -614,8 +614,15 @@ async function interruptScan() {
   const btn = document.getElementById('scan-bar-interrupt');
   btn.textContent = '⏸ Stopping…'; btn.disabled = true;
   try {
-    await fetch('/api/cancel', { method: 'POST' });
-    appendLog('⏸ Interrupt signal sent — waiting for process to exit…', 'warn');
+    const resp = await fetch('/api/cancel', { method: 'POST' });
+    let data = null;
+    try { data = await resp.json(); } catch (_) {}
+    if (!resp.ok) {
+      appendLog(`[ERROR] ${data?.error || 'Could not send interrupt signal.'}`, 'error');
+      btn.textContent = '⏸ Interrupt'; btn.disabled = false;
+      return;
+    }
+    appendLog(data?.message || '⏸ Interrupt signal sent — waiting for process to exit…', 'warn');
   } catch(e) {
     appendLog('[ERROR] Could not send interrupt signal.', 'error');
     btn.textContent = '⏸ Interrupt'; btn.disabled = false;
@@ -644,7 +651,14 @@ async function emergencyStop() {
   _emergencyArmed = false;
   btn.textContent = '⚡ Killing…'; btn.disabled = true; btn.classList.remove('armed');
   try {
-    await fetch('/api/cancel/force', { method: 'POST' });
+    const resp = await fetch('/api/cancel/force', { method: 'POST' });
+    let data = null;
+    try { data = await resp.json(); } catch (_) {}
+    if (!resp.ok) {
+      appendLog(`[ERROR] ${data?.error || 'Could not send kill signal.'}`, 'error');
+      btn.textContent = '⚡ Emergency Stop'; btn.disabled = false;
+      return;
+    }
     appendLog('⚡ Emergency stop — process force-killed. Server is still running.', 'error');
   } catch(e) {
     appendLog('[ERROR] Could not send kill signal.', 'error');
@@ -3528,6 +3542,8 @@ async function executePrune() {
       pruneSelected.clear();
       _updatePruneSummary();
       _showPruneStatus(`✓ Prune complete — ${paths.length} file${paths.length > 1 ? 's' : ''} ${label}. Check the report for details.`, false);
+    } else if (exitCode === 130) {
+      _showPruneStatus('⚠ Prune cancelled. Re-open the report and re-stage if you still want to apply removals.', true);
     } else {
       _showPruneStatus('✗ Prune failed — see the log panel (View Output) for details.', true);
     }

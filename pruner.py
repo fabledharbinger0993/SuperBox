@@ -374,6 +374,7 @@ def prune_files(
     log=None,
     permanent: bool = False,
     keeper_map: Optional[dict[str, str]] = None,
+    should_cancel=None,
 ) -> dict:
     """
     Remove file_paths from DjmdContent and move them to a timestamped
@@ -399,6 +400,14 @@ def prune_files(
         if log:
             log(msg)
 
+    def _cancel_requested() -> bool:
+        if not should_cancel:
+            return False
+        try:
+            return bool(should_cancel())
+        except Exception:
+            return False
+
     stamp     = datetime.now().strftime("%Y%m%d_%H%M%S")
     if permanent:
         trash_dir = None
@@ -418,6 +427,22 @@ def prune_files(
     # ── Step 1: Remove from database (with playlist re-threading) ─────────
     emit("  Removing from RekordBox database…")
     for path in file_paths:
+        if _cancel_requested():
+            emit("    ⚠  Cancel requested — rolling back pending database changes.")
+            try:
+                db.rollback()
+            except Exception as exc:
+                errors.append(f"Rollback failed after cancel request: {exc}")
+            emit("  Prune cancelled before commit. No files were moved.")
+            return {
+                "db_removed":           0,
+                "files_moved":          0,
+                "skipped":              0,
+                "errors":               errors,
+                "trash_dir":            str(trash_dir) if trash_dir is not None else None,
+                "playlists_rethreaded": 0,
+                "cancelled":            True,
+            }
         try:
             rows = db.get_content(FolderPath=path)
             if rows:
@@ -454,11 +479,15 @@ def prune_files(
             "errors":               errors,
             "trash_dir":            str(trash_dir) if trash_dir is not None else None,
             "playlists_rethreaded": playlists_rethreaded,
+            "cancelled":            False,
         }
 
     emit("")
 
     # ── Step 2: Move/delete files ──────────────────────────────────────────
+    if _cancel_requested():
+        emit("  ⚠  Cancel requested after database commit — finishing file operations to keep DB and filesystem in sync.")
+
     action_label = "Permanently deleting" if permanent else "Moving files to recovery folder"
     emit(f"  {action_label}…")
     for path in file_paths:
@@ -507,4 +536,5 @@ def prune_files(
         "errors":               errors,
         "trash_dir":            str(trash_dir) if trash_dir is not None else None,
         "playlists_rethreaded": playlists_rethreaded,
+        "cancelled":            False,
     }

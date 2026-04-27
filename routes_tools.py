@@ -84,6 +84,7 @@ _prune_token_store: dict[str, dict] = {}
 _report_cache: dict[str, dict] = {}
 
 _PRUNE_TOKEN_TTL: int = 1800
+_prune_token_lock: threading.Lock = threading.Lock()
 _prune_state_lock: threading.Lock = threading.Lock()
 _active_prune_workers: int = 0
 _PRUNE_CANCEL_EVENT: threading.Event = threading.Event()
@@ -132,7 +133,11 @@ def _load_duplicate_cache(csv_path: Path, *, include_db: bool = True) -> dict:
     csv_mtime = csv_path.stat().st_mtime
 
     cached = _report_cache.get(cache_key)
-    if cached is not None and cached.get("_mtime") == csv_mtime:
+    if (
+        cached is not None
+        and cached.get("_mtime") == csv_mtime
+        and (not include_db or cached.get("_db_enriched", False))
+    ):
         return cached
 
     from pruner import load_report  # noqa: PLC0415
@@ -160,6 +165,7 @@ def _load_duplicate_cache(csv_path: Path, *, include_db: bool = True) -> dict:
 
     cached = {
         "_mtime": csv_mtime,
+        "_db_enriched": include_db,
         "groups": all_groups,
         "remove_paths": [entry["file_path"] for entry in remove_entries],
         "keep_paths": [
@@ -297,7 +303,6 @@ def api_process():
         tf.write("\n".join(pending))
         tf.close()
         cmd += ["--paths-file", tf.name]
-        cmd = [sys.executable, str(CLI_PATH), "process", paths[0], *cmd[4:]]
         library_root = _get_library_root(request, "path")
         return _sse_response(
             cmd,
@@ -341,7 +346,12 @@ def api_process_retry():
         cmd.append("--no-key")
 
     library_root = str(Path(paths[0]).parent)
-    return _sse_response(cmd, library_root=library_root, step_name="process")
+    return _sse_response(
+        cmd,
+        library_root=library_root,
+        step_name="process",
+        cleanup_paths=[Path(tf.name)],
+    )
 
 
 # ── Pipeline ──────────────────────────────────────────────────────────────────
@@ -797,30 +807,25 @@ def api_prune_stage():
             return jsonify({"error": "paths must be a list"}), 400
 
         keeper_map: dict[str, str] = {}
-        csv_path_str = data.get("csv_path", "").strip()
-        csv_path = (
-            Path(csv_path_str)
-            if csv_path_str
-            else Path.home() / "rekordbox-toolkit" / "duplicate_report.csv"
-        )
-        cache_key = str(csv_path.resolve())
-        cached = _report_cache.get(cache_key)
-        if cached:
-            for g in cached["groups"]:
-                keep_entry = next((e for e in g["entries"] if e["action"] == "KEEP"), None)
+        csv_path = _resolve_duplicates_report_path(str(data.get("csv_path", "")).strip())
+        if csv_path.exists():
+            cached = _load_duplicate_cache(csv_path, include_db=False)
+            for group in cached["groups"]:
+                keep_entry = next((entry for entry in group["entries"] if entry["action"] == "KEEP"), None)
                 if keep_entry:
-                    for e in g["entries"]:
-                        if e["action"] == "REVIEW_REMOVE":
-                            keeper_map[e["file_path"]] = keep_entry["file_path"]
+                    for entry in group["entries"]:
+                        if entry["action"] == "REVIEW_REMOVE":
+                            keeper_map[entry["file_path"]] = keep_entry["file_path"]
 
         token = str(uuid.uuid4())
-        _evict_old_jobs(_prune_token_store, _MAX_PRUNE_TOKENS)
-        _prune_token_store[token] = {
-            "paths":      paths,
-            "permanent":  bool(data.get("permanent", False)),
-            "keeper_map": keeper_map,
-            "_issued_at": time.time(),
-        }
+        with _prune_token_lock:
+            _evict_old_jobs(_prune_token_store, _MAX_PRUNE_TOKENS)
+            _prune_token_store[token] = {
+                "paths":      paths,
+                "permanent":  bool(data.get("permanent", False)),
+                "keeper_map": keeper_map,
+                "_issued_at": time.time(),
+            }
         return jsonify({"token": token, "keeper_map_size": len(keeper_map)})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
@@ -839,79 +844,13 @@ def api_duplicates_load():
     except (ValueError, TypeError):
         return jsonify({"error": "page and per_page must be integers"}), 400
 
-    csv_path = (
-        Path(csv_path_str)
-        if csv_path_str
-        else Path.home() / "rekordbox-toolkit" / "duplicate_report.csv"
-    )
+    csv_path = _resolve_duplicates_report_path(csv_path_str)
 
     if not csv_path.exists():
         return jsonify({"error": f"Report not found: {csv_path}"}), 404
 
-    cache_key = str(csv_path.resolve())
-
     try:
-        csv_mtime = csv_path.stat().st_mtime
-        cached = _report_cache.get(cache_key)
-        if cached is None or cached.get("_mtime") != csv_mtime:
-            from pruner import load_report  # noqa: PLC0415
-            groups = None
-            db_warning = None
-
-            try:
-                from db_connection import read_db  # noqa: PLC0415
-                from config import DJMT_DB as _DB  # noqa: PLC0415
-                with read_db(_DB) as db:
-                    groups = load_report(csv_path, db)
-            except Exception as db_exc:
-                groups = load_report(csv_path, None)
-                db_warning = f"Rekordbox DB unavailable while loading duplicates: {db_exc}"
-
-            all_groups = [
-                {
-                    "group_id": g.group_id,
-                    "entries": [
-                        {
-                            "action":         e.action,
-                            "rank":           e.rank,
-                            "file_path":      e.file_path,
-                            "filename":       e.filename,
-                            "file_size_mb":   round(e.file_size_mb, 2),
-                            "bpm":            e.bpm,
-                            "key":            e.key,
-                            "format_ext":     e.format_ext,
-                            "format_tier":    e.format_tier,
-                            "exists_on_disk": e.exists_on_disk,
-                            "in_db":          e.in_db,
-                        }
-                        for e in g.entries
-                    ],
-                }
-                for g in groups
-            ]
-            remove_entries = [
-                e
-                for g in all_groups
-                for e in g["entries"]
-                if e["action"] == "REVIEW_REMOVE"
-            ]
-            _report_cache[cache_key] = {
-                "_mtime":         csv_mtime,
-                "groups":         all_groups,
-                "remove_paths":   [e["file_path"] for e in remove_entries],
-                "keep_paths": [
-                    e["file_path"]
-                    for g in all_groups
-                    for e in g["entries"]
-                    if e["action"] == "KEEP"
-                ],
-                "total_remove_mb": round(
-                    sum(e["file_size_mb"] for e in remove_entries), 1
-                ),
-                "db_warning": db_warning,
-            }
-
-        cached = _report_cache[cache_key]
+        cached = _load_duplicate_cache(csv_path, include_db=True)
         all_groups = cached["groups"]
         total = len(all_groups)
         start = page * per_page
@@ -936,45 +875,15 @@ def api_duplicates_load():
 def api_duplicates_remove_paths():
     """Return the full remove_paths and keep_paths lists for Select All operations."""
     csv_path_str = request.args.get("csv_path", "").strip()
-    csv_path = (
-        Path(csv_path_str)
-        if csv_path_str
-        else Path.home() / "rekordbox-toolkit" / "duplicate_report.csv"
-    )
-    cache_key = str(csv_path.resolve())
-    if cache_key not in _report_cache:
-        # Auto-populate the cache if the CSV file exists (handles server-restart scenario)
-        if csv_path.exists():
-            try:
-                from pruner import load_report  # noqa: PLC0415
-                groups = load_report(csv_path, None)
-                all_groups = [
-                    {
-                        "group_id": g.group_id,
-                        "entries": [
-                            {
-                                "action":       e.action,
-                                "file_path":    e.file_path,
-                                "file_size_mb": round(e.file_size_mb, 2),
-                            }
-                            for e in g.entries
-                        ],
-                    }
-                    for g in groups
-                ]
-                remove_entries = [e for g in all_groups for e in g["entries"] if e["action"] == "REVIEW_REMOVE"]
-                _report_cache[cache_key] = {
-                    "_mtime":       csv_path.stat().st_mtime,
-                    "groups":       all_groups,
-                    "remove_paths": [e["file_path"] for e in remove_entries],
-                    "keep_paths":   [e["file_path"] for g in all_groups for e in g["entries"] if e["action"] == "KEEP"],
-                    "total_remove_mb": round(sum(e["file_size_mb"] for e in remove_entries), 1),
-                }
-            except Exception as exc:
-                return jsonify({"error": str(exc)}), 500
-        else:
-            return jsonify({"error": "Report not loaded — call /api/duplicates/load first"}), 400
-    cached = _report_cache[cache_key]
+    csv_path = _resolve_duplicates_report_path(csv_path_str)
+    if not csv_path.exists():
+        return jsonify({"error": "Report not loaded — call /api/duplicates/load first"}), 400
+
+    try:
+        cached = _load_duplicate_cache(csv_path, include_db=False)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
     return jsonify({
         "remove_paths": cached["remove_paths"],
         "keep_paths":   cached["keep_paths"],
@@ -1021,19 +930,59 @@ def api_run_prune():
     Execute a confirmed prune. Expects ?token=<uuid> issued by POST /api/prune/stage.
     Returns an SSE stream of progress lines.
     """
-    token = request.args.get("token", "")
-    staged = _prune_token_store.pop(token, {})
-    _PRUNE_TOKEN_TTL = 1800  # 30 minutes
-    if staged and (time.time() - staged.get("_issued_at", 0)) > _PRUNE_TOKEN_TTL:
-        staged = {}
+    token = request.args.get("token", "").strip()
+    if not token:
+        return _sse_done([
+            "[ERROR] Missing prune token.",
+            "Re-stage the prune list and try again.",
+        ], exit_code=1)
+
+    staged = None
+    token_state = "ok"
+    with _prune_token_lock:
+        existing = _prune_token_store.get(token)
+        if not existing:
+            token_state = "missing"
+        elif (time.time() - existing.get("_issued_at", 0)) > _PRUNE_TOKEN_TTL:
+            _prune_token_store.pop(token, None)
+            token_state = "expired"
+        else:
+            staged = _prune_token_store.pop(token, None)
+
+    if token_state == "expired":
+        return _sse_done([
+            "[ERROR] Prune token expired.",
+            "Re-stage the prune list and try again.",
+        ], exit_code=1)
+
+    if token_state == "missing" or not staged:
+        return _sse_done([
+            "[ERROR] Invalid or already-used prune token.",
+            "Re-stage the prune list and try again.",
+        ], exit_code=1)
     paths: list[str] = staged.get("paths", [])
     permanent: bool = staged.get("permanent", False)
     keeper_map: dict = staged.get("keeper_map", {})
+
+    with _prune_state_lock:
+        global _active_prune_workers
+        if _active_prune_workers > 0:
+            return _sse_done([
+                "[ERROR] A prune operation is already running.",
+                "Wait for the current prune to finish before starting another.",
+            ], exit_code=1)
+        _active_prune_workers += 1
+        _PRUNE_CANCEL_EVENT.clear()
 
     log_q: queue.Queue = queue.Queue()
 
     def _worker() -> None:
         try:
+            if _PRUNE_CANCEL_EVENT.is_set():
+                log_q.put(("line", "[ERROR] Prune cancelled before start."))
+                log_q.put(("done", 130))
+                return
+
             if _rb_is_running():
                 log_q.put(("line", "[ERROR] Rekordbox is open — close it before pruning."))
                 log_q.put(("done", 1))
@@ -1048,9 +997,21 @@ def api_run_prune():
             from db_connection import write_db  # noqa: PLC0415
             from config import DJMT_DB as _DB  # noqa: PLC0415
 
+            summary = {}
             with write_db(_DB) as db:
-                prune_files(paths, db, log=lambda m: log_q.put(("line", m)),
-                            permanent=permanent, keeper_map=keeper_map)
+                summary = prune_files(
+                    paths,
+                    db,
+                    log=lambda m: log_q.put(("line", m)),
+                    permanent=permanent,
+                    keeper_map=keeper_map,
+                    should_cancel=_PRUNE_CANCEL_EVENT.is_set,
+                )
+
+            if summary.get("cancelled"):
+                log_q.put(("line", "[ERROR] Prune cancelled before completion."))
+                log_q.put(("done", 130))
+                return
 
             _prune_root = staged.get("library_root", "")
             if not _prune_root:
@@ -1066,8 +1027,16 @@ def api_run_prune():
         except Exception as exc:
             log_q.put(("line", f"[ERROR] {exc}"))
             log_q.put(("done", 1))
+        finally:
+            _mark_prune_worker(-1)
 
-    threading.Thread(target=_worker, daemon=True).start()
+    try:
+        threading.Thread(target=_worker, daemon=True).start()
+    except Exception as exc:
+        _mark_prune_worker(-1)
+        return _sse_done([
+            f"[ERROR] Could not start prune worker: {exc}",
+        ], exit_code=1)
 
     def _generate():
         while True:
@@ -1101,14 +1070,35 @@ def api_cancel():
                 pass
         _active_procs.clear()
 
-    if count > 0:
-        return jsonify({"ok": True, "terminated": count})
+    prune_running = _prune_workers_running() > 0
+    if prune_running:
+        _PRUNE_CANCEL_EVENT.set()
+
+    if count > 0 or prune_running:
+        msg = "Interrupt signal sent — waiting for process to exit…"
+        if prune_running and count == 0:
+            msg = "Prune is running in-process and will stop at the next safe checkpoint."
+        elif prune_running:
+            msg = "Interrupt sent to subprocesses. Prune will stop at the next safe checkpoint."
+        return jsonify({
+            "ok": True,
+            "terminated": count,
+            "prune_running": prune_running,
+            "message": msg,
+        })
+
     return jsonify({"ok": False, "error": "No active scan"}), 404
 
 
 @bp.route("/api/cancel/force", methods=["POST"])
 def api_cancel_force():
     """Send SIGKILL to all active subprocesses (emergency stop — server stays running)."""
+    if _prune_workers_running() > 0:
+        return jsonify({
+            "ok": False,
+            "error": "Prune is running in-process and cannot be force-killed safely. Wait for prune to finish.",
+        }), 409
+
     count = 0
     with _proc_lock:
         for proc in list(_active_procs.values()):
@@ -1279,6 +1269,8 @@ def api_normalize_preview():
     folder = Path(path)
     if not path or not folder.is_dir():
         return jsonify({"error": "valid folder path required"}), 400
+
+    _cleanup_preview_tmp()
 
     job_id = uuid.uuid4().hex[:8]
     with _PREVIEW_LOCK:
