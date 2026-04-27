@@ -184,7 +184,6 @@
 
 <!-- ══ File Browser Panel ═══════════════════════════════════════════════════ -->
 <div id="fb-panel">
-  <div class="sidebar-resize-handle"></div>
   <div id="fb-header">
     <div id="fb-breadcrumb-row">
       <button type="button" class="fb-nav-btn" id="fb-up-btn"   onclick="fbUp()"   title="Go up">↑</button>
@@ -194,111 +193,6 @@
   </div>
   <div id="fb-list"></div>
   <div id="fb-drag-hint">Drag any item to a drop zone ↗</div>
-</div>
-
-<!-- ══ Tool Nav ══════════════════════════════════════════════════════════════ -->
-<div id="tools-panel">
-
-  <!-- Toolkit Button -->
-  <button type="button" class="tool-btn toolkit-btn" id="toolkit-btn" onclick="openToolkitModal()" title="Open Toolkit — All RekitBox Tools">
-    <img src="/static/icon-toolkit.png" class="tool-icon" alt="Toolkit" onerror="this.src='/static/icon-start-wizard.png'">
-    <span class="tool-label">Toolkit</span>
-  </button>
-
-  <div class="tool-nav-divider"></div>
-
-  <!-- Library -->
-  <div class="tool-nav-section">Library</div>
-  <button type="button" class="tool-btn active" id="rail-btn-library" onclick="leScrollTop()" title="Library &amp; Playlist Editor">
-    <img src="/static/icon-rb-file.png" class="tool-icon" alt="Library">
-    <span class="tool-label">Library</span>
-  </button>
-  <button type="button" id="fb-toggle-btn" onclick="toggleFileBrowser()" class="tool-btn" title="Browse files (⌘B)">
-    <img src="/static/icon-rb-folder.png" class="tool-icon" alt="Browse Files">
-    <span class="tool-label">Files</span>
-  </button>
-
-  <div class="tool-nav-divider"></div>
-
-  <!-- File Tools -->
-  <div class="tool-nav-section">File Tools</div>
-  <button type="button" class="tool-btn" data-step="step-process" onclick="expandToolPanel('step-process')" title="Tag Tracks — Detect BPM &amp; Key">
-    <img src="/static/icon-tag.png" class="tool-icon" alt="Tag Tracks">
-    <span class="tool-label">Tag Tracks</span>
-  </button>
-  <button type="button" class="tool-btn" data-step="step-rename" onclick="expandToolPanel('step-rename')" title="Rename Tracks">
-    <img src="/static/icon-filename.png" class="tool-icon" alt="Rename">
-    <span class="tool-label">Rename</span>
-  </button>
-  <button type="button" class="tool-btn" data-step="step-convert" onclick="expandToolPanel('step-convert')" title="Convert Audio">
-    <img src="/static/icon-convert.png" class="tool-icon" alt="Convert">
-    <span class="tool-label">Convert</span>
-  </button>
-  <button type="button" class="tool-btn" data-step="step-normalize" onclick="expandToolPanel('step-normalize')" title="Normalize Volume">
-    <img src="/static/icon-normalize.png" class="tool-icon" alt="Normalize">
-    <span class="tool-label">Normalize</span>
-  </button>
-
-  <div class="tool-nav-divider"></div>
-
-  <!-- Organize -->
-  <div class="tool-nav-section">Organize</div>
-  <button type="button" class="tool-btn" data-step="step-organize" onclick="expandToolPanel('step-organize')" title="Organize Files">
-    <img src="/static/icon-organizer.png" class="tool-icon" alt="Organize">
-    <span class="tool-label">Organize</span>
-  </button>
-  <button type="button" class="tool-btn" data-step="step-duplicates" onclick="expandToolPanel('step-duplicates')" title="Find Duplicates">
-    <img src="/static/icon-find-duplicate.png" class="tool-icon" alt="Duplicates">
-    <span class="tool-label">Duplicates</span>
-  </button>
-  <button type="button" class="tool-btn" data-step="step-novelty" onclick="expandToolPanel('step-novelty')" title="Find New Tracks">
-    <img src="/static/icon-novelty.png" class="tool-icon" alt="Novelty">
-    <span class="tool-label">Novelty</span>
-  </button>
-
-  <div class="tool-nav-divider"></div>
-
-  <!-- Database -->
-  <div class="tool-nav-section">Database</div>
-  <button type="button" class="tool-btn db-tool-btn" id="rail-btn-audit" onclick="openDbPanel('audit')" title="Audit Library">
-    <img src="/static/icon-audit.png" class="tool-icon" alt="Audit">
-    <span class="tool-label">Audit</span>
-  </button>
-  <button type="button" class="tool-btn db-tool-btn" id="rail-btn-relocate" onclick="openDbPanel('relocate')" title="Relocate Paths">
-    <img src="/static/icon-move.png" class="tool-icon" alt="Relocate">
-    <span class="tool-label">Relocate</span>
-  </button>
-  <button type="button" class="tool-btn db-tool-btn" id="rail-btn-import" onclick="openDbPanel('import')" title="Import Tracks">
-    <img src="/static/icon-import.png" class="tool-icon" alt="Import">
-    <span class="tool-label">Import</span>
-  </button>
-  <button type="button" class="tool-btn db-tool-btn" id="rail-btn-link" onclick="openDbPanel('link')" title="Link Playlists">
-    <img src="/static/icon-link.png" class="tool-icon" alt="Link">
-    <span class="tool-label">Link</span>
-  </button>
-
-  <div class="tool-nav-divider"></div>
-
-  <!-- Utilities -->
-  <div class="tool-nav-section">Utilities</div>
-  <button type="button" id="pipeline-btn" onclick="openPipelineWizard()" class="tool-btn" title="Pipeline Wizard">
-    <img src="/static/icon-start-wizard.png" class="tool-icon" alt="Pipeline">
-    <span class="tool-label">Pipeline</span>
-  </button>
-  <button type="button" id="rekitgo-btn" onclick="openRekitGo()" class="tool-btn" title="RekitGo — iOS companion app">
-    <img src="/static/icon-rekitgo.png" class="tool-icon" alt="RekitGo">
-    <span class="tool-label">RekitGo</span>
-    <span id="rekitgo-btn-dot" class="tool-dot"></span>
-  </button>
-  <button type="button" id="lightbulb-btn" onclick="openWelcome()" class="tool-btn" title="About RekitBox">
-    <img src="/static/icon-welcome-info.png" class="tool-icon" alt="About">
-    <span class="tool-label">About</span>
-  </button>
-  <button type="button" id="owl-btn" onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()" onclick="owlClick()" class="tool-btn" title="Glossary &amp; Concepts">
-    <img src="/static/icon-site-key.png" class="tool-icon owl-icon" alt="Glossary">
-    <span class="tool-label">Glossary</span>
-  </button>
-
 </div>
 
 <!-- ══ Right Navigation Bar ══════════════════════════════════════════════════ -->

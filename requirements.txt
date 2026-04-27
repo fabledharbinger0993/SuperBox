@@ -29,10 +29,8 @@ mutagen==1.47
 
 librosa>=0.10.2
 # BPM detection, beat tracking, key detection, and chroma analysis
-python -m pip install {module}
 pyloudnorm==0.1.1
 # Loudness measurement (EBU R128 / LUFS)
-# Note: pip install {module} is a placeholder — replace {module} with the actual package name when needed
 
 soundfile>=0.12.1
 # Audio file I/O used by pyloudnorm and normalisation verification

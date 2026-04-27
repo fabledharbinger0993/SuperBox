@@ -5747,26 +5747,4 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   // Floating tool modal drag
   _initToolFloatModalDrag();
-
-  // Sidebar resize handles
-  document.querySelectorAll('.sidebar-resize-handle').forEach(handle => {
-    let startX, startW;
-    handle.addEventListener('mousedown', e => {
-      e.preventDefault();
-      startX = e.clientX;
-      startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w'), 10) || 260;
-      handle.classList.add('dragging');
-      const onMove = ev => {
-        const newW = Math.min(Math.max(startW + (ev.clientX - startX), 180), 420);
-        document.documentElement.style.setProperty('--sidebar-w', newW + 'px');
-      };
-      const onUp = () => {
-        handle.classList.remove('dragging');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-      };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
-  });
 });
