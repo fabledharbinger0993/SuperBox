@@ -32,9 +32,9 @@ from datetime import datetime
 from pathlib import Path
 
 try:
-    from RekitBox.config import DJMT_DB, MUSIC_ROOT   # when run as a package
+    from RekitBox.config import LOCAL_DB, MUSIC_ROOT   # when run as a package
 except ImportError:
-    from config import DJMT_DB, MUSIC_ROOT             # when run as a script
+    from config import LOCAL_DB, MUSIC_ROOT             # when run as a script
 
 log = logging.getLogger(__name__)
 
@@ -132,9 +132,9 @@ def cmd_audit(args: argparse.Namespace) -> None:
     root = Path(args.root) if args.root else MUSIC_ROOT
     extra_roots = [Path(r) for r in (args.also_scan or [])]
 
-    log.info("Opening database (read-only): %s", DJMT_DB)
+    log.info("Opening database (read-only): %s", LOCAL_DB)
     try:
-        with read_db(DJMT_DB) as db:
+        with read_db(LOCAL_DB) as db:
             report = full_audit(db, root=root, extra_roots=extra_roots)
         summary_text = report.summary()
         print(summary_text)
@@ -181,7 +181,7 @@ def cmd_import(args: argparse.Namespace) -> None:
     if args.dry_run:
         log.info("DRY RUN — no writes will occur")
         try:
-            with read_db(DJMT_DB) as db:
+            with read_db(LOCAL_DB) as db:
                 for index, root in enumerate(roots, start=1):
                     _log_root_step("Import preview", root, index, len(roots))
                     report = import_directory(root, db, dry_run=True)
@@ -200,7 +200,7 @@ def cmd_import(args: argparse.Namespace) -> None:
     else:
         log.info("Importing from %d source folder(s)", len(roots))
         try:
-            with write_db(DJMT_DB) as db:
+            with write_db(LOCAL_DB) as db:
                 for index, root in enumerate(roots, start=1):
                     _log_root_step("Import", root, index, len(roots))
                     report = import_directory(root, db, dry_run=False, resume=args.resume)
@@ -253,7 +253,7 @@ def cmd_link(args: argparse.Namespace) -> None:
 
     log.info("Linking tracks under %d source folder(s)", len(roots))
     try:
-        with db_ctx(DJMT_DB) as db:
+        with db_ctx(LOCAL_DB) as db:
             for index, root in enumerate(roots, start=1):
                 _log_root_step("Link", root, index, len(roots))
                 report = link_directory(root, db, dry_run=args.dry_run)
@@ -284,7 +284,7 @@ def cmd_relocate(args: argparse.Namespace) -> None:
     # will match zero rows and log a warning.
     log.info("Relocating: %s → %s", old_root, new_root)
     try:
-        with write_db(DJMT_DB) as db:
+        with write_db(LOCAL_DB) as db:
             results = relocate_directory(old_root, new_root, db)
     except Exception:
         log.exception("Relocation failed")

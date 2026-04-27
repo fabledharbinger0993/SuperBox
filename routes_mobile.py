@@ -372,7 +372,7 @@ def mobile_rekordbox_tracks():
     Query params: search, sort (date_added|title|artist|bpm), limit, offset.
     """
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     search = request.args.get("search", "").strip().lower()
     sort = request.args.get("sort", "date_added")
@@ -443,7 +443,7 @@ def mobile_rekordbox_add_track():
     Response: { "track_id": "123456", "status": "added" }
     """
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     data = request.get_json(silent=True) or {}
     file_path = data.get("file_path", "").strip()
@@ -524,7 +524,7 @@ def _run_analysis(job_id: str, track_ids: list) -> None:
     from audio_processor import process_file  # noqa: PLC0415
     from db_connection import read_db, write_db  # noqa: PLC0415
     from key_mapper import resolve_key_id  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     for track_id in track_ids:
         with _ANALYSIS_LOCK:
@@ -643,7 +643,7 @@ def mobile_rekordbox_analyze_status(job_id: str):
 def mobile_rekordbox_playlists():
     """List all non-folder playlists with track count."""
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with read_db(_DB) as db:
@@ -668,7 +668,7 @@ def mobile_rekordbox_playlists():
 def mobile_rekordbox_create_playlist():
     """Create a new playlist. Body: { "name": "My Playlist" }"""
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
@@ -690,7 +690,7 @@ def mobile_rekordbox_create_playlist():
 def mobile_rekordbox_playlist(playlist_id: str):
     """Get a single playlist with its ordered track list."""
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with read_db(_DB) as db:
@@ -744,7 +744,7 @@ def mobile_rekordbox_playlist(playlist_id: str):
 def mobile_rekordbox_rename_playlist(playlist_id: str):
     """Rename a playlist. Body: { "name": "New Name" }"""
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
@@ -769,7 +769,7 @@ def mobile_rekordbox_rename_playlist(playlist_id: str):
 def mobile_rekordbox_delete_playlist(playlist_id: str):
     """Delete a playlist (does not delete the tracks themselves)."""
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with write_db(_DB) as db:
@@ -789,7 +789,7 @@ def mobile_rekordbox_delete_playlist(playlist_id: str):
 def mobile_rekordbox_add_to_playlist(playlist_id: str):
     """Append a track to a playlist. Body: { "track_id": "123456" }"""
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     data = request.get_json(silent=True) or {}
     track_id = str(data.get("track_id", "")).strip()
@@ -820,7 +820,7 @@ def mobile_rekordbox_add_to_playlist(playlist_id: str):
 def mobile_rekordbox_remove_from_playlist(playlist_id: str, track_id: str):
     """Remove a track from a playlist (does not delete the track from the library)."""
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with write_db(_DB) as db:

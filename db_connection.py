@@ -148,7 +148,7 @@ def open_db(
     RuntimeError
         If write=True and backup creation fails.
     """
-    target = db_path or DJMT_DB
+    target = db_path or LOCAL_DB
 
     if write:
         if rekordbox_is_running():

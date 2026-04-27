@@ -3173,6 +3173,7 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-hi);
+  -webkit-app-region: no-drag;
 }
 .fuzzy-threshold-label {
   display: block;
@@ -3185,6 +3186,7 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   width: 100%;
   accent-color: var(--accent);
   cursor: pointer;
+  -webkit-app-region: no-drag;
 }
 
 /* ── Enrichment options ────────────────────────────────────────────────── */

@@ -217,7 +217,7 @@ def _library_canonical_path_conflicts(db):
 @bp.route("/api/library/tracks")
 def api_library_tracks():
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with read_db(_DB) as db:
@@ -234,7 +234,7 @@ def api_library_integrity_canonical_paths():
     This is read-only and intended to support canonical-path cleanup workflows.
     """
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with read_db(_DB) as db:
@@ -253,7 +253,7 @@ def api_library_integrity_canonical_paths():
 def api_library_integrity_canonical_paths_plan():
     """Build a read-only consolidation plan for canonical path cleanup."""
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         try:
@@ -309,7 +309,7 @@ def api_library_integrity_canonical_paths_plan():
 @bp.route("/api/library/tracks/<track_id>/stream")
 def api_library_track_stream(track_id):
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with read_db(_DB) as db:
@@ -332,7 +332,7 @@ def api_library_track_stream(track_id):
 @bp.route("/api/library/playlists", methods=["GET"])
 def api_library_playlists():
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with read_db(_DB) as db:
@@ -344,7 +344,7 @@ def api_library_playlists():
 @bp.route("/api/library/playlists", methods=["POST"])
 def api_library_create_playlist():
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     data = request.get_json(silent=True) or {}
     name = str(data.get("name", "")).strip()
@@ -384,7 +384,7 @@ def api_library_create_playlist():
 @bp.route("/api/library/playlists/<playlist_id>/tracks")
 def api_library_playlist_tracks(playlist_id):
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with read_db(_DB) as db:
@@ -409,7 +409,7 @@ def api_library_playlist_tracks(playlist_id):
 @bp.route("/api/library/playlists/<playlist_id>/tracks", methods=["POST"])
 def api_library_add_tracks_to_playlist(playlist_id):
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     data = request.get_json(silent=True) or {}
     track_ids = data.get("track_ids")
@@ -467,7 +467,7 @@ def api_library_add_tracks_to_playlist(playlist_id):
 @bp.route("/api/library/playlists/<playlist_id>", methods=["PUT"])
 def api_library_rename_playlist(playlist_id):
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     data = request.get_json(silent=True) or {}
     name = str(data.get("name", "")).strip()
@@ -491,7 +491,7 @@ def api_library_rename_playlist(playlist_id):
 @bp.route("/api/library/playlists/<playlist_id>", methods=["DELETE"])
 def api_library_delete_playlist(playlist_id):
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with write_db(_DB) as db:
@@ -510,7 +510,7 @@ def api_library_delete_playlist(playlist_id):
 @bp.route("/api/library/playlists/<playlist_id>/tracks/<track_id>", methods=["DELETE"])
 def api_library_remove_track_from_playlist(playlist_id, track_id):
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     try:
         with write_db(_DB) as db:
@@ -532,7 +532,7 @@ def api_library_remove_track_from_playlist(playlist_id, track_id):
 @bp.route("/api/library/playlists/<playlist_id>/tracks", methods=["DELETE"])
 def api_library_remove_tracks_from_playlist(playlist_id):
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     data = request.get_json(silent=True) or {}
     track_ids = data.get("track_ids")
@@ -573,7 +573,7 @@ def api_library_remove_tracks_from_playlist(playlist_id):
 @bp.route("/api/library/tracks/<track_id>", methods=["PATCH"])
 def api_library_patch_track(track_id):
     from db_connection import write_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
 
     data = request.get_json(silent=True) or {}
     if "title" not in data:
@@ -676,7 +676,7 @@ def api_library_export_status(job_id):
 @bp.route("/api/playlists")
 def api_playlists():
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
     try:
         with read_db(_DB) as db:
             rows = db.get_playlist().all()
@@ -699,7 +699,7 @@ def api_playlists():
 @bp.route("/api/playlists/<playlist_id>")
 def api_playlist(playlist_id):
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
     try:
         with read_db(_DB) as db:
             pl = db.get_playlist(ID=playlist_id).one_or_none()
@@ -732,7 +732,7 @@ def api_playlist(playlist_id):
 @bp.route("/api/tracks")
 def api_tracks():
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
     try:
         with read_db(_DB) as db:
             rows = db.get_content().all()
@@ -754,7 +754,7 @@ def api_tracks():
 @bp.route("/api/tracks/<track_id>")
 def api_track(track_id):
     from db_connection import read_db  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
     try:
         with read_db(_DB) as db:
             t = db.get_content(ID=track_id).one_or_none()

@@ -175,7 +175,7 @@ def api_audit_path_roots():
     try:
         from audit import find_dead_roots  # noqa: PLC0415
         from db_connection import read_db  # noqa: PLC0415
-        from config import DJMT_DB as _DB  # noqa: PLC0415
+        from config import LOCAL_DB as _DB  # noqa: PLC0415
         with read_db(_DB) as db:
             report = find_dead_roots(db)
         return jsonify({

@@ -169,10 +169,10 @@ def api_export_rekordbox():
         import shutil
         import xml.etree.ElementTree as ET
 
-        from config import DJMT_DB                  # noqa: PLC0415
+        from config import LOCAL_DB                  # noqa: PLC0415
         from pyrekordbox import Rekordbox6Database  # noqa: PLC0415
 
-        db_src = str(DJMT_DB)
+        db_src = str(LOCAL_DB)
         db_dst = os.path.join(target, "PIONEER", "Master", "master.db")
         xml_path = os.path.join(target, "PIONEER", "playlists.xml")
         contents_dir = os.path.join(target, "PIONEER", "Contents")

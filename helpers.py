@@ -575,7 +575,7 @@ def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
     import json as _json  # noqa: PLC0415
     from pathlib import Path as _Path  # noqa: PLC0415
     from db_connection import read_db, rekordbox_is_running  # noqa: PLC0415
-    from config import DJMT_DB as _DB  # noqa: PLC0415
+    from config import LOCAL_DB as _DB  # noqa: PLC0415
     from pyrekordbox import Rekordbox6Database  # noqa: PLC0415
     import ws_bus as _ws  # noqa: PLC0415
 
