@@ -3351,24 +3351,24 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   right: var(--nav-bar-right-w);
   bottom: var(--scan-bar-h);
   z-index: 5;
-  background: linear-gradient(to bottom, #000000 0%, #0a0018 60%, #110025 100%);
+  background: #000;
   display: flex;
   align-items: stretch;
   justify-content: stretch;
-  opacity: 1;
 }
 #library-editor-overlay.hidden { display: none !important; }
 /* le-visible is no-op — editor is always visible */
 #library-editor-overlay.le-visible { opacity: 1; }
 
-/* Crisp icon watermark — nearly transparent, centred, not blurred */
+/* Icon watermark — crisp edges, nearly invisible */
 #library-editor-overlay::before {
   content: '';
   position: absolute;
   inset: 0;
-  background:
-    url('/static/icon-rekitbox-app.png') center / 420px 420px no-repeat;
-  opacity: 0.045;
+  background: url('/static/icon-rekitbox-app.png') center / 420px 420px no-repeat;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  opacity: 0.04;
   pointer-events: none;
   z-index: 0;
 }
