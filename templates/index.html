@@ -629,6 +629,12 @@
     <span id="db-panel-title">RekordBox DB Tools</span>
     <button type="button" class="db-panel-close" onclick="closeDbPanel()" title="Close">✕</button>
   </div>
+  <nav class="db-panel-nav" role="tablist">
+    <button type="button" class="db-tool-btn" id="rail-btn-audit"    role="tab" onclick="openDbPanel('audit')">Audit</button>
+    <button type="button" class="db-tool-btn" id="rail-btn-relocate" role="tab" onclick="openDbPanel('relocate')">Relocate</button>
+    <button type="button" class="db-tool-btn" id="rail-btn-link"     role="tab" onclick="openDbPanel('link')">Link</button>
+    <button type="button" class="db-tool-btn" id="rail-btn-import"   role="tab" onclick="openDbPanel('import')">Import</button>
+  </nav>
   <div class="db-panel-body">
 
     {% include 'partials/rekordbox_db/audit.html' %}

@@ -83,6 +83,130 @@ _PREVIEW_WINDOW: int = 20       # seconds of audio measured for LUFS
 _prune_token_store: dict[str, dict] = {}
 _report_cache: dict[str, dict] = {}
 
+_PRUNE_TOKEN_TTL: int = 1800
+_prune_state_lock: threading.Lock = threading.Lock()
+_active_prune_workers: int = 0
+_PRUNE_CANCEL_EVENT: threading.Event = threading.Event()
+
+_PREVIEW_FILE_TTL_SEC: int = 86400
+_PREVIEW_MAX_FILES: int = 400
+
+
+def _default_duplicates_report_path() -> Path:
+    return Path.home() / "rekordbox-toolkit" / "duplicate_report.csv"
+
+
+def _resolve_duplicates_report_path(csv_path_str: str) -> Path:
+    if not csv_path_str:
+        return _default_duplicates_report_path()
+    return Path(csv_path_str).expanduser()
+
+
+def _build_duplicate_groups(groups) -> list[dict]:
+    return [
+        {
+            "group_id": g.group_id,
+            "entries": [
+                {
+                    "action":         e.action,
+                    "rank":           e.rank,
+                    "file_path":      e.file_path,
+                    "filename":       e.filename,
+                    "file_size_mb":   round(e.file_size_mb, 2),
+                    "bpm":            e.bpm,
+                    "key":            e.key,
+                    "format_ext":     e.format_ext,
+                    "format_tier":    e.format_tier,
+                    "exists_on_disk": e.exists_on_disk,
+                    "in_db":          e.in_db,
+                }
+                for e in g.entries
+            ],
+        }
+        for g in groups
+    ]
+
+
+def _load_duplicate_cache(csv_path: Path, *, include_db: bool = True) -> dict:
+    cache_key = str(csv_path.resolve())
+    csv_mtime = csv_path.stat().st_mtime
+
+    cached = _report_cache.get(cache_key)
+    if cached is not None and cached.get("_mtime") == csv_mtime:
+        return cached
+
+    from pruner import load_report  # noqa: PLC0415
+
+    db_warning = None
+    if include_db:
+        try:
+            from db_connection import read_db  # noqa: PLC0415
+            from config import DJMT_DB as _DB  # noqa: PLC0415
+            with read_db(_DB) as db:
+                groups = load_report(csv_path, db)
+        except Exception as db_exc:
+            groups = load_report(csv_path, None)
+            db_warning = f"Rekordbox DB unavailable while loading duplicates: {db_exc}"
+    else:
+        groups = load_report(csv_path, None)
+
+    all_groups = _build_duplicate_groups(groups)
+    remove_entries = [
+        entry
+        for group in all_groups
+        for entry in group["entries"]
+        if entry["action"] == "REVIEW_REMOVE"
+    ]
+
+    cached = {
+        "_mtime": csv_mtime,
+        "groups": all_groups,
+        "remove_paths": [entry["file_path"] for entry in remove_entries],
+        "keep_paths": [
+            entry["file_path"]
+            for group in all_groups
+            for entry in group["entries"]
+            if entry["action"] == "KEEP"
+        ],
+        "total_remove_mb": round(sum(entry["file_size_mb"] for entry in remove_entries), 1),
+        "db_warning": db_warning,
+    }
+    _report_cache[cache_key] = cached
+    return cached
+
+
+def _prune_workers_running() -> int:
+    with _prune_state_lock:
+        return _active_prune_workers
+
+
+def _mark_prune_worker(delta: int) -> None:
+    global _active_prune_workers
+    with _prune_state_lock:
+        _active_prune_workers = max(0, _active_prune_workers + delta)
+
+
+def _cleanup_preview_tmp() -> None:
+    try:
+        clips = sorted(_PREVIEW_TMP.glob("*.mp3"), key=lambda p: p.stat().st_mtime, reverse=True)
+    except Exception:
+        return
+
+    now = time.time()
+    for clip in clips:
+        try:
+            if now - clip.stat().st_mtime > _PREVIEW_FILE_TTL_SEC:
+                clip.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    try:
+        clips = sorted(_PREVIEW_TMP.glob("*.mp3"), key=lambda p: p.stat().st_mtime, reverse=True)
+        for stale in clips[_PREVIEW_MAX_FILES:]:
+            stale.unlink(missing_ok=True)
+    except Exception:
+        pass
+
 
 # ── Process (Tag Tracks) ──────────────────────────────────────────────────────
 

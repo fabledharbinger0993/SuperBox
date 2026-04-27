@@ -1247,7 +1247,10 @@ function toggleLog() {
 
 /* ── SSE runner ────────────────────────────────────────────────────────────── */
 function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false) {
-  if (isRunning) return;
+  if (isRunning) {
+    showToast('A tool is already running — wait for it to finish or click Interrupt.', 'warning');
+    return;
+  }
   initLog(logTitle);
   showScanBar(logTitle);
   isRunning = true;
