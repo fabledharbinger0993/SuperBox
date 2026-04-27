@@ -3368,7 +3368,7 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   background: url('/static/icon-rekitbox-app.png') center / 420px 420px no-repeat;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-  opacity: 0.04;
+  opacity: 0.08;
   pointer-events: none;
   z-index: 0;
 }
