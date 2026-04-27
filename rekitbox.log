@@ -4,3 +4,10 @@ WARNING: qrcode 8.2 does not provide the extra 'svg'
 WARNING:brew_updater:brew_updater: brew not found — Homebrew may not be installed
 WARNING: qrcode 8.2 does not provide the extra 'svg'
 WARNING:brew_updater:brew_updater: brew not found — Homebrew may not be installed
+WARNING:waitress.queue:Task queue depth is 1
+WARNING:waitress.queue:Task queue depth is 1
+WARNING:waitress.queue:Task queue depth is 1
+WARNING:waitress.queue:Task queue depth is 2
+WARNING:waitress.queue:Task queue depth is 3
+WARNING:waitress.queue:Task queue depth is 4
+WARNING:waitress.queue:Task queue depth is 1

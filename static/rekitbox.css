@@ -3346,9 +3346,9 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 /*    Backdrop: disco-queens.jpg full bleed. UI floats as frosted glass.     */
 #library-editor-overlay {
   position: fixed;
-  left: 0;
-  top: var(--header-h);
-  right: 0;
+  left: var(--left-panel-w);
+  top: var(--titlebar-h);
+  right: var(--nav-bar-right-w);
   bottom: var(--scan-bar-h);
   z-index: 5;
   background: linear-gradient(to bottom, #000000 0%, #0a0018 60%, #110025 100%);
