@@ -12,6 +12,7 @@ import platform
 import queue
 import random as _random
 import re as _re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -41,6 +42,23 @@ from helpers import (
 )
 
 bp = Blueprint("tools", __name__)
+
+
+# ── External tool path resolution (Homebrew-safe) ─────────────────────────────
+
+def _find_tool(name: str) -> str:
+    """Resolve an external binary, falling back to Homebrew paths on macOS."""
+    found = shutil.which(name)
+    if found:
+        return found
+    for candidate in (f"/opt/homebrew/bin/{name}", f"/usr/local/bin/{name}"):
+        if Path(candidate).is_file():
+            return candidate
+    return name  # last resort — surfaces a clear FileNotFoundError if absent
+
+
+_FFMPEG  = _find_tool("ffmpeg")
+_FFPROBE = _find_tool("ffprobe")
 
 
 # ── Normalize preview state ───────────────────────────────────────────────────
@@ -801,7 +819,37 @@ def api_duplicates_remove_paths():
     )
     cache_key = str(csv_path.resolve())
     if cache_key not in _report_cache:
-        return jsonify({"error": "Report not loaded — call /api/duplicates/load first"}), 400
+        # Auto-populate the cache if the CSV file exists (handles server-restart scenario)
+        if csv_path.exists():
+            try:
+                from pruner import load_report  # noqa: PLC0415
+                groups = load_report(csv_path, None)
+                all_groups = [
+                    {
+                        "group_id": g.group_id,
+                        "entries": [
+                            {
+                                "action":       e.action,
+                                "file_path":    e.file_path,
+                                "file_size_mb": round(e.file_size_mb, 2),
+                            }
+                            for e in g.entries
+                        ],
+                    }
+                    for g in groups
+                ]
+                remove_entries = [e for g in all_groups for e in g["entries"] if e["action"] == "REVIEW_REMOVE"]
+                _report_cache[cache_key] = {
+                    "_mtime":       csv_path.stat().st_mtime,
+                    "groups":       all_groups,
+                    "remove_paths": [e["file_path"] for e in remove_entries],
+                    "keep_paths":   [e["file_path"] for g in all_groups for e in g["entries"] if e["action"] == "KEEP"],
+                    "total_remove_mb": round(sum(e["file_size_mb"] for e in remove_entries), 1),
+                }
+            except Exception as exc:
+                return jsonify({"error": str(exc)}), 500
+        else:
+            return jsonify({"error": "Report not loaded — call /api/duplicates/load first"}), 400
     cached = _report_cache[cache_key]
     return jsonify({
         "remove_paths": cached["remove_paths"],
@@ -964,7 +1012,7 @@ def _preview_set(job_id: str, **kw) -> None:
 def _preview_duration(path: Path) -> "float | None":
     try:
         r = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+            [_FFPROBE, "-v", "quiet", "-show_entries", "format=duration",
              "-of", "csv=p=0", str(path)],
             capture_output=True, text=True, timeout=8,
         )
@@ -978,7 +1026,7 @@ def _preview_lufs(path: Path, start: float) -> "float | None":
     """Measure integrated LUFS over _PREVIEW_WINDOW seconds starting at start."""
     try:
         r = subprocess.run(
-            ["ffmpeg", "-ss", str(max(0, start)), "-t", str(_PREVIEW_WINDOW),
+            [_FFMPEG, "-ss", str(max(0, start)), "-t", str(_PREVIEW_WINDOW),
              "-i", str(path), "-af", "loudnorm=print_format=json",
              "-f", "null", "/dev/null"],
             capture_output=True, text=True, timeout=40,
@@ -995,7 +1043,7 @@ def _preview_lufs(path: Path, start: float) -> "float | None":
 def _preview_extract(src: Path, start: float, dest: Path) -> bool:
     try:
         subprocess.run(
-            ["ffmpeg", "-y", "-ss", str(max(0, start)), "-t", "10",
+            [_FFMPEG, "-y", "-ss", str(max(0, start)), "-t", "10",
              "-i", str(src), "-acodec", "libmp3lame", "-q:a", "2",
              str(dest)],
             capture_output=True, timeout=30, check=True,
@@ -1008,7 +1056,7 @@ def _preview_extract(src: Path, start: float, dest: Path) -> bool:
 def _preview_normalize(src: Path, dest: Path) -> bool:
     try:
         subprocess.run(
-            ["ffmpeg", "-y", "-i", str(src),
+            [_FFMPEG, "-y", "-i", str(src),
              "-af", "loudnorm=I=-8:TP=-1.5:LRA=11",
              "-acodec", "libmp3lame", "-q:a", "2", str(dest)],
             capture_output=True, timeout=30, check=True,

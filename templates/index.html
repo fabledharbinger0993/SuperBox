@@ -205,12 +205,19 @@
     <img src="/static/icon-rb-folder.png" class="nav-right-icon" alt="Files">
     <span class="nav-right-label">Files</span>
   </button>
-  
+  <button type="button" id="nav-btn-db" class="nav-right-btn" onclick="openDbPanel('audit')" title="RekordBox DB Tools">
+    <img src="/static/RB_LOGO.png" class="nav-right-icon" alt="DB Tools">
+    <span class="nav-right-label">DB Tools</span>
+  </button>
+
   <!-- Library dropdown -->
   <div id="dropdown-library" class="folder-dropdown"></div>
   
   <!-- Files dropdown -->
   <div id="dropdown-files" class="folder-dropdown"></div>
+
+  <!-- Session summary pills — stacked at bottom of right toolbar -->
+  <div id="session-pills-container"></div>
 </div>
 
 <div id="owl-hover-panel"
@@ -221,9 +228,6 @@
   </div>
   <div class="owl-panel-list" id="owl-panel-list"></div>
 </div>
-
-<!-- ══ Session summary pills ════════════════════════════════════════════════ -->
-<div id="session-pills-container"></div>
 
 <!-- ══ Settings modal ═══════════════════════════════════════════════════════ -->
 <div id="settings-backdrop" class="hidden">

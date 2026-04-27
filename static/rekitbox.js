@@ -73,17 +73,34 @@ document.addEventListener('click', (e) => {
 });
 
 function loadLibraryFolders(dropdown) {
-  // Placeholder - integrate with existing library navigation
-  dropdown.innerHTML = `
-    <div class="folder-item" onclick="navigateToLibrarySection('all')">
-      <img src="/static/icon-rb-file.png" class="folder-item-icon" alt="">
-      <span>All Tracks</span>
-    </div>
-    <div class="folder-item" onclick="navigateToLibrarySection('playlists')">
-      <img src="/static/icon-rb-folder.png" class="folder-item-icon" alt="">
-      <span>Playlists</span>
-    </div>
-  `;
+  dropdown.innerHTML = '<div class="folder-item folder-item-loading">Loading…</div>';
+  fetch('/api/library/playlists')
+    .then(r => r.json())
+    .then(items => {
+      // API already returns only root-level items in tree order
+      const roots = Array.isArray(items) ? items : [];
+      if (!roots.length) {
+        dropdown.innerHTML = '<div class="folder-item folder-item-empty">No playlists found</div>';
+        return;
+      }
+      dropdown.innerHTML = '';
+      roots.forEach(p => {
+        const icon = p.type === 'folder' ? '/static/icon-rb-folder.png' : '/static/icon-rb-file.png';
+        const div = document.createElement('div');
+        div.className = 'folder-item';
+        div.innerHTML = `<img src="${icon}" class="folder-item-icon" alt=""><span>${_esc(p.name)}</span>`;
+        if (p.track_count) {
+          const cnt = document.createElement('span');
+          cnt.className = 'folder-item-count';
+          cnt.textContent = p.track_count;
+          div.appendChild(cnt);
+        }
+        dropdown.appendChild(div);
+      });
+    })
+    .catch(() => {
+      dropdown.innerHTML = '<div class="folder-item folder-item-empty">Could not load library</div>';
+    });
 }
 
 function loadFileBrowserFolders(dropdown) {
@@ -1406,7 +1423,20 @@ function runProcess() {
   const paths = getFolderPaths('process-pills');
   if (!paths.length) { showToast('Add at least one music folder first.', 'warning'); return; }
 
-  // Retry-errored mode: POST the specific file list, force=true, no directory scan
+  const enrichChecked = document.getElementById('process-enrich-tags')?.checked;
+  if (enrichChecked) {
+    fetch('/api/config').then(r => r.json()).then(cfg => {
+      if (!cfg.acoustid_api_key) {
+        showToast('AcoustID API key not set — enrichment will be skipped. Add acoustid_api_key to your config.', 'warning');
+      }
+      _doRunProcess(paths);
+    }).catch(() => _doRunProcess(paths));
+    return;
+  }
+  _doRunProcess(paths);
+}
+
+function _doRunProcess(paths) {
   const retryOnly = document.getElementById('process-retry-errored')?.checked;
   if (retryOnly && _lastErrorSummary) {
     const retryPaths = [
@@ -2911,7 +2941,12 @@ function _executeRename(path, dryRun) {
     document.getElementById('step-rename')?.querySelector('.tool-resume-banner')?.remove();
   }
   runCommand(`/api/run/rename?${p}`, label,
-    ec => { if (ec === 0) _clearToolCkpt('rename'); });
+    ec => {
+      if (ec === 0) {
+        _clearToolCkpt('rename');
+        if (dryRun) showToast('Dry run complete — uncheck "Dry Run" and click Clean File Names again to apply.', 'neutral');
+      }
+    });
 }
 
 async function runRenameWithPreflight(path) {
@@ -4376,6 +4411,7 @@ const DB_PANEL_TITLES = {
 let _dbPanelActive = null;
 
 function openDbPanel(tool) {
+  closeRightNavDropdown();
   // Deactivate all sections + rail buttons
   document.querySelectorAll('.db-panel-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.db-tool-btn').forEach(b => b.classList.remove('active'));
@@ -4391,6 +4427,7 @@ function openDbPanel(tool) {
   document.getElementById('db-panel').classList.add('open');
   document.getElementById('db-panel-backdrop').classList.add('open');
   document.body.classList.add('sidebar-open');
+  document.getElementById('nav-btn-db')?.classList.add('active');
   _dbPanelActive = tool;
 }
 
@@ -4398,6 +4435,7 @@ function closeDbPanel() {
   document.getElementById('db-panel').classList.remove('open');
   document.getElementById('db-panel-backdrop').classList.remove('open');
   document.querySelectorAll('.db-tool-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav-btn-db')?.classList.remove('active');
   _dbPanelActive = null;
   // Only remove sidebar-open if file browser isn't also open
   if (!document.getElementById('fb-panel').classList.contains('fb-open')) {
