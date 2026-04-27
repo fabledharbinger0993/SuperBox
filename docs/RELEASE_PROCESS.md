@@ -4,7 +4,7 @@
 
 RekitBox uses GitHub Actions to automatically build and attach distributable `.zip` files to every release. This ensures your website download link always works:
 
-```
+```url
 https://github.com/fabledharbinger0993/RekitBox/releases/latest/download/RekitBox.zip
 ```
 
@@ -24,18 +24,20 @@ bash build_release.sh --release
 ```
 
 The `--release` flag automatically:
+
 1. Creates a GitHub release for the tag
 2. Uploads `RekitBox.zip` (the workflows will also run and attach both zips)
 3. Generates release notes with installation instructions
 
 ### Method 2: Manual via GitHub Web UI
 
-1. Go to: https://github.com/fabledharbinger0993/RekitBox/releases/new
+1. Go to: <https://github.com/fabledharbinger0993/RekitBox/releases/new>
 2. Choose existing tag or create new tag (e.g., `v2.2.6`)
 3. Write release title and notes
 4. Click **Publish release**
 
 GitHub Actions will automatically:
+
 - Build `RekitBox.app` from source
 - Build `RekitBox Agent.app` from source
 - Create both `.zip` files
@@ -46,12 +48,14 @@ GitHub Actions will automatically:
 When you publish a release, two GitHub Actions workflows run in parallel:
 
 ### `release-zip.yml` — Main RekitBox
+
 1. Checks out the tagged commit
 2. Builds `RekitBox.app` bundle (launcher script + Info.plist)
 3. Creates `RekitBox.zip`
 4. Uploads to release with `--clobber` (replaces if exists)
 
 ### `release-agent-zip.yml` — Agent Variant
+
 1. Checks out the tagged commit
 2. Builds `RekitBox Agent.app` bundle
 3. Creates `RekitBox-Agent.zip`
@@ -75,7 +79,7 @@ Once workflows complete (takes ~30 seconds), these links work automatically:
 
 After creating a release, verify:
 
-1. **Workflows succeeded**: Check https://github.com/fabledharbinger0993/RekitBox/actions
+1. **Workflows succeeded**: Check <https://github.com/fabledharbinger0993/RekitBox/actions>
 2. **Zips attached**: Visit release page, confirm both zips are listed
 3. **Download works**: Click each zip, verify they download
 4. **App launches**: Unzip, double-click the app, verify it opens Terminal and clones repo
@@ -83,15 +87,18 @@ After creating a release, verify:
 ## Troubleshooting
 
 **Workflow fails with "permission denied"**
+
 - Check that `permissions: contents: write` is set in workflow YAML
 - Ensure GITHUB_TOKEN has release write permissions
 
 **Zip missing from release**
+
 - Check workflow run logs in Actions tab
 - Verify the workflow trigger is `on: release: types: [published]`
 - Confirm tag was pushed before creating release
 
 **Download link 404**
+
 - GitHub Actions may still be running (~30 seconds)
 - Check release page to see if "Assets" section shows the zips
 - Verify workflow completed successfully in Actions tab
@@ -113,6 +120,7 @@ These scripts create the same `.app` bundles that GitHub Actions builds, but loc
 ## Why .app Files Aren't Committed
 
 `packaging/*.app` is gitignored because:
+
 - Binary files bloat git history
 - GitHub Actions builds them from source on every release
 - Keeps repo size small

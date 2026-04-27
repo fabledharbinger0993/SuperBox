@@ -1,0 +1,36 @@
+<!-- Glow filter for titlebar gradient edge -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:fixed;pointer-events:none" aria-hidden="true">
+  <defs>
+    <filter id="titlebar-glow" x="-10%" y="-400%" width="120%" height="900%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>
+
+<!-- ══ Titlebar — frameless window chrome ══════════════════════════════════ -->
+<div id="titlebar">
+  <div class="traffic-lights">
+    <button type="button" class="tl tl-red"    id="quit-btn"  onclick="quitRekitBox()"     title="Close RekitBox"></button>
+    <button type="button" class="tl tl-yellow"               onclick="minimizeWindow()"   title="Minimize"></button>
+    <button type="button" class="tl tl-green"                onclick="toggleFullscreen()" title="Zoom"></button>
+  </div>
+  <div class="titlebar-sep"></div>
+  <div class="titlebar-pills">
+    <div class="titlebar-pill">
+      <div class="dot" id="rb-dot"></div>
+      <span id="rb-label">Checking…</span>
+    </div>
+    <div class="titlebar-pill" id="release-pill">
+      <div class="dot"></div>
+      <span id="release-label">—</span>
+    </div>
+    <div class="titlebar-pill" id="backup-pill">
+      <div class="dot"></div>
+      <span id="backup-label"></span>
+    </div>
+  </div>
+</div>

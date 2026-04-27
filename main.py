@@ -80,6 +80,14 @@ class _Api:
             return os.path.normpath(result[0])
         return None
 
+    def minimize(self):
+        if self._window:
+            self._window.minimize()
+
+    def toggle_fullscreen(self):
+        if self._window:
+            self._window.toggle_fullscreen()
+
 
 if __name__ == '__main__':
     if not _server_running():
@@ -103,6 +111,7 @@ if __name__ == '__main__':
         height=900,
         min_size=(900, 600),
         resizable=True,
+        frameless=True,
         background_color='#07070f',
         js_api=_api,
     )

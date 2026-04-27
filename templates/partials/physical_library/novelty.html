@@ -1,0 +1,75 @@
+    <!-- ── Novelty Scanner ───────────────────────────────────────────────── -->
+  <div class="card" id="step-novelty">
+    <div class="card-head">
+      <div class="card-icon"><img src="/static/icon-novelty.png" alt="Novelty Scanner"></div>
+      <div class="card-meta">
+        <div class="card-title">Novelty Scanner — Capture Unique Tracks from Any Drive</div>
+        <div class="card-blurb">Scans a source drive for tracks that don't exist anywhere in your home library and copies every one of them across. When in doubt, it copies. Use this to safely rescue one-of-a-kind recordings from backup drives before anything gets lost.</div>
+      </div>
+      <span class="risk-badge safe">SAFE</span>
+    </div>
+    <div class="explainers">
+      <details>
+        <summary>How is this different from Find Duplicates?</summary>
+        <div class="explain-body">
+          <p>Find Duplicates is cold-blooded — it only flags a track as a duplicate when it's highly confident. That strictness protects you from accidental deletion.</p>
+          <p>The Novelty Scanner flips the logic: a track is copied unless we're highly confident it's already in your library. One extra copy on disk costs nothing. A missing irreplaceable recording costs everything.</p>
+          <p><strong>Uses your existing scan index</strong> — tracks already fingerprinted during a BPM/key run skip straight past Chromaprint, making the scan much faster on large libraries.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Dry Run vs Live Run</summary>
+        <div class="explain-body">
+          <p>Dry Run (default) scans and reports what would be copied without touching anything. The source drive is <strong>never modified</strong> in either mode — this tool only copies, never moves.</p>
+          <p>Live Run copies novel tracks into your destination using the same Artist / Album / Track structure as the Library Organizer. Already-structured files keep their folder layout.</p>
+        </div>
+      </details>
+    </div>
+    <div class="card-form">
+      <div class="field compact-drop-field">
+        <label>Source Drive(s) / Folder(s)</label>
+        <div class="folder-zone" id="novelty-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folders here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="novelty-zone-text" placeholder="/Volumes/Passport">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('novelty-pills')">Browse…</button>
+            <button class="folder-zone-add" type="button" onclick="noveltyZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="novelty-pills"></div>
+      </div>
+      <div class="field compact-drop-field">
+        <label>Destination (Home Library)</label>
+        <div class="folder-zone" id="novelty-dest-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop destination folder here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="novelty-dest" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickPathFor('novelty-dest')">Browse…</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="checkbox-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="novelty-dry-run" checked>
+            Dry Run (preview only — nothing will be copied)
+          </label>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="btn-novelty" onclick="runNovelty()">
+          <img src="/static/icon-novelty.png" class="icon-sm-invert" alt="Novelty scanner">
+          Scan for Novel Tracks
+        </button>
+      </div>
+      <div class="rb-block-msg" id="novelty-rb-block">
+        <span>⚠</span> Close Rekordbox before running a live scan.
+      </div>
+    </div>
+  </div>

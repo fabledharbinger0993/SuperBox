@@ -19,6 +19,7 @@
 - `GET /audio/<path>` — Serve audio file for playback (Flask static route)
 
 ## Notes
+
 - All endpoints return JSON
 - All write actions require Rekordbox to be closed (enforced in backend)
 - pyrekordbox handles DB and playlist XML export

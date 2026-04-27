@@ -24,12 +24,7 @@ _setup_needed() {
   for formula in ffmpeg chromaprint; do
     _brew list --formula "$formula" &>/dev/null || return 0
   done
-  # Ollama missing?
-  command -v ollama &>/dev/null || return 0
-  # Default Rekki model not yet pulled?
-  local _model="${REKIT_AGENT_MODEL:-qwen2.5-coder:7b}"
-  ollama list 2>/dev/null | grep -q "^${_model}" || return 0
-  # Python venv missing?
+ # Python venv missing?
   [ ! -d "$VENV" ] && return 0
   # Sentinel not yet written by setup.sh?
   [ ! -f "$SENTINEL" ] && return 0
@@ -56,14 +51,6 @@ exec > /dev/null 2>&1
 # ── Homebrew update/upgrade (silent, non-blocking) ───────────────────────
 if _brew --version &>/dev/null; then
   (_brew update >/dev/null 2>&1 && _brew upgrade --formula >/dev/null 2>&1) &
-fi
-
-# ── Ensure Ollama is running ─────────────────────────────────────────────
-# setup.sh starts it during first-run, but subsequent launches (including
-# after a reboot) need to restart it.  Non-blocking — Rekki shows a
-# friendly "connecting…" state if Ollama takes a moment to warm up.
-if command -v ollama &>/dev/null && ! pgrep -x ollama &>/dev/null; then
-  nohup ollama serve >> "$LOG" 2>&1 &
 fi
 
 # ── Activate venv ─────────────────────────────────────────────────────────

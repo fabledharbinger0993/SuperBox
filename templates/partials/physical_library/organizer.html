@@ -1,0 +1,160 @@
+    <!-- ── Organize Library ──────────────────────────────────────────────── -->
+  <div class="card" id="step-organize">
+    <div class="card-head">
+      <div class="card-icon"><img src="/static/icon-organizer.png" alt="Organize"></div>
+      <div class="card-meta">
+        <div class="card-title">Organize Library — Consolidate into Artist / Album / Track</div>
+        <div class="card-blurb">Scans one or more folders (no matter how deeply nested) and moves or copies every track to the correct Artist / Album / Track location. Merges duplicate artist folders, creates missing folders, and prunes empty ones.</div>
+      </div>
+      <span class="risk-badge warn" id="organize-risk-badge">Moves Files</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>What structure does this create?</summary>
+        <div class="explain-body">
+          <pre>Target Root/
+├── Artist Name/
+│   └── Album or Release Name/
+│       └── track.mp3
+├── Orphaned Tracks/       ← no artist tag
+│   └── 2023/
+│       └── track.mp3
+└── Live Sets &amp; Mixes/    ← duration ≥ mix threshold
+    └── 2024/
+        └── mix.mp3</pre>
+          <p class="organize-note">Joint releases (e.g. "Artist A &amp; Artist B") get their own folder under that combined name. Tracks without an album tag sit directly in the artist folder.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Is this safe to run?</summary>
+        <div class="explain-body">
+          <p><strong>Always run a Dry Run first.</strong> Dry Run scans everything and shows exactly where each file would go — nothing is moved. Review the output in the terminal log, then uncheck Dry Run and run again to execute.</p>
+          <p>Files already at their correct canonical location are skipped. If a filename clash is detected, the incoming file is renamed with a numeric suffix (_1, _2 …) rather than overwriting.</p>
+        </div>
+      </details>
+      <details>
+        <summary>How does it handle artist name variations?</summary>
+        <div class="explain-body">
+          <p>It reads the <strong>Album Artist</strong> tag (TPE2) first, which is typically the primary artist without "feat." credits. If that's missing it falls back to the Track Artist tag (TPE1). This means "Daft Punk feat. Pharrell Williams" lands in the <em>Daft Punk</em> folder, not a separate "feat." folder.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What counts as a Mix / Live Set?</summary>
+        <div class="explain-body">
+          <p>Any track whose duration is at or above the Mix Threshold (default 15 minutes) is routed to <strong>Live Sets &amp; Mixes / YYYY /</strong> instead of the normal Artist tree. Adjust the threshold if your library has long studio tracks you don't want caught.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="card-grid">
+
+        <!-- Left pane: Source folders (pill zone) -->
+        <div class="audit-card compact-drop-card">
+          <div class="audit-panel-title">
+            <img src="/static/icon-organizer.png" alt="Library organizer" class="audit-panel-icon">
+            Source Folders — where to scan
+          </div>
+          <p class="audit-panel-blurb">Add every folder you want reorganised. Files are walked recursively — add top-level roots, not individual artist folders.</p>
+          <div class="folder-zone" id="organize-zone">
+            <div class="folder-zone-hint">
+              <strong>⤵ Drop folders here</strong>
+              or type a path and press Enter
+            </div>
+            <div class="folder-zone-input-row">
+              <input type="text" class="folder-zone-text" id="organize-zone-text" placeholder="/Volumes/DJMT">
+              <button class="folder-zone-browse" type="button" onclick="pickFolderFor('organize-source-pills')">Browse…</button>
+              <button class="folder-zone-add" type="button" onclick="organizeZoneAdd()">+ Add</button>
+            </div>
+          </div>
+          <div class="folder-pills" id="organize-source-pills"></div>
+        </div>
+
+        <!-- Right pane: Target (single-path zone) -->
+        <div class="audit-card compact-drop-card">
+          <div class="audit-panel-title">
+            <img src="/static/icon-organizer.png" alt="Library organizer" class="audit-panel-icon">
+            Target — organised library root
+          </div>
+          <p class="audit-panel-blurb">The root where files will be moved or copied into the Artist / Album / Track hierarchy. Must be writable.</p>
+          <div class="folder-zone" id="organize-target-zone">
+            <div class="folder-zone-hint">
+              <strong>⤵ Drop target folder here</strong>
+              or type / browse to the root
+            </div>
+            <div class="folder-zone-input-row">
+              <input type="text" class="folder-zone-text" id="organize-target" placeholder="/Volumes/YourDrive/Music">
+              <button class="folder-zone-browse" type="button" onclick="pickPathFor('organize-target')">Browse…</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Mode</label>
+          <select id="organize-mode" aria-label="Organisation mode" onchange="orgUpdateMode(this.value)" class="select-styled">
+            <option value="assimilate" selected>Full Library Assimilation — move files, clean up source</option>
+            <option value="integrate">Full Library Integration — copy files only, source untouched</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Mix Threshold <span class="label-hint">— tracks longer than this go to Live Sets &amp; Mixes</span></label>
+          <select id="organize-mix-threshold" aria-label="Similarity threshold" class="select-styled">
+            <option value="10">10 minutes</option>
+            <option value="15" selected>15 minutes (default)</option>
+            <option value="20">20 minutes</option>
+            <option value="30">30 minutes</option>
+            <option value="60">60 minutes</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Parallel Workers <span class="label-hint">— I/O threads</span></label>
+          <select id="organize-workers" aria-label="Parallel workers" class="select-styled">
+            <option value="1" selected>1 — sequential (safe)</option>
+            <option value="2">2 workers</option>
+            <option value="4">4 workers</option>
+          </select>
+        </div>
+      </div>
+      <div class="field organize-dry-field">
+        <label class="organize-dry-label">
+          <input type="checkbox" id="organize-dry-run" checked>
+          Dry Run — preview without touching any files <span class="label-hint">(recommended — uncheck to execute)</span>
+        </label>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-neon" id="btn-organize" onclick="runOrganize()">Scan &amp; Organize</button>
+      </div>
+
+      <!-- ── Rekordbox library migration ──────────────────────────────────── -->
+      <div class="migrate-db-section">
+        <div class="migrate-db-header" onclick="toggleMigrateSection()">
+          <span class="migrate-db-chevron" id="migrate-db-chevron">▸</span>
+          <strong>Move Rekordbox Library to Drive</strong>
+          <span class="risk-badge danger migrate-risk-right">Moves DB + Symlink</span>
+        </div>
+        <div class="migrate-db-body" id="migrate-db-body">
+          <p class="migrate-db-blurb">
+            Moves <code>~/Library/Pioneer/rekordbox/</code> (master.db, playlists, analysis) to
+            <code>&lt;drive&gt;/Pioneer/rekordbox/</code> and replaces the original with a symlink.
+            Rekordbox continues to work normally — the data lives on the drive.
+            <strong>Rekordbox must be closed.</strong>
+          </p>
+          <div class="migrate-db-confirm-row" id="migrate-db-step1">
+            <label class="checkbox-label migrate-confirm-label">
+              <input type="checkbox" id="migrate-confirm-cb" onchange="migrateCbChanged()">
+              I understand this moves my Rekordbox database to the target drive
+            </label>
+            <button type="button" class="btn btn-danger-outline" id="btn-migrate-db" disabled
+                    onclick="runMigrateDb()">
+              Move Library to Drive →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>

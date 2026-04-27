@@ -1,0 +1,39 @@
+    <!-- ── Audit ─────────────────────────────────────────────────────────── -->
+    <div class="db-panel-section" id="db-panel-audit">
+      <div class="db-panel-tool-head">
+        <div class="db-panel-icon"><img src="/static/icon-audit.png" alt="Audit"></div>
+        <div>
+          <div class="db-panel-tool-title">Audit Library</div>
+          <div class="db-panel-tool-blurb">Read-only health check — finds orphaned, missing, and duplicate-path records in your RekordBox database.</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Music Folder(s)</label>
+        <div class="folder-zone" id="audit-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folder here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="audit-zone-text" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('audit-pills')">Browse…</button>
+            <button class="folder-zone-add"    type="button" onclick="auditZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="audit-pills"></div>
+      </div>
+      <div class="field organize-note">
+        <label class="audit-save-label">
+          <input type="checkbox" id="audit-save-physical">
+          Save physical file index to disk
+        </label>
+      </div>
+      <div id="dead-roots-banner" class="dead-roots-banner">
+        <strong>⚠ Dead library roots detected</strong>
+        <div id="dead-roots-detail"></div>
+      </div>
+      <div class="btn-row audit-btn-mt">
+        <button type="button" class="btn btn-neon" onclick="runAudit()">Run Audit</button>
+        <button type="button" class="btn btn-secondary" onclick="previewCanonicalPlan()">Preview Canonical Plan</button>
+      </div>
+    </div>

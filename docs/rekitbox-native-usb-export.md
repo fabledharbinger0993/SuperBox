@@ -1,6 +1,7 @@
 # RekitBox-Native USB Export & File Structure
 
 ## Export Workflow
+
 1. User selects target USB drive
 2. RekitBox validates drive (format, free space, folder structure)
 3. Pyrekordbox writes Rekordbox-compatible SQLite DB to drive
@@ -9,6 +10,7 @@
 6. Final validation: check for all required files, report errors
 
 ## File/Folder Structure
+
 - /PIONEER/
   - /DJM/
   - /CDJ/
@@ -23,11 +25,13 @@
 - /rekordbox/ (hidden, for DB and settings)
 
 ## Compatibility
+
 - All files/folders must match what Pioneer hardware expects
 - Use Pyrekordbox for DB schema and export logic
 - Test on real hardware (CDJ, Omnis, XDJ, etc.)
 
 ## Safety
+
 - Never overwrite existing DB/files without backup
 - Validate before/after export, show user errors/warnings
 

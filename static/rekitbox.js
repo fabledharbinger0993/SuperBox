@@ -907,6 +907,32 @@ async function quitRekitBox() {
   }, 500);
 }
 
+function minimizeWindow() {
+  if (window.pywebview?.api?.minimize) window.pywebview.api.minimize();
+}
+
+function toggleFullscreen() {
+  if (window.pywebview?.api?.toggle_fullscreen) window.pywebview.api.toggle_fullscreen();
+}
+
+function replaySplash() {
+  const overlay = document.getElementById('splash-overlay');
+  const video   = document.getElementById('splash-video');
+  if (!overlay || !video) return;
+  overlay.hidden = false;
+  video.currentTime = 0;
+  video.play().catch(() => {});
+  video.onended = () => { overlay.hidden = true; };
+  overlay.onclick = (e) => {
+    if (e.target !== video) { overlay.hidden = true; video.pause(); }
+  };
+}
+
+function openSiteKey() {
+  // TODO: implement site key / definitions modal
+  console.info('[RekitBox] openSiteKey — modal not yet implemented');
+}
+
 async function refreshStatus() {
   try {
     const res  = await fetch('/api/status');

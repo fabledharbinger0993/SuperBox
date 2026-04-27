@@ -1,0 +1,221 @@
+    <!-- ── Duplicate Tracks — unified scan + review + prune ─────────────── -->
+  <div class="card" id="step-duplicates">
+    <div class="card-head">
+      <div class="card-icon safe"><img src="/static/icon-find-duplicate.png" alt="Duplicate Tracks"></div>
+      <div class="card-meta">
+        <div class="card-title">Duplicate Tracks</div>
+        <div class="card-blurb">Acoustic fingerprinting finds identical recordings regardless of filename, format, or bitrate. Scan, review, and prune in one panel.</div>
+      </div>
+      <span class="risk-badge safe" id="dupes-risk-badge">Read-Only Scan</span>
+    </div>
+
+    <!-- ── Phase 1: Scan config ────────────────────────────────────────── -->
+    <div id="dupes-scan-phase">
+      <div class="explainers">
+        <details>
+          <summary>How fingerprinting works &amp; what the rankings mean</summary>
+          <div class="explain-body">
+            <p>Uses <strong>Chromaprint</strong> (the engine behind AcoustID / MusicBrainz) to analyze the actual audio waveform — not filenames or tags. Two files with an identical fingerprint are the same recording, regardless of format or bitrate.</p>
+            <p>Files are ranked using the <strong>RARP hierarchy</strong> to suggest which copy to keep:</p>
+            <ul>
+              <li><strong>PN</strong> — filename starts with digits + separator (e.g. <code>01 - Title</code>). Curated source.</li>
+              <li><strong>MIK</strong> — has a <code>TKEY</code>/<code>initialkey</code> tag written by Mix In Key.</li>
+              <li><strong>RAW</strong> — neither of the above.</li>
+            </ul>
+            <p>Lossless formats (AIFF, WAV, FLAC) always beat lossy (MP3, M4A). Within the same format, larger file wins. <strong>Playlist protection:</strong> before any duplicate is removed, its playlist slots are re-threaded to point at the keeper. Your playlists stay intact. A timestamped backup of <code>master.db</code> is created before any write.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="card-form">
+        <div class="field">
+          <label>Music Folder(s) to Scan</label>
+          <div class="folder-zone" id="dupes-zone">
+            <div class="folder-zone-hint">
+              <strong>⤵ Drop folders here</strong>
+              or type a path and press Enter
+            </div>
+            <div class="folder-zone-input-row">
+              <input type="text" class="folder-zone-text" id="dupes-zone-text" placeholder="/Volumes/YourDrive/Music">
+              <button class="folder-zone-browse" type="button" onclick="pickFolderFor('dupes-pills')">Browse…</button>
+              <button class="folder-zone-add" type="button" onclick="dupesZoneAdd()">+ Add</button>
+            </div>
+          </div>
+          <div class="folder-pills" id="dupes-pills"></div>
+        </div>
+        <div class="field">
+          <label>Parallel Workers <span class="label-hint">— fpcalc processes to run simultaneously (your Mac has 8 cores)</span></label>
+          <select id="dupes-workers" aria-label="Parallel workers" class="select-styled">
+            <option value="1">1 — sequential (safe, slowest)</option>
+            <option value="2">2 workers</option>
+            <option value="4" selected>4 workers (recommended)</option>
+            <option value="6">6 workers (fast)</option>
+            <option value="8">8 workers (max — all cores)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Match Mode <span class="field-badge safe">Controls detection thoroughness</span></label>
+          <div class="match-mode-grid">
+            <label class="match-mode-card" title="Exact fingerprint string equality. Fastest — good for obvious duplicates.">
+              <input type="radio" name="dupes-match-mode" value="exact" id="match-exact" checked>
+              <span class="match-mode-label">
+                <strong>Exact</strong>
+                <span class="match-mode-desc">Identical fingerprints only. Fastest.</span>
+              </span>
+            </label>
+            <label class="match-mode-card" title="Hamming-distance comparison on raw fingerprint integers. Catches same track encoded differently (Beatport vs Bandcamp, different bitrate/codec).">
+              <input type="radio" name="dupes-match-mode" value="fuzzy" id="match-fuzzy">
+              <span class="match-mode-label">
+                <strong>Fuzzy</strong>
+                <span class="match-mode-desc">Similar fingerprints. Catches re-encodes.</span>
+              </span>
+            </label>
+            <label class="match-mode-card" title="Groups files with matching title+artist tags and similar duration before fingerprinting. Catches duplicates tagged differently.">
+              <input type="radio" name="dupes-match-mode" value="tags" id="match-tags">
+              <span class="match-mode-label">
+                <strong>Tags</strong>
+                <span class="match-mode-desc">Title + artist matching. Broadens search.</span>
+              </span>
+            </label>
+            <label class="match-mode-card" title="Tags pre-matching + fuzzy fingerprinting. Most thorough — catches nearly everything. Slowest.">
+              <input type="radio" name="dupes-match-mode" value="all" id="match-all">
+              <span class="match-mode-label">
+                <strong>All</strong>
+                <span class="match-mode-desc">Tags + fuzzy. Most thorough, slowest.</span>
+              </span>
+            </label>
+          </div>
+          <!-- Fuzzy threshold slider — shown when fuzzy or all is selected -->
+          <div class="fuzzy-threshold-row" id="fuzzy-threshold-row">
+            <label class="fuzzy-threshold-label" for="fuzzy-threshold">
+              Similarity threshold: <strong id="fuzzy-threshold-val">85%</strong>
+            </label>
+            <input type="range" id="fuzzy-threshold" min="70" max="98" value="85" step="1"
+                   class="fuzzy-threshold-slider"
+                   oninput="document.getElementById('fuzzy-threshold-val').textContent = this.value + '%'">
+            <p class="field-hint">Lower = more matches found, more false positives. 85% is recommended.</p>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-neon" onclick="runDuplicates()">Scan for Duplicates</button>
+        </div>
+
+        <!-- Load existing report (for re-review without re-scanning) -->
+        <details class="dupes-load-existing">
+          <summary>Load an existing report</summary>
+          <div class="dupes-load-existing-body">
+            <div class="prune-report-row">
+              <input type="text" id="prune-csv-path" class="folder-zone-text"
+                     placeholder="~/rekordbox-toolkit/duplicate_report.csv"
+                     class="flex-1">
+              <button type="button" class="btn btn-ghost" onclick="loadPruneReport()">Load</button>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- ── Phase 2: Review &amp; Prune (hidden until scan/load completes) ── -->
+    <div id="dupes-results-phase">
+
+      <!-- Stats bar -->
+      <div class="dupes-stats-bar">
+        <div class="dupes-stats-left">
+          <span class="dupes-stat" id="dupes-stat-groups">— groups</span>
+          <span class="dupes-stat-sep">·</span>
+          <span class="dupes-stat" id="dupes-stat-remove">— to remove</span>
+          <span class="dupes-stat-sep">·</span>
+          <span class="dupes-stat dupes-stat-accent" id="dupes-stat-size">— recoverable</span>
+        </div>
+        <button type="button" class="btn btn-ghost btn-xs" onclick="resetDupesScan()">↩ New Scan</button>
+      </div>
+
+      <!-- Select All controls -->
+      <div class="prune-selectall-row">
+        <button type="button" class="prune-selectall-btn" id="sa-best-btn" onclick="selectAllBest()">
+          <span class="sa-dot"></span>
+          Select All Best Copies
+        </button>
+        <button type="button" class="prune-selectall-btn" id="sa-lower-btn" onclick="selectAllLower()">
+          <span class="sa-dot"></span>
+          Select All Lower Quality
+        </button>
+        <span class="prune-count-label" id="prune-count-label">0 files selected</span>
+      </div>
+
+      <!-- Groups list -->
+      <div id="prune-groups"></div>
+
+      <!-- Pagination -->
+      <div id="prune-pagination">
+        <button type="button" class="btn" id="prune-prev-btn" onclick="_loadPrunePage(prunePage-1)">← Prev</button>
+        <span id="prune-page-info"></span>
+        <button type="button" class="btn" id="prune-next-btn" onclick="_loadPrunePage(prunePage+1)">Next →</button>
+      </div>
+
+      <!-- Action bar -->
+      <div class="prune-action-bar">
+        <span class="prune-selected-count" id="prune-selected-summary">Select files above to continue.</span>
+        <label class="prune-action-label">
+          <input type="checkbox" id="prune-permanent-cb"
+               onchange="document.getElementById('btn-prune-start').textContent = this.checked ? 'Delete Permanently →' : 'Move to Trash →'">
+          Delete permanently
+        </label>
+        <button type="button" class="btn btn-prune-danger" id="btn-prune-start"
+                onclick="pruneStep1()" disabled>
+          Move to Trash →
+        </button>
+      </div>
+
+      <div class="rb-block-msg" id="prune-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before pruning.
+      </div>
+
+      <!-- Inline status shown after a prune attempt -->
+      <div id="prune-status-msg"></div>
+    </div>
+  </div>
+
+
+  <!-- ── Confirmation panels (spatially separated, no overlapping) ───── -->
+  <div id="confirm-backdrop"></div>
+
+  <!-- Step 1 — bottom-right. "What you're doing." Proceed button bottom-right. -->
+  <div class="confirm-panel" id="confirm-step1">
+    <div class="confirm-panel-head">
+      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="rb-logo-icon">
+      <div class="confirm-step-num">1</div>
+      <div class="confirm-panel-title">Confirm Selection</div>
+      <button type="button" class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
+    </div>
+    <div class="confirm-panel-body">
+      <p>You're about to remove <strong id="c1-count">—</strong> files from the RekordBox database.</p>
+      <p class="confirm-detail" id="c1-mode-note">Files will be moved to a recovery folder in Trash. Nothing is permanently deleted.</p>
+    </div>
+    <div class="confirm-panel-footer">
+      <button type="button" class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
+      <button type="button" class="btn btn-warn-action" onclick="pruneStep2()">Review the file list →</button>
+    </div>
+  </div>
+
+  <!-- Step 2 — top-left. File list + execute. -->
+  <div class="confirm-panel" id="confirm-step2">
+    <div class="confirm-panel-head">
+      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="rb-logo-icon">
+      <div class="confirm-step-num">2</div>
+      <div class="confirm-panel-title">Review &amp; Execute</div>
+      <button type="button" class="confirm-panel-cancel" onclick="cancelPrune()">✕ Cancel</button>
+    </div>
+    <div class="confirm-file-list" id="c2-file-list"></div>
+    <div class="confirm-panel-body confirm-body-pt">
+      <p class="confirm-detail">These files will be moved to Trash. Their database entries will be removed. A timestamped backup of <code>master.db</code> is created automatically. RekordBox must be closed.</p>
+    </div>
+    <div class="confirm-panel-footer">
+      <button type="button" class="btn btn-ghost" onclick="cancelPrune()">Cancel</button>
+      <span class="footer-flex-spacer"></span>
+      <button type="button" class="btn btn-prune-danger" id="btn-execute-prune" onclick="executePrune()">Execute — Move to Trash</button>
+    </div>
+    <div class="rb-block-msg" id="prune-final-rb-block">
+      <span>⚠</span> RekordBox is open. Close it to proceed.
+    </div>
+  </div>

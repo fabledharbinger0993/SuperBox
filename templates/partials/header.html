@@ -1,0 +1,60 @@
+<!-- ══ Left Panel — Activity bar ══════════════════════════════════════════ -->
+<div id="left-panel">
+
+  <!-- App icon lockup -->
+  <div class="lp-logo">
+    <img src="/static/icon-rekitbox-app.png" alt="RekitBox">
+  </div>
+
+  <!-- Primary nav icons -->
+  <nav class="lp-nav" aria-label="Left panel navigation">
+    <button type="button" class="lp-btn" onclick="openToolkitModal()" title="Toolkit">
+      <img src="/static/icon-tool-kit.png" alt="" class="lp-icon" aria-hidden="true">
+      <span class="lp-label">Tools</span>
+    </button>
+    <button type="button" class="lp-btn" onclick="openWelcome()" title="Welcome">
+      <img src="/static/icon-welcome-info.png" alt="" class="lp-icon" aria-hidden="true">
+      <span class="lp-label">Welcome</span>
+    </button>
+    <button type="button" class="lp-btn" onclick="openSiteKey()" title="Site Key / Definitions">
+      <img src="/static/icon-site-key.png" alt="" class="lp-icon" aria-hidden="true">
+      <span class="lp-label">Key</span>
+    </button>
+    <button type="button" class="lp-btn" onclick="replaySplash()" title="Replay intro">
+      <img src="/static/icon-rekki.png" alt="" class="lp-icon" aria-hidden="true">
+      <span class="lp-label">Rekki</span>
+    </button>
+  </nav>
+
+  <!-- Neon divider -->
+  <div class="lp-divider" aria-hidden="true"></div>
+
+  <!-- Drives -->
+  <div class="lp-drives">
+    <button type="button" class="lp-btn lp-drives-hdr" title="Connected Drives — coming soon" disabled>
+      <img src="/static/icon-rb-folder.png" alt="" class="lp-icon" aria-hidden="true">
+      <span class="lp-label">Drives</span>
+    </button>
+    <div id="drive-list"></div>
+  </div>
+
+  <div class="lp-spacer"></div>
+
+  <!-- Bottom-pinned utilities -->
+  <div class="lp-bottom">
+    <button type="button" class="lp-btn" id="view-output-btn" onclick="reopenLog()" title="View Output Log">
+      <span class="lp-glyph">▸</span>
+      <span class="lp-label">Log</span>
+    </button>
+    <button type="button" class="lp-btn" onclick="openSettings()" title="Settings">
+      <span class="lp-glyph">⚙</span>
+      <span class="lp-label">Settings</span>
+    </button>
+  </div>
+
+</div>
+
+<!-- Splash replay overlay — click outside video or wait for end to dismiss -->
+<div id="splash-overlay" hidden aria-modal="true" role="dialog" aria-label="Intro video">
+  <video id="splash-video" src="/static/rekitbox-splash.mp4" playsinline></video>
+</div>

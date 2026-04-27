@@ -1,0 +1,76 @@
+    <!-- ── Relocate ───────────────────────────────────────────────────────── -->
+    <div class="db-panel-section" id="db-panel-relocate">
+      <div class="db-panel-tool-head">
+        <div class="db-panel-icon warn"><img src="/static/icon-move.png" alt="Relocate"></div>
+        <div>
+          <div class="db-panel-tool-title">Relocate — Fix Broken Paths</div>
+          <div class="db-panel-tool-blurb">Updates the database when you move or rename your music folders. <strong>RekordBox must be closed.</strong></div>
+        </div>
+      </div>
+      <div class="field audit-row-mt">
+        <label>Old Paths</label>
+        <div class="folder-zone" id="relocate-old-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop old folder</strong>
+            or type prefix and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="relocate-old-zone-text" placeholder="/Volumes/OLD_DRIVE/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('relocate-old-pills')">Browse…</button>
+            <button class="folder-zone-add"    type="button" onclick="relocateOldZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="relocate-old-pills"></div>
+      </div>
+      <div class="field">
+        <label>New Path</label>
+        <div class="folder-zone" id="relocate-new-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop new folder</strong>
+            or type / browse to the new root
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="relocate-new" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickPathFor('relocate-new')">Browse…</button>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row audit-btn-mt">
+        <button type="button" class="btn btn-neon" id="btn-relocate" onclick="runRelocate()">Relocate Paths</button>
+      </div>
+      <div class="rb-block-msg" id="relocate-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before relocating.
+      </div>
+    </div>
+
+    <!-- ── Link Playlists ─────────────────────────────────────────────────── -->
+    <div class="db-panel-section" id="db-panel-link">
+      <div class="db-panel-tool-head">
+        <div class="db-panel-icon warn"><img src="/static/icon-link.png" alt="Link"></div>
+        <div>
+          <div class="db-panel-tool-title">Link Playlists</div>
+          <div class="db-panel-tool-blurb">Matches imported tracks to RekordBox playlists based on the folders they live in.</div>
+        </div>
+      </div>
+      <div class="field audit-row-mt">
+        <label>Music Folder(s)</label>
+        <div class="folder-zone" id="link-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folder here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="link-zone-text" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('link-pills')">Browse…</button>
+            <button class="folder-zone-add"    type="button" onclick="linkZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="link-pills"></div>
+      </div>
+      <div class="btn-row audit-btn-mt">
+        <button type="button" class="btn btn-neon" id="btn-link" onclick="runLink()">Link Playlists</button>
+      </div>
+      <div class="rb-block-msg" id="link-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before linking.
+      </div>
+    </div>

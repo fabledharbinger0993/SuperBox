@@ -1,0 +1,94 @@
+  <!-- ── Rename ──────────────────────────────────────────────────────────── -->
+  <div class="card" id="step-rename">
+    <div class="card-head">
+      <div class="card-icon caution"><img src="/static/icon-filename.png?v=2.0.0" alt="Rename Files"></div>
+      <div class="card-meta">
+        <div class="card-title">Rename Files</div>
+        <div class="card-blurb">Clean up file names using metadata tags. Generates "Artist: Title" format, removes underscores, numbers, processing markers (PN, IDs) — keeps all metadata searchable in Rekordbox.</div>
+      </div>
+    </div>
+    <details class="explain-block">
+      <summary>How it works</summary>
+      <div class="explain-body">
+        <p><strong>Input:</strong> Files like <code>918223_SomethingPN.mp3</code> or <code>Artist_Remix_12345.mp3</code> or <code>Track (2).mp3</code></p>
+        <p><strong>Artist priority:</strong> Vocal/lead artist → Album artist/band → Producer. So a Donna Summer remix by Felix da-Housecat becomes <code>Donna Summer: On the Radio (Felix da-Housecat remix)</code> — using Donna as the primary artist.</p>
+        <p><strong>Copy markers preserved:</strong> If a file is named <code>Track (2).mp3</code>, it becomes <code>Artist: Track (2).mp3</code>. Duplicates detected during rename get <code>(2)</code>, <code>(3)</code>, etc.</p>
+        <p><strong>Process:</strong> Reads title and artist from ID3 tags with smart priority, preserves copy markers (2), (copy), (v2), etc., strips processing markers and odd patterns.</p>
+        <p><strong>Output:</strong> Clean filenames like <code>Artist: Title.mp3</code> or <code>Artist: Title (2).mp3</code></p>
+        <p><strong>Metadata preserved:</strong> Artist, album, and all other tags stay intact — full searchability in Rekordbox.</p>
+      </div>
+    </details>
+    <div class="card-form">
+      <div class="field compact-drop-field">
+        <label>Source Folder</label>
+        <div class="folder-zone" id="rename-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folder here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="rename-zone-text" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('rename-pills')">Browse…</button>
+            <button class="folder-zone-add" type="button" onclick="renameZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="rename-pills"></div>
+      </div>
+      <div class="field">
+        <div class="checkbox-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="rename-dry-run" checked>
+            Dry Run (preview only — no files will be renamed)
+          </label>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn" id="btn-rename-probe" onclick="runRenameProbe()">
+          Probe Ambiguities
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-rename" onclick="runRename()">
+          <img src="/static/icon-filename.png?v=2.0.0" class="icon-sm-invert" alt="Rename files">
+          Clean File Names
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="rename-learn-backdrop"></div>
+  <div class="rename-learn-modal" id="rename-learn-modal">
+    <div class="rename-learn-head">
+      <div>
+        <div class="rename-learn-title">Rename Preflight</div>
+        <div class="rename-learn-sub" id="rename-learn-subtitle"></div>
+      </div>
+      <button class="rename-learn-close" type="button" onclick="closeRenamePreflightModal()">✕</button>
+    </div>
+    <div class="rename-learn-body">
+      <div class="rename-learn-summary" id="rename-learn-summary"></div>
+      <div class="rename-learn-list" id="rename-learn-list"></div>
+    </div>
+    <div class="rename-learn-foot">
+      <button class="btn btn-ghost" type="button" onclick="closeRenamePreflightModal()">Cancel</button>
+      <button class="btn btn-primary" id="rename-learn-apply-btn" type="button" onclick="applyRenamePreflightAndRun()">Apply Decisions + Rename</button>
+    </div>
+  </div>
+
+
+
+  <!-- ── Pipeline step-confirm gate (standalone fixed overlay) ─────────────── -->
+  <div id="pipe-confirm-gate">
+    <div id="pipe-gate-row">
+      <span id="pipe-gate-icon">✓</span>
+      <div id="pipe-gate-content">
+        <div id="pipe-gate-title">Step complete</div>
+        <div id="pipe-gate-body"></div>
+        <div id="pipe-gate-actions">
+          <button type="button" class="btn btn-neon" id="pipe-btn-finish" onclick="pipeGateAction('finish')"><img src="/static/icon-restart-from-interrupt.png" class="pipe-gate-icon-btn" alt=""> Finish</button>
+          <button type="button" class="btn btn-neon" id="pipe-btn-redo" onclick="pipeGateAction('redo')"><img src="/static/icon-restart-step.png" class="pipe-gate-icon-btn" alt=""> Re-do</button>
+          <button type="button" class="btn" id="pipe-btn-skip" onclick="pipeGateAction('skip')"><img src="/static/icon-skip-to-next-step.png" class="pipe-gate-icon-btn" alt=""> Skip</button>
+          <button type="button" class="btn pipe-btn-stop" onclick="pipeGateAction('stop')"><img src="/static/icon-interrupt-plus-stop-wizard.png" class="pipe-gate-icon-btn" alt=""> Stop</button>
+          <span id="pipe-gate-next-label"></span>
+        </div>
+      </div>
+    </div>
+  </div>

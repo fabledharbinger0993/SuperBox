@@ -1,0 +1,32 @@
+    <!-- ── Import ─────────────────────────────────────────────────────────── -->
+    <div class="db-panel-section" id="db-panel-import">
+      <div class="db-panel-tool-head">
+        <div class="db-panel-icon warn"><img src="/static/icon-import.png" alt="Import"></div>
+        <div>
+          <div class="db-panel-tool-title">Import — Add Tracks to RekordBox</div>
+          <div class="db-panel-tool-blurb">Preview first to see what will be added, then import. <strong>RekordBox must be closed.</strong> A timestamped backup is created automatically.</div>
+        </div>
+      </div>
+      <div class="field audit-row-mt">
+        <label>Music Folder(s)</label>
+        <div class="folder-zone" id="import-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folder here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="import-zone-text" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('import-pills')">Browse…</button>
+            <button class="folder-zone-add"    type="button" onclick="importZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="import-pills"></div>
+      </div>
+      <div class="btn-row audit-btn-mt">
+        <button type="button" class="btn btn-ghost" onclick="runImportDry()">Preview Import</button>
+        <button type="button" class="btn btn-neon" id="btn-import" onclick="runImport()">Import Tracks</button>
+      </div>
+      <div class="rb-block-msg" id="import-rb-block">
+        <span>⚠</span> RekordBox is open. Close it before importing.
+      </div>
+    </div>

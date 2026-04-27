@@ -1,4 +1,4 @@
-# Copilot Instructions For RekitBox + Rekki
+# Copilot Instructions For RekitBox
 
 ## Runtime Context
 - Project root: /Users/cameronkelly/FabledHarbinger/Git Repos/RekitBox-private-main
@@ -10,19 +10,6 @@
 - Never auto-run write actions against Rekordbox DB.
 - Require explicit user action for any write route (import, relocate, prune, organize).
 - Assume Rekordbox must be closed before any DB write.
-- Default Rekki assistant behavior is read-only guidance.
-- Keep apply/commit/push automation flags disabled by default.
-
-## Rekki Agent Loop (Reason -> Act -> Observe)
-1. Reason:
-   - Parse user intent (example: set-building, prep auditing, duplicates review).
-   - Build minimal context from /api/rekki/context and current app status.
-2. Act:
-   - Prefer read-only operations first (status, health, summaries, dry-run suggestions).
-   - If proposing write actions, return a checklist and required confirmations.
-3. Observe:
-   - Re-check status and report deltas.
-   - Surface errors in plain language with next safe step.
 
 ## Domain Logic To Reuse
 - Harmonic transitions (Camelot):
@@ -40,12 +27,6 @@
 - Frontend changes should stay in static/rekitbox.js and templates/index.html.
 - Keep UI additions compact and non-invasive.
 - Preserve local-first behavior (no CDN, no required internet services).
-
-## Suggested Next Feature Slice
-- Add read-only Rekki helper tools:
-  - "Find compatible tracks" by BPM/key window
-  - "Prep gap audit" (missing BPM/key/hot-cue indicators from available metadata)
-  - "Set builder seed" (genre + tempo + harmonic compatibility summary)
 
 ## Testing Expectations
 - Python compile must pass for modified Python files.

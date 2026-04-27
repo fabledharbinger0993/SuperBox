@@ -1,0 +1,79 @@
+  <div class="card" id="step-convert">
+    <div class="card-head">
+      <div class="card-icon"><img src="/static/icon-convert.png" alt="Convert"></div>
+      <div class="card-meta">
+        <div class="card-title">Convert — Change Audio Format</div>
+        <div class="card-blurb">Convert one or more source folders to a different audio format. Supports MP3, WAV, AIFF, and FLAC. Metadata is preserved.</div>
+      </div>
+      <span class="risk-badge caution">Rewrites Files</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>Which format should I choose?</summary>
+        <div class="explain-body">
+          <ul>
+            <li><strong>MP3</strong> — smallest files, universal compatibility, lossy compression. Best for: storage constraints, portability.</li>
+            <li><strong>WAV</strong> — lossless, uncompressed. Best for: archival, mastering, when file size isn't a concern.</li>
+            <li><strong>AIFF</strong> — lossless, mainly used on Mac. Best for: Mac DJs, archival.</li>
+            <li><strong>FLAC</strong> — lossless, compressed to ~60% of WAV size. Best for: archival with smaller file sizes, high-fidelity listening.</li>
+          </ul>
+          <p>RekordBox works with all formats equally. Choose based on your storage space, backup strategy, and playback device.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Will my tags be preserved?</summary>
+        <div class="explain-body">
+          <p>Yes. All metadata (BPM, key, cue points, hot cues, loops) is copied to the new file. After conversion, the original files are moved to the RekitBox Archive Quarantine folder, so you can recover them if needed.</p>
+        </div>
+      </details>
+      <details>
+        <summary>How long will this take?</summary>
+        <div class="explain-body">
+          <p>Conversion speed depends on file count and your drive speed. MP3 encoding is typically fastest, FLAC slowest (uses compression level 8). A 10,000-track library might take several hours. The operation shows real-time progress.</p>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field-row">
+        <div class="field">
+          <label>Source Folder(s) to Convert</label>
+          <div class="folder-zone" id="convert-zone">
+            <div class="folder-zone-hint">
+              <strong>⤵ Drop folder here</strong>
+              or type a path and press Enter
+            </div>
+            <div class="folder-zone-input-row">
+              <input type="text" class="folder-zone-text" id="convert-zone-text" placeholder="/Volumes/YourDrive/Music">
+              <button class="folder-zone-browse" type="button" onclick="pickFolderFor('convert-pills')">Browse…</button>
+              <button class="folder-zone-add" type="button" onclick="convertZoneAdd()">+ Add</button>
+            </div>
+          </div>
+          <div class="folder-pills" id="convert-pills"></div>
+        </div>
+        <div class="field">
+          <label>Target Format</label>
+          <select id="convert-format" aria-label="Target format">
+            <option value="mp3">MP3 (320 kbps)</option>
+            <option value="wav">WAV (lossless, uncompressed)</option>
+            <option value="aiff">AIFF (lossless, Mac native)</option>
+            <option value="flac">FLAC (lossless, compressed)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Parallel Workers <span class="label-hint">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
+        <select id="convert-workers" aria-label="Parallel workers" class="select-styled">
+          <option value="1">1 — sequential (safe, slowest)</option>
+          <option value="2">2 workers</option>
+          <option value="4" selected>4 workers (recommended)</option>
+          <option value="6">6 workers (fast)</option>
+          <option value="8">8 workers (max — all cores)</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-neon" id="btn-convert" onclick="runConvert()">Start Converting</button>
+      </div>
+    </div>
+  </div>

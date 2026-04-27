@@ -1,0 +1,97 @@
+    <!-- ── Step 5: Normalize ───────────────────────────────────────────────── -->
+  <div class="card" id="step-normalize">
+    <div class="card-head">
+      <div class="card-icon danger"><img src="/static/icon-normalize.png" alt="Normalize"></div>
+      <div class="card-meta">
+        <div class="card-title">Normalize Loudness <em class="optional-label">(Optional)</em></div>
+        <div class="card-blurb">Adjusts every track's volume so they all hit at the same level on the CDJs. Target is −8.0 LUFS — the DJ standard. <strong>This rewrites the actual audio file.</strong></div>
+      </div>
+      <span class="risk-badge danger">Rewrites Audio</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>What exactly happens to my files?</summary>
+        <div class="explain-body">
+          <p>Each file is analyzed for integrated loudness (EBU R128 standard). If it's outside −8.0 LUFS ± 0.5 LUFS, the file is re-encoded:</p>
+          <ul>
+            <li><strong>MP3</strong> → re-encoded at 320 kbps CBR</li>
+            <li><strong>AIFF/WAV</strong> → re-encoded losslessly at the same bit depth as the original</li>
+          </ul>
+          <p>Files already within the tolerance window are <strong>left untouched</strong>.</p>
+          <p>The process: original is renamed to <code>.bak</code>, new file is written, <code>soundfile</code> validates the new file is readable, then — and only then — the <code>.bak</code> is deleted. If validation fails, the <code>.bak</code> is kept and you still have your original.</p>
+        </div>
+      </details>
+      <details>
+        <summary>Should I normalize my files?</summary>
+        <div class="explain-body">
+          <p><strong>Only if inconsistent levels are a real problem for you.</strong> −8.0 LUFS is the correct target for DJ use — it leaves headroom for the mixer and matches what most commercial releases already land at.</p>
+          <p>Things to know before you run this:</p>
+          <ul>
+            <li>This is the highest-risk operation in the toolkit. Back up your drive first.</li>
+            <li>MP3 re-encoding is a lossy process — even at 320 kbps, you're going through an encode cycle. For AIFF/WAV files, re-encoding is lossless.</li>
+            <li>Tracks that are already at the right level are skipped entirely — this will not process your whole library unnecessarily.</li>
+            <li>Do not run this while the drive is in use by RekordBox or during a gig.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder(s)</label>
+        <div class="folder-zone" id="normalize-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folders here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="normalize-zone-text" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('normalize-pills')">Browse…</button>
+            <button class="folder-zone-add" type="button" onclick="normalizeZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="normalize-pills"></div>
+      </div>
+
+      <!-- ── Loudness preview player ─────────────────────────────────────── -->
+      <div id="norm-preview">
+        <div id="norm-preview-status" class="norm-preview-status">
+          Add a folder above to load loudness previews.
+        </div>
+        <div id="norm-sample-list">
+          <!-- rows: quietest original, quietest normalised, loudest original, loudest normalised -->
+          <div class="norm-sample-row norm-sample-placeholder" data-slot="0">
+            <div class="norm-sample-meta"><span class="norm-sample-kind">Quietest</span><span class="norm-sample-tag">Original</span></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" type="button" title="Play audio" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+          </div>
+          <div class="norm-sample-row norm-sample-placeholder" data-slot="1">
+            <div class="norm-sample-meta"><span class="norm-sample-kind">Quietest</span><span class="norm-sample-tag norm-sample-tag--norm">Normalized  −8 LUFS</span></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" type="button" title="Play audio" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+          </div>
+          <div class="norm-sample-row norm-sample-placeholder" data-slot="2">
+            <div class="norm-sample-meta"><span class="norm-sample-kind">Loudest</span><span class="norm-sample-tag">Original</span></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" type="button" title="Play audio" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+          </div>
+          <div class="norm-sample-row norm-sample-placeholder" data-slot="3">
+            <div class="norm-sample-meta"><span class="norm-sample-kind">Loudest</span><span class="norm-sample-tag norm-sample-tag--norm">Normalized  −8 LUFS</span></div>
+            <div class="norm-sample-player"><button class="norm-play-btn" type="button" title="Play audio" disabled></button><div class="norm-progress-track"><div class="norm-progress-fill"></div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Parallel Workers <span class="label-hint">— ffmpeg processes to run simultaneously (your Mac has 8 cores)</span></label>
+        <select id="normalize-workers" class="normalize-workers-select" title="Select number of parallel workers for ffmpeg processes">
+          <option value="1">1 — sequential (safe, slowest)</option>
+          <option value="2">2 workers</option>
+          <option value="4" selected>4 workers (recommended)</option>
+          <option value="6">6 workers (fast)</option>
+          <option value="8">8 workers (max — all cores)</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-neon" onclick="runNormalize()">Normalize Loudness</button>
+      </div>
+    </div>
+  </div>

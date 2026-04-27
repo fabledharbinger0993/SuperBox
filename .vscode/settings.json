@@ -1,6 +1,13 @@
 {
 	"task.allowAutomaticTasks": "on",
 	"git.autofetch": true,
+
+	// ── CSS linter ─────────────────────────────────────────────────────────
+	// RekitBox runs in pywebview (Chromium). Suppress Safari/iOS compat noise.
+	"css.lint.vendorPrefix": "ignore",
+	"css.lint.compatibleVendorPrefixes": "ignore",
+	"css.lint.unknownVendorSpecificProperties": "ignore",
+
 	"files.exclude": {
 		"**/.venv": true,
 		"**/venv": true
@@ -15,5 +22,23 @@
 		"inline-style-disabled": false
 	},
 	"python-envs.defaultEnvManager": "ms-python.python:conda",
-	"python-envs.defaultPackageManager": "ms-python.python:conda"
+	"python-envs.defaultPackageManager": "ms-python.python:conda",
+	"cSpell.words": [
+		"APPLESCRIPT",
+		"bitrates",
+		"Chromaprint",
+		"DJMT",
+		"flac",
+		"Hotcue",
+		"kbps",
+		"keylock",
+		"Omnis",
+		"Pyrekordbox",
+		"Rekit",
+		"rekitbox",
+		"Rekordbox",
+		"shellenv",
+		"venv",
+		"wavesurfer"
+	]
 }

@@ -1,0 +1,88 @@
+    <!-- ── Step 2: Process (tags only) ────────────────────────────────────── -->
+  <div class="card" id="step-process">
+    <div class="card-head">
+      <div class="card-icon caution"><img src="/static/icon-tag.png" alt="Tag Tracks"></div>
+      <div class="card-meta">
+        <div class="card-title">Tag Tracks — Detect BPM &amp; Musical Key</div>
+        <div class="card-blurb">Reads each audio file and writes BPM and musical key into the file's tags. Skips files that already have tags — won't overwrite your Mix In Key work unless you ask it to.</div>
+      </div>
+      <span class="risk-badge caution">Writes Tags</span>
+    </div>
+
+    <div class="explainers">
+      <details>
+        <summary>How does it detect BPM and key?</summary>
+        <div class="explain-body">
+          <p><strong>BPM</strong> is calculated by librosa beat tracking, which analyzes the actual audio waveform for beat
+            patterns — not guessing from the filename. Result is sanity-checked (must be between 30–300 BPM).</p>
+          <p><strong>Key</strong> uses the Krumhansl-Schmuckler algorithm on the audio's chroma features via librosa. The
+            result is translated to whichever notation RekordBox uses (Camelot, Open Key, or standard — whatever's already
+            in your database).</p>
+          <p>Files that already have a BPM or key tag are <strong>skipped by default</strong>. Use <em>Force Overwrite</em>
+            only if you want to replace existing values.</p>
+          <p>Optional <strong>MusicBrainz enrichment</strong> fingerprints each track via AcoustID and fills in missing title, artist, and album tags from the MusicBrainz database. Requires an AcoustID API key in settings.</p>
+        </div>
+      </details>
+      <details>
+        <summary>What could go wrong?</summary>
+        <div class="explain-body">
+          <p>This modifies the <strong>file tags</strong> (ID3, AIFF metadata etc.) — not the audio itself. Your audio waveform is untouched.</p>
+          <p>Edge cases to know about:</p>
+          <ul>
+            <li>BPM detection can be fooled by very long intros or unusual time signatures. Review results in RekordBox afterward.</li>
+            <li>Key detection is an estimate — it works well on most house, techno, and disco, but can struggle with atonal or heavily processed tracks.</li>
+            <li>If a file can't be read (corrupt, DRM, unsupported format), it's logged as an error and skipped — it does not stop the rest of the batch.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+
+    <div class="card-form">
+      <div class="field">
+        <label>Music Folder(s)</label>
+        <div class="folder-zone" id="process-zone">
+          <div class="folder-zone-hint">
+            <strong>⤵ Drop folders here</strong>
+            or type a path and press Enter
+          </div>
+          <div class="folder-zone-input-row">
+            <input type="text" class="folder-zone-text" id="process-zone-text" placeholder="/Volumes/YourDrive/Music">
+            <button class="folder-zone-browse" type="button" onclick="pickFolderFor('process-pills')">Browse…</button>
+            <button class="folder-zone-add" type="button" onclick="processZoneAdd()">+ Add</button>
+          </div>
+        </div>
+        <div class="folder-pills" id="process-pills"></div>
+      </div>
+      <div class="field">
+        <label>Options</label>
+        <div class="checkbox-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="process-no-bpm"> Skip BPM detection
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="process-no-key"> Skip key detection
+          </label>
+          <label class="checkbox-label" id="process-retry-errored-row">
+            <input type="checkbox" id="process-retry-errored">
+            <span>Retry errored tracks only <span class="field-badge caution" id="process-retry-count"></span></span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" id="process-force"> Force overwrite <em>all</em> existing tags
+          </label>
+        </div>
+      </div>
+      <div class="field">
+        <label>Metadata Enrichment <span class="field-badge caution">Requires AcoustID API key</span></label>
+        <div class="enrichment-option-row">
+          <label class="checkbox-label enrichment-checkbox-label">
+            <input type="checkbox" id="process-enrich-tags">
+            <span>Look up title, artist &amp; album from MusicBrainz after tagging</span>
+          </label>
+          <p class="field-hint">Fingerprints each track and queries the AcoustID web service (~1 req/s). Only fills in <em>missing</em> fields unless Force Overwrite is on. Requires <code>acoustid_api_key</code> in your RekitBox config.</p>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-neon" onclick="runProcess()">Detect BPM &amp; Key</button>
+      </div>
+    </div>
+  </div>

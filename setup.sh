@@ -65,6 +65,7 @@ FORMULAS=(ffmpeg chromaprint)
 for formula in "${FORMULAS[@]}"; do
   if "$BREW" list --formula "$formula" &>/dev/null; then
     info "Upgrading $formula..."
+    # shellcheck disable=SC2015
     "$BREW" upgrade "$formula" 2>/dev/null \
       && ok "$formula upgraded" \
       || ok "$formula already at latest"
@@ -95,6 +96,7 @@ else
   ok "Virtual environment already exists"
 fi
 
+# shellcheck disable=SC1091
 source "$VENV/bin/activate"
 
 # ── Python packages ───────────────────────────────────────────────────────

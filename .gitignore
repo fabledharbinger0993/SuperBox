@@ -41,8 +41,3 @@ RekitBox.zip
 # Never commit a copy here — it causes confusion about which file is current.
 static/index.html
 
-# RekkiClaw / FabledClaw snapshot — agent assets live in Git Repos/RekkiClaw.
-# Only the .pi/prompts/ tree is needed by RekitBox (rekit_agent.py reads it
-# directly from the sibling RekkiClaw repo — no local copy required).
-agent_assets/fabledclaw_snapshot/
-packaging/*.app

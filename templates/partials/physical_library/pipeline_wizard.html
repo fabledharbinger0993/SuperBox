@@ -1,0 +1,181 @@
+<!-- ══ Pipeline Wizard ══════════════════════════════════════════════════════ -->
+<div id="pipeline-wizard-backdrop" class="hidden" onclick="if(event.target===this)closePipelineWizard()">
+  <div id="pipeline-wizard">
+
+    <!-- ── Shared header banner ───────────────────────────────────────────── -->
+    <div class="pipe-wiz-header-center">
+      <img src="/static/icon-rekitbox-app.png" alt="RekitBox" id="pipe-wiz-header-img">
+    </div>
+
+    <!-- ── Phase 1: Build your pipeline ──────────────────────────────────── -->
+    <div id="pipe-wiz-p1">
+      <div class="pipe-wiz-header">
+        <img src="/static/RB_LOGO.png" alt="" role="presentation" class="pipe-wiz-logo">
+        <div class="pipe-wiz-title-col">
+          <div class="pipe-wiz-title">Pipeline Wizard</div>
+          <div class="pipe-wiz-sub">Choose your steps and order, then configure each one.</div>
+        </div>
+        <button type="button" class="welcome-close" onclick="closePipelineWizard()" title="Close">✕</button>
+      </div>
+
+      <!-- Checkpoint resume banner (hidden until a checkpoint is detected on open) -->
+      <div id="pipe-resume-banner" class="hidden">
+        <span class="pipe-resume-bookmark">🔖</span>
+        <div class="pipe-resume-body">
+          <div id="pipe-resume-text">Checkpoint found</div>
+          <div id="pipe-resume-sub">Resume from last saved step?</div>
+        </div>
+        <button type="button" class="btn btn-neon pipe-resume-btn" onclick="resumeFromCheckpoint()">Resume</button>
+        <button type="button" class="btn pipe-resume-discard" onclick="discardCheckpoint()">Discard</button>
+      </div>
+
+      <div class="pipe-wiz-body">
+
+        <!-- Left: available steps -->
+        <div class="pipe-wiz-available">
+          <div class="pipe-col-label">Available steps — click to add</div>
+          <button type="button" onclick="pipelineLoadRecommended()" class="btn-pipe-load-recommended">★ Load recommended order</button>
+
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('audit')" title="DB snapshot + full physical filesystem scan">
+            <img src="/static/icon-audit.png" class="pipe-action-icon" alt="Library Audit">
+            <span class="pipe-action-text"><strong>Library Audit</strong><span>DB snapshot + physical filesystem inventory</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('process')" title="Write BPM and Key tags into every file">
+            <img src="/static/icon-tag.png" class="pipe-action-icon" alt="Tag Tracks">
+            <span class="pipe-action-text"><strong>Tag Tracks</strong><span>Writes BPM and musical key into each file</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('duplicates')" title="Find identical recordings no matter how they're named">
+            <img src="/static/icon-find-duplicate.png" class="pipe-action-icon" alt="Find Duplicates">
+            <span class="pipe-action-text"><strong>Find Duplicates</strong><span>Scans for files that are the same recording</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('prune')" title="Remove the copies confirmed in Find Duplicates">
+            <img src="/static/icon-prune.png" class="pipe-action-icon" alt="Prune Duplicates">
+            <span class="pipe-action-text"><strong>Prune Duplicates</strong><span>Remove copies found by Find Duplicates</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('relocate')" title="Update RekordBox after files have moved">
+            <img src="/static/icon-move.png" class="pipe-action-icon" alt="Fix Broken Paths">
+            <span class="pipe-action-text"><strong>Fix Broken Paths</strong><span>Update RekordBox after files have moved</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('import')" title="Add new audio files into the RekordBox database">
+            <img src="/static/icon-import.png" class="pipe-action-icon" alt="Import Tracks">
+            <span class="pipe-action-text"><strong>Import Tracks</strong><span>Add new audio files to RekordBox database</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('link')" title="Link imported tracks to playlists by folder name">
+            <img src="/static/icon-link.png" class="pipe-action-icon" alt="Link Playlists">
+            <span class="pipe-action-text"><strong>Link Playlists</strong><span>Connect tracks to playlists by folder name</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('normalize')" title="Re-encode tracks that are too loud or too quiet">
+            <img src="/static/icon-normalize.png" class="pipe-action-icon" alt="Balance Loudness">
+            <span class="pipe-action-text"><strong>Balance Loudness</strong><span>Brings every track to the same volume level</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('convert')" title="Change every file to your chosen audio format">
+            <img src="/static/icon-convert.png" class="pipe-action-icon" alt="Convert Format">
+            <span class="pipe-action-text"><strong>Convert Format</strong><span>Changes files to AIFF, MP3, WAV, or FLAC</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('organize')" title="Move files into Artist / Album / Track folders">
+            <img src="/static/icon-organizer.png" class="pipe-action-icon" alt="Organize Library">
+            <span class="pipe-action-text"><strong>Organize Library</strong><span>Moves files into Artist / Album / Track order</span></span>
+          </button>
+          <button type="button" class="pipe-action-btn" onclick="pipelineAddStep('novelty')" title="Copy tracks that exist only on the source drive">
+            <img src="/static/icon-novelty.png" class="pipe-action-icon" alt="Novelty Scan">
+            <span class="pipe-action-text"><strong>Novelty Scan</strong><span>Copy unique tracks from source into library</span></span>
+          </button>
+
+        </div>
+
+        <!-- Right: pipeline queue -->
+        <div class="pipe-wiz-queue-col">
+          <div class="pipe-col-label">
+            Your pipeline — runs top to bottom
+            <button type="button" onclick="pipelineClear()" class="btn-pipe-clear" title="Remove all steps">Clear all</button>
+          </div>
+          <div id="pipeline-queue" class="pipeline-queue">
+            <div class="pipe-empty" id="pipe-empty-msg">
+              No steps added yet.<br>
+              <span class="pipe-empty-hint">Click an action on the left to start building.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="pipe-recommended-note" class="hidden">
+        <strong>Why this order?</strong> Tag first so BPM/key are ready for duplicate detection. Find duplicates before deleting. Prune after reviewing. Relocate so DB paths are correct. Organize once clean. Normalize last.
+      </div>
+
+
+      <div class="pipe-wiz-footer">
+        <label class="wiz-label-lg">
+          <input type="checkbox" id="wiz-dry-run" checked>
+          Dry Run — preview only
+        </label>
+        <label class="wiz-label-sm">
+          <input type="checkbox" id="wiz-confirm-steps">
+          Confirm between steps
+        </label>
+        <div class="wiz-p1-footer-right">
+          <button type="button" class="btn" onclick="closePipelineWizard()">Cancel</button>
+          <button type="button" class="btn btn-neon" onclick="pipeWizNext()">Configure Steps →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Phase 2: Configure each step (redesigned split-panel) ────────── -->
+    <div id="pipe-wiz-p2" class="hidden">
+      <div class="pipe-wiz-header">
+        <img src="/static/RB_LOGO.png" alt="" role="presentation" class="pipe-wiz-logo">
+        <div class="pipe-wiz-title-col">
+          <div class="pipe-wiz-title">Configure Steps</div>
+          <div class="pipe-wiz-sub">Select a step from the list to configure it. All required fields must be filled before running.</div>
+        </div>
+        <button type="button" class="welcome-close" onclick="closePipelineWizard()" title="Close">✕</button>
+      </div>
+
+      <!-- Split body: narrow sidebar + large config panel -->
+      <div class="pipe-wiz-p2-body">
+
+        <!-- LEFT: scrollable ordered step sidebar -->
+        <div id="pipe-wiz-stack">
+          <!-- populated by pipeWizBuildConfigs() -->
+        </div>
+
+        <!-- RIGHT: single active config panel -->
+        <div id="pipe-wiz-active-cfg">
+          <div class="pipe-wiz-cfg-hint">Select a step on the left to configure it.</div>
+        </div>
+
+      </div>
+
+      <!-- Completion progress strip -->
+      <div id="wiz-progress-strip">
+        <span id="wiz-progress-label">0 / 0 steps ready</span>
+        <div class="wiz-progress-track"><div id="wiz-progress-bar"></div></div>
+      </div>
+
+
+      <div class="pipe-wiz-footer pipe-wiz-footer-rel">
+        <button type="button" class="btn" onclick="pipeWizBack()">← Back</button>
+        <label class="wiz-label-lg">
+          <input type="checkbox" id="wiz-dry-run-2" checked>
+          Dry Run
+        </label>
+        <label class="wiz-label-sm">
+          <input type="checkbox" id="wiz-confirm-steps-2">
+          Confirm between steps
+        </label>
+        <div class="wiz-next-wrap">
+          <!-- "Please fill required fields" tooltip -->
+          <div id="wiz-next-tooltip">
+            Please make required selections
+          </div>
+          <button type="button" class="btn btn-neon" id="wiz-run-btn" onclick="pipeWizRun()"
+                 >
+            <img src="/static/icon-start-wizard.png" class="pipe-gate-icon-btn" alt="">
+            Run Pipeline
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
