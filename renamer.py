@@ -258,7 +258,7 @@ def _get_prioritized_artist(path: Path) -> str | None:
         
         return None
     except Exception as e:
-        log.debug(f"Could not read artist tags from {path}: {e}")
+        log.debug("Could not read artist tags from %s: %s", path, e)
         return None
 
 
@@ -801,7 +801,7 @@ def _walk_audio_files(root: Path) -> list[Path]:
                 if file_path.suffix.lower() in AUDIO_EXTENSIONS:
                     files.append(file_path)
     except OSError as e:
-        log.warning(f"Error walking {root}: {e}")
+        log.warning("Error walking %s: %s", root, e)
     return files
 
 
@@ -1060,7 +1060,8 @@ def rename_directory(
     )
     
     renamed = skipped = collisions = errors = quarantined = 0
-    
+    batch_count = 0
+
     def _emit() -> None:
         print(
             "FABLEGEAR_PROGRESS: " + json.dumps({
@@ -1075,7 +1076,7 @@ def rename_directory(
             }),
             flush=True,
         )
-    
+
     for i, file_path in enumerate(files):
         result = _rename_one(
             file_path,
@@ -1086,21 +1087,43 @@ def rename_directory(
             library_root=root,
         )
         results.append(result)
-        
+
         if result.action == "renamed":
             renamed += 1
+            batch_count += 1
         elif result.action == "no_change":
             skipped += 1
         elif result.action == "collision_numbered":
             collisions += 1
+            batch_count += 1
         elif result.action == "quarantined":
             quarantined += 1
+            batch_count += 1
         elif result.action == "error":
             errors += 1
-        
+
         if (i + 1) % max(1, total // 20) == 0 or i == total - 1:
             _emit()
-    
+
+        if not dry_run and db is not None and batch_count >= BATCH_SIZE:
+            try:
+                db.commit()
+                log.info("Committed batch of %d DB path updates", batch_count)
+                batch_count = 0
+            except Exception:
+                log.exception("Batch commit failed — rolling back")
+                db.rollback()
+                raise
+
+    if not dry_run and db is not None and batch_count > 0:
+        try:
+            db.commit()
+            log.info("Final commit: %d DB path updates", batch_count)
+        except Exception:
+            log.exception("Final commit failed — rolling back")
+            db.rollback()
+            raise
+
     log.info(
         "Rename complete: %d renamed, %d skipped, %d collisions handled, %d quarantined, %d errors",
         renamed,
@@ -1109,5 +1132,5 @@ def rename_directory(
         quarantined,
         errors,
     )
-    
+
     return results

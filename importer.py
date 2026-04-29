@@ -370,7 +370,6 @@ def import_directory(
     dry_run: bool = False,
     resume: bool = False,
 ) -> ImportReport:
-    clear_caches()  # reset per-session artist/album ID cache before each run
     """
     Import all audio files under root into the database.
 
@@ -393,6 +392,7 @@ def import_directory(
         Files that previously failed will always be retried — they are not
         recorded in the progress state.
     """
+    clear_caches()  # reset per-session artist/album ID cache before each run
     report = ImportReport()
     batch_count = 0
     batch_start_index = 0

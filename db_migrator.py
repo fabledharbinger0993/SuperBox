@@ -47,7 +47,7 @@ def _drive_root_from_path(target: str) -> Path:
 def _rb_is_running() -> bool:
     try:
         r = subprocess.run(
-            ["pgrep", "-f", "rekordbox"],
+            ["pgrep", "-x", "rekordbox"],
             capture_output=True, text=True, timeout=5,
         )
         return r.returncode == 0
