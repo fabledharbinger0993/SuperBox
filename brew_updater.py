@@ -59,6 +59,31 @@ _status: dict = {
 }
 
 
+# ── Homebrew path detection ───────────────────────────────────────────────────
+
+def _find_brew() -> str | None:
+    """Find brew executable in common macOS locations."""
+    import shutil
+    from pathlib import Path
+    
+    # Try shutil.which first (checks PATH)
+    brew_in_path = shutil.which("brew")
+    if brew_in_path:
+        return brew_in_path
+    
+    # Try common Homebrew install locations
+    common_paths = [
+        "/opt/homebrew/bin/brew",      # Apple Silicon (M1/M2/M3)
+        "/usr/local/bin/brew",          # Intel Macs
+    ]
+    
+    for path in common_paths:
+        if Path(path).exists():
+            return path
+    
+    return None
+
+
 # ── Core check ────────────────────────────────────────────────────────────────
 
 def check_now() -> dict:
@@ -67,9 +92,17 @@ def check_now() -> dict:
     Returns the new status dict.
     """
     log.info("brew_updater: checking for Homebrew updates …")
+    
+    brew_cmd = _find_brew()
+    if not brew_cmd:
+        msg = "brew not found — Homebrew may not be installed"
+        log.warning("brew_updater: %s", msg)
+        _update_cache(error=msg)
+        return get_status()
+    
     try:
         result = subprocess.run(
-            ["brew", "outdated", "--json=v2"],
+            [brew_cmd, "outdated", "--json=v2"],
             capture_output=True,
             text=True,
             timeout=60,
@@ -102,11 +135,6 @@ def check_now() -> dict:
             log.info("brew_updater: %d package(s) outdated — %s", len(outdated), names)
         else:
             log.info("brew_updater: all FableGear Homebrew packages are up to date")
-
-    except FileNotFoundError:
-        msg = "brew not found — Homebrew may not be installed"
-        log.warning("brew_updater: %s", msg)
-        _update_cache(error=msg)
 
     except Exception as exc:
         log.warning("brew_updater: check failed — %s", exc)

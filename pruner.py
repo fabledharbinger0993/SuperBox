@@ -340,13 +340,13 @@ def _rethread_playlists(remove_content, keeper_path: str, db, emit) -> int:
 
     Returns the number of playlist slots re-threaded (updated, not dropped).
     """
-    keeper_rows = db.get_content(FolderPath=keeper_path)
+    keeper_rows = db.get_content(FolderPath=keeper_path).all()
     if not keeper_rows:
         emit(f"      ⚠  Keeper not in DB ({Path(keeper_path).name}) — playlist entries left intact")
         return 0
 
     keeper_content = keeper_rows[0]
-    song_rows = db.get_playlist_songs(ContentID=remove_content.ID)
+    song_rows = db.get_playlist_songs(ContentID=remove_content.ID).all()
     if not song_rows:
         return 0
 
@@ -356,7 +356,7 @@ def _rethread_playlists(remove_content, keeper_path: str, db, emit) -> int:
         # Check whether keeper is already in this playlist
         already_there = db.get_playlist_songs(
             ContentID=keeper_content.ID, PlaylistID=playlist_id
-        )
+        ).all()
         if already_there:
             # Keeper already present — just drop the duplicate's slot
             db.session.delete(song_row)
@@ -444,7 +444,7 @@ def prune_files(
                 "cancelled":            True,
             }
         try:
-            rows = db.get_content(FolderPath=path)
+            rows = db.get_content(FolderPath=path).all()
             if rows:
                 for row in rows:
                     # Re-thread playlist slots before deleting the content row

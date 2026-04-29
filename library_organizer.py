@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / library_organizer.py
+fablegear / library_organizer.py
 
 Consolidates a music library into a canonical folder structure:
 
@@ -284,7 +284,7 @@ def organize_library(
 
     def _emit() -> None:
         print(
-            "REKITBOX_PROGRESS: " + json.dumps({
+            "FABLEGEAR_PROGRESS: " + json.dumps({
                 "done":      done,
                 "total":     total,
                 "remaining": total - done,

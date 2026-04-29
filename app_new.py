@@ -518,15 +518,15 @@ def api_fs_list():
 
 # ── Setup / state persistence ─────────────────────────────────────────────────
 
-_REKITBOX_STATE = Path.home() / ".rekordbox-toolkit" / "fablegear-state.json"
+_FABLEGEAR_STATE = Path.home() / ".fablegear" / "fablegear-state.json"
 
 
 @app.route("/api/setup-status")
 def api_setup_status():
     """Return whether the welcome wizard has been completed."""
     try:
-        if _REKITBOX_STATE.exists():
-            state = json.loads(_REKITBOX_STATE.read_text())
+        if _FABLEGEAR_STATE.exists():
+            state = json.loads(_FABLEGEAR_STATE.read_text())
             return jsonify({
                 "setup_complete": bool(state.get("setup_complete")),
                 "db_read":        state.get("db_read"),
@@ -547,8 +547,8 @@ def api_setup_complete():
             "db_read":  data.get("db_read"),
             "db_write": data.get("db_write"),
         }
-        _REKITBOX_STATE.parent.mkdir(parents=True, exist_ok=True)
-        _REKITBOX_STATE.write_text(json.dumps(state, indent=2) + "\n")
+        _FABLEGEAR_STATE.parent.mkdir(parents=True, exist_ok=True)
+        _FABLEGEAR_STATE.write_text(json.dumps(state, indent=2) + "\n")
         return jsonify({"ok": True})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
@@ -556,7 +556,7 @@ def api_setup_complete():
 
 @app.route("/api/config/set-music-root", methods=["POST"])
 def api_set_music_root():
-    """Update music_root in ~/.rekordbox-toolkit/config.json."""
+    """Update music_root in ~/.fablegear/config.json."""
     try:
         from user_config import load_user_config, save_user_config  # noqa: PLC0415
         data = request.get_json(silent=True) or {}

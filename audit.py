@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / audit.py
+fablegear / audit.py
 
 Read-only database snapshot and filesystem validation.
 No writes of any kind. Safe to run at any time, even with Rekordbox open.

@@ -1,12 +1,12 @@
-# RekitBox Mac .app Launcher
+# FABLEGEAR Mac .app Launcher
 
-This folder contains scripts to build a native Mac .app wrapper for RekitBox with a custom dock icon.
+This folder contains scripts to build a native Mac .app wrapper for FABLEGEAR with a custom dock icon.
 
 ## Files
 
-- `RekitBoxLauncher.applescript`: AppleScript source for the launcher.
+- `FABLEGEARLauncher.applescript`: AppleScript source for the launcher.
 - `build_applescript_app.sh`: Script to compile the .app and set the icon.
-- `rekitbox-app-icon.png`: Custom dock icon (must be present).
+- `FABLEGEAR-app-icon.png`: Custom dock icon (must be present).
 
 ## Build Instructions
 
@@ -18,12 +18,12 @@ This folder contains scripts to build a native Mac .app wrapper for RekitBox wit
     bash build_applescript_app.sh
     ```
 
-3. The resulting `RekitBox.app` can be moved to `/Applications` or the Dock.
+3. The resulting `FABLEGEAR.app` can be moved to `/Applications` or the Dock.
 
 ## Behavior
 
 - On launch, the app runs `launch.sh` from the repo root.
-- Homebrew and RekitBox update checks run silently; if offline, the current version opens.
+- Homebrew and FABLEGEAR update checks run silently; if offline, the current version opens.
 - Closing the window quits the app and venv.
 
 ---

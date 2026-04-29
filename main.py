@@ -28,7 +28,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 # Tell app.py where to find templates and static when bundled
-os.environ.setdefault('REKITBOX_ROOT', str(_ROOT))
+os.environ.setdefault('FABLEGEAR_ROOT', str(_ROOT))
 
 # ── Server config ─────────────────────────────────────────────────────────────
 # Bind to all interfaces so Tailscale (and LAN) can reach the mobile API.
@@ -74,7 +74,7 @@ class _Api:
     def pick_folder(self):
         if not self._window:
             return None
-        result = self._window.create_file_dialog(webview.FOLDER_DIALOG)
+        result = self._window.create_file_dialog(webview.FileDialog.FOLDER)
         if result:
             import os
             return os.path.normpath(result[0])

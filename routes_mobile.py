@@ -28,6 +28,23 @@ from helpers import (
 bp = Blueprint("mobile", __name__)
 
 
+def _norm_text(value):
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def _track_identity_signature(track):
+    title = _norm_text(getattr(track, "Title", ""))
+    artist_name = ""
+    try:
+        artist_name = _norm_text(track.Artist.Name if track.Artist else "")
+    except Exception:
+        artist_name = ""
+
+    duration = int(getattr(track, "Length", 0) or 0)
+    file_name = _norm_text(Path(str(getattr(track, "FolderPath", "") or "")).name)
+    return (artist_name, title, duration, file_name)
+
+
 # ── Analysis job state (mobile-only) ─────────────────────────────────────────
 
 _ANALYSIS_JOBS: dict[str, dict] = {}
@@ -40,7 +57,7 @@ def _get_mobile_token() -> str:
     """
     Return the FableGo Bearer token, generating it if absent.
 
-    Token is persisted in ~/.rekordbox-toolkit/config.json under "mobile_token".
+    Token is persisted in ~/.fablegear/config.json under "mobile_token".
     Printed to console once on first generation so the user can copy it.
     Returns empty string if FableGear hasn't been configured yet.
     """
@@ -168,7 +185,7 @@ def api_connectivity():
     try:
         import json as _json
         import pathlib as _pl
-        cfg_path = _pl.Path.home() / ".rekordbox-toolkit" / "config.json"
+        cfg_path = _pl.Path.home() / ".fablegear" / "config.json"
         if cfg_path.exists():
             token = _json.loads(cfg_path.read_text()).get("mobile_token")
     except Exception:
@@ -801,9 +818,25 @@ def mobile_rekordbox_add_to_playlist(playlist_id: str):
             pl = db.get_playlist(ID=playlist_id).one_or_none()
             if pl is None:
                 return jsonify({"error": "Playlist not found"}), 404
+            if int(getattr(pl, "Attribute", 0) or 0) == 1:
+                return jsonify({"error": "Cannot add tracks to a folder"}), 400
+
+            existing_ids = set()
+            existing_signatures = set()
+            for song in db.get_playlist_songs(PlaylistID=pl.ID).all():
+                existing_ids.add(str(getattr(song, "ContentID", "")))
+                song_track = getattr(song, "Content", None)
+                if song_track is not None:
+                    existing_signatures.add(_track_identity_signature(song_track))
+
             track = db.get_content(ID=track_id).one_or_none()
             if track is None:
                 return jsonify({"error": "Track not found"}), 404
+
+            signature = _track_identity_signature(track)
+            if str(track.ID) in existing_ids or signature in existing_signatures:
+                return jsonify({"status": "skipped", "reason": "already present"}), 200
+
             db.add_to_playlist(pl, track, track_no=None)
             db.commit()
             return jsonify({"status": "added"}), 201
@@ -824,14 +857,18 @@ def mobile_rekordbox_remove_from_playlist(playlist_id: str, track_id: str):
 
     try:
         with write_db(_DB) as db:
-            song = db.get_playlist_songs(
+            songs = db.get_playlist_songs(
                 PlaylistID=playlist_id, ContentID=track_id
-            ).one_or_none()
-            if song is None:
+            ).all()
+            if not songs:
                 return jsonify({"error": "Track not in playlist"}), 404
-            db.remove_from_playlist(playlist_id, song.ID)
+
+            removed = 0
+            for song in songs:
+                db.remove_from_playlist(playlist_id, song.ID)
+                removed += 1
             db.commit()
-            return jsonify({"status": "removed"})
+            return jsonify({"status": "removed", "removed": removed})
     except RuntimeError as exc:
         return jsonify({"error": str(exc)}), 503
     except Exception as exc:

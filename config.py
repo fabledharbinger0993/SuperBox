@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / config.py
+fablegear / config.py
 Central configuration: paths, constants, key mappings.
 All path references in the toolkit flow from here.
 """
@@ -10,7 +10,7 @@ from pathlib import Path
 # Require Python 3.12+ — Path.walk() was added in 3.12
 if sys.version_info < (3, 12):
     raise RuntimeError(
-        f"rekordbox-toolkit requires Python 3.12 or later "
+        f"FableGear requires Python 3.12 or later "
         f"(found {sys.version_info.major}.{sys.version_info.minor}). "
         "Path.walk() is used throughout — upgrade Python or replace with os.walk()."
     )
@@ -18,7 +18,7 @@ if sys.version_info < (3, 12):
 # ─── User configuration ───────────────────────────────────────────────────────
 #
 # All paths and user-adjustable constants are stored in the user's config file
-# at ~/.rekordbox-toolkit/config.json and written there by `python3 cli.py setup`.
+# at ~/.fablegear/config.json and written there by `python3 cli.py setup`.
 #
 # These module-level names preserve the existing import interface throughout
 # the codebase — callers use LOCAL_DB, DJMT_DB, MUSIC_ROOT, BACKUP_DIR,
@@ -32,7 +32,7 @@ except NotConfiguredError as _exc:
     raise RuntimeError(str(_exc)) from _exc
 
 # FableGear mode: 'rural' (no AI) or 'suburban' (AI enabled)
-REKITBOX_MODE = _cfg.get("mode", "suburban")
+FABLEGEAR_MODE = _cfg.get("mode", "suburban")
 
 # ─── Database and filesystem paths ───────────────────────────────────────────
 

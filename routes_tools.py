@@ -63,7 +63,7 @@ _FFPROBE = _find_tool("ffprobe")
 
 # ── Normalize preview state ───────────────────────────────────────────────────
 
-_PREVIEW_TMP: Path = Path.home() / ".rekordbox-toolkit" / "previews"
+_PREVIEW_TMP: Path = Path.home() / ".fablegear" / "previews"
 _PREVIEW_TMP.mkdir(parents=True, exist_ok=True)
 
 _PREVIEW_JOBS: dict[str, dict] = {}
@@ -608,9 +608,15 @@ def api_rename():
     if not path:
         return jsonify({"error": "path is required"}), 400
 
+    live_run = request.args.get("no_dry_run") == "1"
+    if live_run:
+        err = _require_rb_closed()
+        if err:
+            return err
+
     cmd = [sys.executable, str(CLI_PATH), "rename", path]
 
-    if request.args.get("no_dry_run") == "1":
+    if live_run:
         cmd.append("--no-dry-run")
 
     workers = request.args.get("workers", "1").strip()

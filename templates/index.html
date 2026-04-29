@@ -99,10 +99,10 @@
       Library & Playlist Workspace
     </h2>
     <p>
-      Full library browser and playlist editor coming soon. For now, access all tools through the <strong>Toolkit</strong> button in the left sidebar.
+      Open the live library editor to browse playlists, manage folders, edit track titles, and prepare exports without leaving the main workspace.
     </p>
-    <button type="button" class="btn btn-neon" onclick="openToolkitModal()">
-      Open Toolkit →
+    <button type="button" class="btn btn-neon" onclick="openLibraryEditor()">
+      Open Library Editor →
     </button>
   </div>
 
@@ -664,8 +664,8 @@
       <div class="le-header-right">
         <button type="button" class="le-header-btn" onclick="leStartCreate('playlist')" title="New Playlist">＋ Playlist</button>
         <button type="button" class="le-header-btn" onclick="leStartCreate('folder')" title="New Folder">＋ Folder</button>
-        <button type="button" class="le-header-btn" id="le-rename-btn" onclick="leRenameActivePlaylist()" title="Rename selected playlist" disabled>Rename</button>
-        <button type="button" class="le-header-btn" id="le-delete-btn" onclick="leDeleteActivePlaylist()" title="Delete selected playlist" disabled>Delete</button>
+        <button type="button" class="le-header-btn" id="le-rename-btn" onclick="leRenameActivePlaylist()" title="Rename selected playlist or folder" disabled>Rename</button>
+        <button type="button" class="le-header-btn" id="le-delete-btn" onclick="leDeleteActivePlaylist()" title="Delete selected playlist or folder" disabled>Delete</button>
         <button type="button" class="le-header-btn le-export-btn" onclick="leOpenExportModal()" title="Export playlists to Pioneer USB drive">⬆ Export to USB</button>
       </div>
     </div>
@@ -743,7 +743,7 @@
       <!-- Left: Playlist tree -->
       <div class="le-sidebar" id="le-sidebar">
         <div class="le-sidebar-section">All Tracks</div>
-        <button type="button" class="le-tree-item le-tree-all active" onclick="leSelectAll()">
+        <button type="button" class="le-tree-item le-tree-all" onclick="leSelectAll()">
           <span class="le-tree-icon">♫</span>
           <span class="le-tree-label">All Tracks</span>
           <span class="le-tree-count" id="le-all-count">—</span>
@@ -751,7 +751,7 @@
         <div class="le-sidebar-section">Playlists</div>
         <div id="le-playlist-tree"></div>
         <div class="le-sidebar-section le-sidebar-bottom">History</div>
-        <button type="button" class="le-tree-item" onclick="leSelectHistory(this)">
+        <button type="button" class="le-tree-item" id="le-history-btn" onclick="leSelectHistory(this)">
           <span class="le-tree-icon">⏱</span>
           <span class="le-tree-label">Recently Added</span>
         </button>
@@ -768,7 +768,7 @@
           <div class="le-col le-col-bpm" onclick="leSortBy('bpm')">BPM <span class="le-sort-arrow" data-col="bpm"></span></div>
           <div class="le-col le-col-key" onclick="leSortBy('key')">Key <span class="le-sort-arrow" data-col="key"></span></div>
           <div class="le-col le-col-dur" onclick="leSortBy('duration')">Time <span class="le-sort-arrow" data-col="duration"></span></div>
-          <div class="le-col le-col-date" onclick="leSortBy('date')">Added <span class="le-sort-arrow" data-col="date"></span></div>
+          <div class="le-col le-col-date" onclick="leSortBy('date_added')">Added <span class="le-sort-arrow" data-col="date_added"></span></div>
         </div>
         <div class="le-track-list" id="le-track-list">
           <div class="le-empty-state" id="le-empty-state">

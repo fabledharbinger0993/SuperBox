@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / renamer.py
+fablegear / renamer.py
 
 Batch-renames audio files in a directory based on their ID3/Vorbis tags,
 generating clean filenames with smart artist prioritization.
@@ -753,7 +753,16 @@ def _append_quarantine_manifest(manifest_path: Path, entry: dict) -> None:
     manifest_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False))
 
 
-def quarantine_track(source_path: Path, library_root: Path) -> dict:
+def _record_quarantine_manifest(source_path: Path, dest_path: Path, library_root: Path, manifest_path: Path) -> None:
+    _append_quarantine_manifest(manifest_path, {
+        "ts": datetime.now().isoformat(timespec="seconds"),
+        "original_path": str(source_path),
+        "quarantined_path": str(dest_path),
+        "library_root": str(library_root),
+    })
+
+
+def quarantine_track(source_path: Path, library_root: Path, *, record_manifest: bool = True) -> dict:
     if not source_path.exists():
         raise FileNotFoundError(f"Source file not found: {source_path}")
 
@@ -765,12 +774,8 @@ def quarantine_track(source_path: Path, library_root: Path) -> dict:
 
     source_path.rename(dest_path)
     manifest_path = quarantine_dir / _NO_NAME_MANIFEST
-    _append_quarantine_manifest(manifest_path, {
-        "ts": datetime.now().isoformat(timespec="seconds"),
-        "original_path": str(source_path),
-        "quarantined_path": str(dest_path),
-        "library_root": str(library_root),
-    })
+    if record_manifest:
+        _record_quarantine_manifest(source_path, dest_path, library_root, manifest_path)
 
     return {
         "quarantine_dir": str(quarantine_dir),
@@ -852,12 +857,23 @@ def _rename_one(
                     action="quarantined",
                     reason="Would move unresolved file to No-Name tracks for Tagging",
                 )
-            moved = quarantine_track(path, target_root)
+            moved = quarantine_track(path, target_root, record_manifest=False)
             if db is not None:
                 try:
-                    _update_db_path(path, Path(moved["dest_path"]), db)
+                    _sync_db_path_or_revert(path, Path(moved["dest_path"]), db)
                 except Exception as exc:
-                    log.warning("Database update failed for quarantined file %s: %s", path, exc)
+                    return RenameResult(
+                        original_path=path,
+                        new_path=None,
+                        action="error",
+                        reason=str(exc),
+                    )
+            _record_quarantine_manifest(
+                path,
+                Path(moved["dest_path"]),
+                target_root,
+                Path(moved["manifest_path"]),
+            )
             return RenameResult(
                 original_path=path,
                 new_path=Path(moved["dest_path"]),
@@ -894,20 +910,23 @@ def _rename_one(
     if not dry_run:
         try:
             path.rename(new_path)
-            log.info(f"Renamed: {path.name} → {new_path.name}")
-            
-            # Update rekordbox if db is provided
-            if db is not None:
-                try:
-                    _update_db_path(path, new_path, db)
-                except Exception as e:
-                    log.warning(f"Database update failed for {new_path}: {e}")
+            log.info("Renamed: %s -> %s", path.name, new_path.name)
         except OSError as e:
             return RenameResult(
                 original_path=path,
                 new_path=None,
                 action="error",
                 reason=f"Rename failed: {e}",
+            )
+
+        try:
+            _sync_db_path_or_revert(path, new_path, db)
+        except Exception as e:
+            return RenameResult(
+                original_path=path,
+                new_path=None,
+                action="error",
+                reason=str(e),
             )
     
     return RenameResult(
@@ -920,20 +939,74 @@ def _rename_one(
 def _update_db_path(old_path: Path, new_path: Path, db) -> None:
     """
     Update rekordbox DjmdContent.FolderPath for the given file.
-    Matches by file hash (same strategy as relocator.py).
+
+    Rename operations happen in place, so the safest lookup is an exact
+    FolderPath match against the previous on-disk path.
     """
     if not hasattr(db, 'update_content_path'):
         log.debug("Database does not support update_content_path — skipping DB update")
         return
-    
-    # Search for content row with matching file
+
     try:
-        content_row = db.search_by_path(str(old_path))
-        if content_row:
-            db.update_content_path(content_row, new_path, check_path=True)
-            log.debug(f"Updated DB: {old_path.name} → {new_path.name}")
+        rows = db.get_content(FolderPath=str(old_path)).all()
+        if not rows:
+            log.debug("No DB row matched renamed file: %s", old_path)
+            return
+
+        for row in rows:
+            db.update_content_path(row, new_path, check_path=True)
+        log.debug("Updated DB: %s -> %s (%d row(s))", old_path.name, new_path.name, len(rows))
     except Exception as e:
-        log.warning(f"Database lookup/update failed: {e}")
+        log.warning("Database lookup/update failed for %s: %s", old_path, e)
+        raise
+
+
+def _content_ids_for_path(path: Path, db) -> list[str]:
+    rows = db.get_content(FolderPath=str(path)).all()
+    return [str(row.ID) for row in rows]
+
+
+def _sync_db_path_or_revert(old_path: Path, new_path: Path, db) -> None:
+    """Update Rekordbox for a moved file or revert the filesystem change on failure."""
+    if db is None:
+        return
+
+    content_ids: list[str] = []
+
+    try:
+        content_ids = _content_ids_for_path(old_path, db)
+        _update_db_path(old_path, new_path, db)
+    except Exception as exc:
+        try:
+            db.rollback()
+        except Exception:
+            log.exception("Database rollback failed after rename sync error")
+
+        try:
+            if new_path.exists() and not old_path.exists():
+                new_path.rename(old_path)
+        except OSError as revert_error:
+            raise RuntimeError(
+                f"Database update failed after rename and filesystem revert also failed: {revert_error}"
+            ) from exc
+
+        restore_errors: list[str] = []
+        for content_id in content_ids:
+            try:
+                row = db.get_content(ID=content_id)
+                if row is None:
+                    continue
+                db.update_content_path(row, old_path, check_path=True)
+            except Exception as restore_error:
+                restore_errors.append(f"{content_id}: {restore_error}")
+
+        if restore_errors:
+            raise RuntimeError(
+                "Database update failed after rename; filesystem change was reverted, "
+                f"but DB/ANLZ restoration failed for {', '.join(restore_errors)}"
+            ) from exc
+
+        raise RuntimeError("Database update failed after rename; filesystem change was reverted") from exc
 
 
 # ─── Public interface ────────────────────────────────────────────────────────
@@ -975,18 +1048,22 @@ def rename_directory(
     label_artist_hints = _infer_artists_by_label(files)
     
     if total == 0:
-        log.info(f"No audio files found in {root}")
+        log.info("No audio files found in %s", root)
         return results
-    
+
     log.info(
-        f"Renaming {total} files in {root}  dry_run={dry_run}  workers={max_workers}"
+        "Renaming %d files in %s  dry_run=%s  workers=%d",
+        total,
+        root,
+        dry_run,
+        max_workers,
     )
     
     renamed = skipped = collisions = errors = quarantined = 0
     
     def _emit() -> None:
         print(
-            "REKITBOX_PROGRESS: " + json.dumps({
+            "FABLEGEAR_PROGRESS: " + json.dumps({
                 "done":      len(results),
                 "total":     total,
                 "remaining": total - len(results),
@@ -1025,8 +1102,12 @@ def rename_directory(
             _emit()
     
     log.info(
-        f"Rename complete: {renamed} renamed, {skipped} skipped, "
-        f"{collisions} collisions handled, {quarantined} quarantined, {errors} errors"
+        "Rename complete: %d renamed, %d skipped, %d collisions handled, %d quarantined, %d errors",
+        renamed,
+        skipped,
+        collisions,
+        quarantined,
+        errors,
     )
     
     return results

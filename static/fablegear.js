@@ -1273,10 +1273,10 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
   appendLog(`▸ ${logTitle}`, 'dim');
   appendLog('', 'dim');
 
-  // Report block capture — delimited by REKITBOX_REPORT_BEGIN / REKITBOX_REPORT_END
+  // Report block capture — delimited by FABLEGEAR_REPORT_BEGIN / FABLEGEAR_REPORT_END
   let reportBuffer = [];
   let inReport = false;
-  let capturedReportPath = null;   // set by REKITBOX_REPORT_PATH: line
+  let capturedReportPath = null;   // set by FABLEGEAR_REPORT_PATH: line
   let capturedDuplicateCsv = null; // explicit CSV path for duplicate scans
 
   activeSource = new EventSource(url);
@@ -1287,8 +1287,8 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
       const line = data.line;
 
       // Detect report block boundaries
-      if (line === 'REKITBOX_REPORT_BEGIN') { inReport = true; reportBuffer = []; return; }
-      if (line === 'REKITBOX_REPORT_END')   { inReport = false; return; }
+      if (line === 'FABLEGEAR_REPORT_BEGIN') { inReport = true; reportBuffer = []; return; }
+      if (line === 'FABLEGEAR_REPORT_END')   { inReport = false; return; }
       if (inReport) {
         reportBuffer.push(line);
         if (logTitle === 'Find Duplicates — Acoustic Fingerprinting') {
@@ -1298,30 +1298,30 @@ function runCommand(url, logTitle, onDone, useBar = true, showPrefilter = false)
       }
 
       // Machine-readable report path — capture silently, don't echo to log
-      if (line.startsWith('REKITBOX_REPORT_PATH: ')) {
+      if (line.startsWith('FABLEGEAR_REPORT_PATH: ')) {
         capturedReportPath = line.slice(22).trim();
         return;
       }
       // Physical scan JSON path — show subtle note in log
-      if (line.startsWith('REKITBOX_PHYSICAL_SCAN: ')) {
+      if (line.startsWith('FABLEGEAR_PHYSICAL_SCAN: ')) {
         const physPath = line.slice(24).trim();
         appendLog(`  📁 Physical scan saved → ${physPath}`);
         return;
       }
       // Structured progress — update scan bar, don't echo to log
-      if (line.startsWith('REKITBOX_PROGRESS: ')) {
+      if (line.startsWith('FABLEGEAR_PROGRESS: ')) {
         if (useBar) {
           try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
         }
         return;
       }
       // Error summary — stash for report modal actions + retry option on card
-      if (line.startsWith('REKITBOX_ERROR_SUMMARY: ')) {
+      if (line.startsWith('FABLEGEAR_ERROR_SUMMARY: ')) {
         try { _lastErrorSummary = JSON.parse(line.slice(24)); _showRetryOption(); } catch(_) {}
         return;
       }
       // Pre-filter summary — show in log as info line
-      if (line.startsWith('REKITBOX_PREFILTER: ')) {
+      if (line.startsWith('FABLEGEAR_PREFILTER: ')) {
         if (showPrefilter) {
           try {
             const pf = JSON.parse(line.slice(20));
@@ -1409,7 +1409,7 @@ function setAllButtons(disabled) {
 }
 
 // ── Error summary from last Tag Tracks / Normalize run ──────────────────────
-let _lastErrorSummary = null;   // populated by REKITBOX_ERROR_SUMMARY line
+let _lastErrorSummary = null;   // populated by FABLEGEAR_ERROR_SUMMARY line
 
 function _retryErroredCount() {
   if (!_lastErrorSummary) return 0;
@@ -1532,12 +1532,12 @@ function _runProcessRetry(body) {
           try { data = JSON.parse(dataLine.slice(6)); } catch(_) { continue; }
           if (data.line !== undefined) {
             const line = data.line;
-            if (line === 'REKITBOX_REPORT_BEGIN') { inReport = true; reportBuffer = []; continue; }
-            if (line === 'REKITBOX_REPORT_END')   { inReport = false; continue; }
+            if (line === 'FABLEGEAR_REPORT_BEGIN') { inReport = true; reportBuffer = []; continue; }
+            if (line === 'FABLEGEAR_REPORT_END')   { inReport = false; continue; }
             if (inReport) { reportBuffer.push(line); continue; }
-            if (line.startsWith('REKITBOX_REPORT_PATH: '))  { capturedReportPath = line.slice(22).trim(); continue; }
-            if (line.startsWith('REKITBOX_PROGRESS: '))     { try { updateScanBar(JSON.parse(line.slice(19))); } catch(_){} continue; }
-            if (line.startsWith('REKITBOX_ERROR_SUMMARY: ')) { try { _lastErrorSummary = JSON.parse(line.slice(24)); _showRetryOption(); } catch(_){} continue; }
+            if (line.startsWith('FABLEGEAR_REPORT_PATH: '))  { capturedReportPath = line.slice(22).trim(); continue; }
+            if (line.startsWith('FABLEGEAR_PROGRESS: '))     { try { updateScanBar(JSON.parse(line.slice(19))); } catch(_){} continue; }
+            if (line.startsWith('FABLEGEAR_ERROR_SUMMARY: ')) { try { _lastErrorSummary = JSON.parse(line.slice(24)); _showRetryOption(); } catch(_){} continue; }
             appendLog(line, classifyLine(line));
           }
           if (data.done) {
@@ -2548,13 +2548,13 @@ async function _runOnePipelineStep(step, dryRun, capturedCsv) {
           exitCode = ev.exit_code;
         } else if (ev.line !== undefined) {
           const line = ev.line;
-          if (line === 'REKITBOX_REPORT_BEGIN')       { inReport = true; }
-          else if (line === 'REKITBOX_REPORT_END')    { inReport = false; }
-          else if (line.startsWith('REKITBOX_PROGRESS: ')) {
+          if (line === 'FABLEGEAR_REPORT_BEGIN')       { inReport = true; }
+          else if (line === 'FABLEGEAR_REPORT_END')    { inReport = false; }
+          else if (line.startsWith('FABLEGEAR_PROGRESS: ')) {
             try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
-          } else if (line.startsWith('REKITBOX_REPORT_PATH: ')) {
+          } else if (line.startsWith('FABLEGEAR_REPORT_PATH: ')) {
             reportPath = line.slice(22).trim();
-          } else if (line.startsWith('REKITBOX_PHYSICAL_SCAN: ')) {
+          } else if (line.startsWith('FABLEGEAR_PHYSICAL_SCAN: ')) {
             appendLog(`  📁 Physical scan → ${line.slice(24).trim()}`, 'dim');
           } else {
             outputLines.push(line);
@@ -2596,7 +2596,7 @@ async function runPipeline(dryRun = true, confirmMode = false) {
   appendLog('', 'dim');
 
   let reportBuffer = [];
-  let capturedCsv  = null;   // last REKITBOX_REPORT_PATH from a duplicates step
+  let capturedCsv  = null;   // last FABLEGEAR_REPORT_PATH from a duplicates step
 
   const finish = (exitCode, failedStep, stopped) => {
     isRunning = false;
@@ -2733,13 +2733,13 @@ async function runPipeline(dryRun = true, confirmMode = false) {
             if (el) el.className = ev.exit_code === 0 ? 'pipe-step done' : 'pipe-step failed';
           } else if (ev.line !== undefined) {
             const line = ev.line;
-            if (line === 'REKITBOX_REPORT_BEGIN')       { inReport = true; reportBuffer = []; }
-            else if (line === 'REKITBOX_REPORT_END')    { inReport = false; }
-            else if (line.startsWith('REKITBOX_PROGRESS: ')) {
+            if (line === 'FABLEGEAR_REPORT_BEGIN')       { inReport = true; reportBuffer = []; }
+            else if (line === 'FABLEGEAR_REPORT_END')    { inReport = false; }
+            else if (line.startsWith('FABLEGEAR_PROGRESS: ')) {
               try { updateScanBar(JSON.parse(line.slice(19))); } catch(_) {}
-            } else if (line.startsWith('REKITBOX_REPORT_PATH: ')) {
+            } else if (line.startsWith('FABLEGEAR_REPORT_PATH: ')) {
               /* silently capture */
-            } else if (line.startsWith('REKITBOX_PHYSICAL_SCAN: ')) {
+            } else if (line.startsWith('FABLEGEAR_PHYSICAL_SCAN: ')) {
               /* silently capture */
             } else {
               if (inReport) reportBuffer.push(line);
@@ -4476,16 +4476,20 @@ let _leSortCol = 'title';
 let _leSortAsc = true;
 let _leActivePlaylistId = null;
 let _leActivePlaylistName = '';
+let _leActiveNodeId = null;
+let _leActiveNodeName = '';
+let _leActiveNodeType = 'all';
 let _leCreateType = 'playlist';
 let _leStatusLabel = 'Loading…';
 let _leSelectedTrackIds = new Set();
 let _lePlayer = null;
 let _lePlayingTrackId = null;
+let _leTracksLoaded = false;
 
 /* Library editor is always the primary view — openLibraryEditor just reloads if needed */
 function openLibraryEditor() {
   _leOpen = true;
-  if (!_leAllTracks.length) leLoadLibrary();
+  if (!document.getElementById('le-playlist-tree')?.children.length) leLoadPlaylistsOnly();
 }
 
 function closeLibraryEditor() { /* no-op — editor is always visible */ }
@@ -4498,7 +4502,6 @@ function leScrollTop() {
 const _leFilters = { rating: 0, color: -1 };
 
 function leApplyFilters() {
-  if (!_leBaseTracks.length) return;
   const q = _leSearchQuery;
   const bMin = parseFloat(document.getElementById('lf-bpm-min')?.value) || null;
   const bMax = parseFloat(document.getElementById('lf-bpm-max')?.value) || null;
@@ -4781,6 +4784,112 @@ function leRefreshTrackView() {
   leApplyFilters();
 }
 
+function leSetActiveTreeItem(buttonEl) {
+  document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
+  buttonEl?.classList.add('active');
+}
+
+function leActivateAllTracksSelection() {
+  _leActivePlaylistId = null;
+  _leActivePlaylistName = '';
+  _leActiveNodeId = null;
+  _leActiveNodeName = '';
+  _leActiveNodeType = 'all';
+  leSetActiveTreeItem(document.querySelector('.le-tree-all'));
+  leSetTrackView(_leAllTracks, 'All Tracks');
+  leUpdateActionState();
+}
+
+async function leEnsureAllTracksLoaded() {
+  if (_leTracksLoaded) return true;
+
+  leSetStatus('Loading all tracks…');
+  const empty = document.getElementById('le-empty-state');
+  if (empty) {
+    empty.style.display = 'flex';
+    empty.innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">⏳</div><div>Loading all tracks…</div>';
+  }
+
+  try {
+    const tracksRes = await fetch('/api/library/tracks');
+    if (!tracksRes.ok) throw new Error('tracks load failed');
+    _leAllTracks = await tracksRes.json();
+    _leTracksLoaded = true;
+    document.getElementById('le-all-count').textContent = _leAllTracks.length;
+    libBuildGenreSelect();
+    return true;
+  } catch (_) {
+    leSetStatus('Could not load tracks — is the database connected?');
+    if (empty) {
+      empty.style.display = 'flex';
+      empty.innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">⚠</div><div>Failed to load tracks.</div>';
+    }
+    return false;
+  }
+}
+
+async function leLoadPlaylistsOnly() {
+  leSetStatus('Loading playlists…');
+  const empty = document.getElementById('le-empty-state');
+  if (empty) {
+    empty.style.display = 'flex';
+    empty.innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">⏳</div><div>Loading playlists…</div>';
+  }
+
+  try {
+    const playlistsRes = await fetch('/api/library/playlists');
+    if (!playlistsRes.ok) throw new Error('playlist load failed');
+    const playlists = await playlistsRes.json();
+    leRenderPlaylistTree(playlists);
+    leSetStatus('Playlists loaded — select a playlist or load all tracks.');
+    if (empty) {
+      empty.style.display = 'flex';
+      empty.innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">♫</div><div>Select All Tracks or a playlist to load music.</div>';
+    }
+    leUpdateActionState();
+  } catch (_) {
+    leSetStatus('Could not load playlists — is the database connected?');
+    if (empty) {
+      empty.style.display = 'flex';
+      empty.innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">⚠</div><div>Failed to load playlists.</div>';
+    }
+  }
+}
+
+async function leRestoreSelection(savedNode = null) {
+  const node = savedNode || {
+    id: _leActiveNodeId,
+    name: _leActiveNodeName,
+    type: _leActiveNodeType,
+  };
+
+  if (node?.type === 'playlist' && node.id) {
+    const button = document.querySelector(`.le-tree-item[data-id="${node.id}"]`);
+    if (button) {
+      await leSelectPlaylist({ id: node.id, type: 'playlist', name: node.name || 'Playlist' }, button);
+      return;
+    }
+  }
+
+  if (node?.type === 'folder' && node.id) {
+    const button = document.querySelector(`.le-tree-item[data-id="${node.id}"]`);
+    if (button) {
+      leSelectFolder({ id: node.id, type: 'folder', name: node.name || 'Folder' }, button);
+      return;
+    }
+  }
+
+  if (node?.type === 'history') {
+    const button = document.getElementById('le-history-btn');
+    if (button) {
+      await leSelectHistory(button);
+      return;
+    }
+  }
+
+  await leSelectAll();
+}
+
 function leUpdateActionState() {
   const addBtn = document.getElementById('le-add-btn');
   const removeBtn = document.getElementById('le-remove-btn');
@@ -4801,8 +4910,8 @@ function leUpdateActionState() {
       removeBtn.textContent = `Remove ${_leSelectedTrackIds.size} Tracks`;
     }
   }
-  if (renameBtn) renameBtn.disabled = !_leActivePlaylistId;
-  if (deleteBtn) deleteBtn.disabled = !_leActivePlaylistId;
+  if (renameBtn) renameBtn.disabled = !_leActiveNodeId;
+  if (deleteBtn) deleteBtn.disabled = !_leActiveNodeId;
   if (!_leActivePlaylistId) {
     addBtn.textContent = 'Select Playlist';
   } else if (_leSelectedTrackIds.size === 0) {
@@ -4888,6 +4997,7 @@ async function leLoadLibrary() {
     }
     if (tracksRes.ok) {
       _leAllTracks = await tracksRes.json();
+      _leTracksLoaded = true;
       document.getElementById('le-all-count').textContent = _leAllTracks.length;
       libBuildGenreSelect();
     }
@@ -4895,8 +5005,9 @@ async function leLoadLibrary() {
       const playlists = await playlistsRes.json();
       leRenderPlaylistTree(playlists);
     }
-    leSelectAll();
+    leActivateAllTracksSelection();
   } catch (err) {
+    _leTracksLoaded = false;
     leSetStatus('Could not load library — is the database connected?');
     document.getElementById('le-empty-state').innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">⚠</div><div>Failed to load library.</div>';
   }
@@ -4915,9 +5026,12 @@ function leRenderPlaylistTree(nodes, parentEl, depth) {
     const icon = node.type === 'folder' ? '▶ ' : '♫ ';
     item.innerHTML = `<span class="le-tree-icon">${icon}</span><span class="le-tree-label">${_leEsc(node.name)}</span><span class="le-tree-count">${node.track_count ?? ''}</span>`;
     item.onclick = () => {
-      if (node.type === 'folder' && node.children && node.children.length) {
-        sub.classList.toggle('le-tree-children-open');
-        item.querySelector('.le-tree-icon').textContent = sub.classList.contains('le-tree-children-open') ? '▼ ' : '▶ ';
+      if (node.type === 'folder') {
+        if (node.children && node.children.length) {
+          sub.classList.toggle('le-tree-children-open');
+          item.querySelector('.le-tree-icon').textContent = sub.classList.contains('le-tree-children-open') ? '▼ ' : '▶ ';
+        }
+        leSelectFolder(node, item);
         return;
       }
       leSelectPlaylist(node, item);
@@ -4933,21 +5047,19 @@ function leRenderPlaylistTree(nodes, parentEl, depth) {
   });
 }
 
-function leSelectAll() {
-  _leActivePlaylistId = null;
-  _leActivePlaylistName = '';
-  document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
-  document.querySelector('.le-tree-all')?.classList.add('active');
-  leSetTrackView(_leAllTracks, 'All Tracks');
-  leUpdateActionState();
+async function leSelectAll() {
+  if (!await leEnsureAllTracksLoaded()) return;
+  leActivateAllTracksSelection();
 }
 
 async function leSelectPlaylist(node, buttonEl) {
   if (node.type === 'folder') return;
+  _leActiveNodeId = node.id;
+  _leActiveNodeName = node.name || 'Playlist';
+  _leActiveNodeType = 'playlist';
   _leActivePlaylistId = node.id;
   _leActivePlaylistName = node.name || 'Playlist';
-  document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
-  buttonEl?.classList.add('active');
+  leSetActiveTreeItem(buttonEl);
   try {
     const res = await fetch(`/api/library/playlists/${node.id}/tracks`);
     if (res.ok) {
@@ -4958,11 +5070,28 @@ async function leSelectPlaylist(node, buttonEl) {
   } catch (_) {}
 }
 
-function leSelectHistory(buttonEl) {
+function leSelectFolder(node, buttonEl) {
+  _leActiveNodeId = node.id;
+  _leActiveNodeName = node.name || 'Folder';
+  _leActiveNodeType = 'folder';
   _leActivePlaylistId = null;
   _leActivePlaylistName = '';
-  document.querySelectorAll('.le-tree-item').forEach(b => b.classList.remove('active'));
-  buttonEl?.classList.add('active');
+  leSetActiveTreeItem(buttonEl);
+  leSetTrackView([], `${node.name || 'Folder'} (folder)`);
+  leUpdateActionState();
+}
+
+async function leSelectHistory(buttonEl) {
+  if (!await leEnsureAllTracksLoaded()) return;
+  _leActiveNodeId = null;
+  _leActiveNodeName = 'Recently Added';
+  _leActiveNodeType = 'history';
+  _leActivePlaylistId = null;
+  _leActivePlaylistName = '';
+  _leSortCol = 'date_added';
+  _leSortAsc = false;
+  leSetActiveTreeItem(buttonEl);
+  leRefreshSortIndicators();
   const sorted = [..._leAllTracks].sort((a, b) => (b.date_added || '').localeCompare(a.date_added || ''));
   leSetTrackView(sorted.slice(0, 200), 'Recently Added');
   leUpdateActionState();
@@ -4970,7 +5099,15 @@ function leSelectHistory(buttonEl) {
 
 function leRenderTracks(tracks) {
   const list = document.getElementById('le-track-list');
-  const empty = document.getElementById('le-empty-state');
+  if (!list) return;
+  list.querySelectorAll('.le-track-row').forEach(row => row.remove());
+  let empty = document.getElementById('le-empty-state');
+  if (!empty) {
+    empty = document.createElement('div');
+    empty.id = 'le-empty-state';
+    empty.className = 'le-empty-state';
+    list.appendChild(empty);
+  }
   if (!tracks || !tracks.length) {
     empty.style.display = 'flex';
     empty.innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">♫</div><div>No tracks here.</div>';
@@ -4978,7 +5115,6 @@ function leRenderTracks(tracks) {
   }
   empty.style.display = 'none';
   const sorted = leSorted(tracks);
-  list.innerHTML = '';
   sorted.forEach((t, i) => {
     const row = document.createElement('div');
     row.className = 'le-track-row';
@@ -4992,17 +5128,53 @@ function leRenderTracks(tracks) {
     row.innerHTML = `
       <div class="le-col le-col-play"><button class="le-play-btn${playbackState === 'pause' ? ' is-playing' : ''}" data-track-id="${t.id}" aria-label="${playbackState === 'pause' ? 'Pause track' : 'Play track'}">${playbackState === 'pause' ? '❚❚' : '▶'}</button></div>
       <div class="le-col le-col-num">${i + 1}</div>
-      <div class="le-col le-col-title le-editable" data-field="title" data-id="${t.id}">${_leEsc(t.title || '—')}</div>
-      <div class="le-col le-col-artist le-editable" data-field="artist" data-id="${t.id}">${_leEsc(t.artist || '—')}</div>
+      <div class="le-col le-col-title le-editable le-title-editable" data-field="title" data-id="${t.id}" title="Double-click to edit title">${_leEsc(t.title || '—')}</div>
+      <div class="le-col le-col-artist">${_leEsc(t.artist || '—')}</div>
       <div class="le-col le-col-album">${_leEsc(t.album || '—')}</div>
       <div class="le-col le-col-bpm">${bpm}</div>
       <div class="le-col le-col-key">${key}</div>
       <div class="le-col le-col-dur">${dur}</div>
       <div class="le-col le-col-date">${date}</div>`;
     row.querySelector('.le-play-btn')?.addEventListener('click', evt => leToggleTrackPlayback(t.id, evt));
+    row.querySelector('.le-title-editable')?.addEventListener('dblclick', evt => leEditTrackTitle(t, evt));
     row.addEventListener('click', evt => leToggleTrackSelection(String(t.id), evt));
     list.appendChild(row);
   });
+}
+
+async function leEditTrackTitle(track, event) {
+  event?.stopPropagation();
+  const nextTitle = prompt('Edit track title:', track.title || '');
+  if (nextTitle === null) return;
+  const trimmed = nextTitle.trim();
+  if (!trimmed) {
+    showToast('Track title cannot be empty.', 'error');
+    return;
+  }
+
+  const savedNode = {
+    id: _leActiveNodeId,
+    name: _leActiveNodeName,
+    type: _leActiveNodeType,
+  };
+
+  try {
+    const res = await fetch(`/api/library/tracks/${encodeURIComponent(track.id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: trimmed }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      showToast(data.error || 'Could not update track title.', 'error');
+      return;
+    }
+    showToast('Track title updated.', 'success');
+    await leLoadLibrary();
+    await leRestoreSelection(savedNode);
+  } catch (_) {
+    showToast('Could not update track title.', 'error');
+  }
 }
 
 function leToggleTrackSelection(trackId, evt) {
@@ -5028,11 +5200,15 @@ function leSorted(tracks) {
   });
 }
 
+function leRefreshSortIndicators() {
+  document.querySelectorAll('.le-sort-arrow').forEach(el => {
+    el.textContent = el.dataset.col === _leSortCol ? (_leSortAsc ? ' ↑' : ' ↓') : '';
+  });
+}
+
 function leSortBy(col) {
   if (_leSortCol === col) _leSortAsc = !_leSortAsc; else { _leSortCol = col; _leSortAsc = true; }
-  document.querySelectorAll('.le-sort-arrow').forEach(el => {
-    el.textContent = el.dataset.col === col ? (_leSortAsc ? ' ↑' : ' ↓') : '';
-  });
+  leRefreshSortIndicators();
   leRefreshTrackView();
 }
 
@@ -5066,11 +5242,12 @@ async function leSubmitCreate() {
     input?.focus();
     return;
   }
+  const parentId = _leActiveNodeType === 'folder' && _leActiveNodeId ? _leActiveNodeId : '';
   try {
     const res = await fetch('/api/library/playlists', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name, type: _leCreateType }),
+      body: JSON.stringify({ name, type: _leCreateType, parent_id: parentId }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -5120,64 +5297,70 @@ async function leAddSelectionToActivePlaylist() {
 }
 
 async function leRenameActivePlaylist() {
-  if (!_leActivePlaylistId) {
-    showToast('Select a playlist first.', 'error');
+  if (!_leActiveNodeId) {
+    showToast('Select a playlist or folder first.', 'error');
     return;
   }
-  const nextName = prompt('Rename playlist:', _leActivePlaylistName || '');
+  const label = _leActiveNodeType === 'folder' ? 'folder' : 'playlist';
+  const nextName = prompt(`Rename ${label}:`, _leActiveNodeName || '');
   if (nextName === null) return;
   const trimmed = nextName.trim();
   if (!trimmed) {
-    showToast('Playlist name cannot be empty.', 'error');
+    showToast(`${label[0].toUpperCase() + label.slice(1)} name cannot be empty.`, 'error');
     return;
   }
+  const savedNode = { id: _leActiveNodeId, type: _leActiveNodeType, name: trimmed };
   try {
-    const res = await fetch(`/api/library/playlists/${encodeURIComponent(_leActivePlaylistId)}`, {
+    const res = await fetch(`/api/library/playlists/${encodeURIComponent(_leActiveNodeId)}`, {
       method: 'PUT',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ name: trimmed }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      showToast(data.error || 'Could not rename playlist.', 'error');
+      showToast(data.error || `Could not rename ${label}.`, 'error');
       return;
     }
-    showToast('Playlist renamed.', 'success');
-    _leActivePlaylistName = trimmed;
+    showToast(`${label[0].toUpperCase() + label.slice(1)} renamed.`, 'success');
+    if (_leActiveNodeType === 'playlist') _leActivePlaylistName = trimmed;
+    _leActiveNodeName = trimmed;
     await leLoadLibrary();
-    const activeBtn = document.querySelector(`.le-tree-item[data-id="${_leActivePlaylistId}"]`);
-    if (activeBtn) {
-      await leSelectPlaylist({ id: _leActivePlaylistId, type: 'playlist', name: trimmed }, activeBtn);
-    }
+    await leRestoreSelection(savedNode);
   } catch (_) {
-    showToast('Could not rename playlist.', 'error');
+    showToast(`Could not rename ${label}.`, 'error');
   }
 }
 
 async function leDeleteActivePlaylist() {
-  if (!_leActivePlaylistId) {
-    showToast('Select a playlist first.', 'error');
+  if (!_leActiveNodeId) {
+    showToast('Select a playlist or folder first.', 'error');
     return;
   }
-  const label = _leActivePlaylistName || 'this playlist';
-  const ok = confirm(`Delete playlist "${label}"?\n\nTracks will remain in your library.`);
+  const label = _leActiveNodeName || (_leActiveNodeType === 'folder' ? 'this folder' : 'this playlist');
+  const entity = _leActiveNodeType === 'folder' ? 'folder' : 'playlist';
+  const ok = _leActiveNodeType === 'folder'
+    ? confirm(`Delete folder "${label}"?`)
+    : confirm(`Delete playlist "${label}"?\n\nTracks will remain in your library.`);
   if (!ok) return;
   try {
-    const res = await fetch(`/api/library/playlists/${encodeURIComponent(_leActivePlaylistId)}`, {
+    const res = await fetch(`/api/library/playlists/${encodeURIComponent(_leActiveNodeId)}`, {
       method: 'DELETE',
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      showToast(data.error || 'Could not delete playlist.', 'error');
+      showToast(data.error || `Could not delete ${entity}.`, 'error');
       return;
     }
-    showToast('Playlist deleted.', 'success');
+    showToast(`${entity[0].toUpperCase() + entity.slice(1)} deleted.`, 'success');
     _leActivePlaylistId = null;
     _leActivePlaylistName = '';
+    _leActiveNodeId = null;
+    _leActiveNodeName = '';
+    _leActiveNodeType = 'all';
     await leLoadLibrary();
-    leSelectAll();
+    await leSelectAll();
   } catch (_) {
-    showToast('Could not delete playlist.', 'error');
+    showToast(`Could not delete ${entity}.`, 'error');
   }
 }
 
@@ -5367,8 +5550,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (main) drawerBody.appendChild(main);
   }
 
-  /* Auto-load library on startup */
-  leLoadLibrary();
+  /* Load the lighter playlist tree first; tracks load on demand */
+  leLoadPlaylistsOnly();
 
   const search = document.getElementById('le-search');
   if (search) search.addEventListener('input', e => {

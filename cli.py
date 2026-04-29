@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / cli.py
+fablegear / cli.py
 
 Single entry point for all toolkit operations.
 Run with: python3 cli.py <command> [options]
@@ -46,17 +46,17 @@ def _emit_report(text: str, subdir: str, filename: str) -> None:
     Print a report so the UI can capture it, then save it to disk.
 
     Protocol:
-      REKITBOX_REPORT_BEGIN — UI starts capturing
+      FABLEGEAR_REPORT_BEGIN — UI starts capturing
       <plain text lines>   — shown in terminal AND in the inline report card
-      REKITBOX_REPORT_END  — UI stops capturing
-      REKITBOX_REPORT_PATH: /path — UI stores the saved file path
+      FABLEGEAR_REPORT_END  — UI stops capturing
+      FABLEGEAR_REPORT_PATH: /path — UI stores the saved file path
     """
-    print("REKITBOX_REPORT_BEGIN", flush=True)
+    print("FABLEGEAR_REPORT_BEGIN", flush=True)
     print(text, flush=True)
-    print("REKITBOX_REPORT_END", flush=True)
+    print("FABLEGEAR_REPORT_END", flush=True)
     report_path = _write_report(subdir, filename, text)
     if report_path:
-        print(f"REKITBOX_REPORT_PATH: {report_path}", flush=True)
+        print(f"FABLEGEAR_REPORT_PATH: {report_path}", flush=True)
 
 
 def _write_report(subdir: str, filename: str, text: str) -> str | None:
@@ -142,7 +142,7 @@ def cmd_audit(args: argparse.Namespace) -> None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_path = _write_report("Audit", f"audit_{timestamp}.txt", summary_text)
         if report_path:
-            print(f"REKITBOX_REPORT_PATH: {report_path}", flush=True)
+            print(f"FABLEGEAR_REPORT_PATH: {report_path}", flush=True)
     except Exception:
         log.exception("Audit failed")
         sys.exit(1)
@@ -193,7 +193,7 @@ def cmd_import(args: argparse.Namespace) -> None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_path = _write_report("Import", f"preview_import_{timestamp}.txt", summary_text)
             if report_path:
-                print(f"REKITBOX_REPORT_PATH: {report_path}", flush=True)
+                print(f"FABLEGEAR_REPORT_PATH: {report_path}", flush=True)
         except Exception:
             log.exception("Dry-run import failed")
             sys.exit(1)
@@ -214,7 +214,7 @@ def cmd_import(args: argparse.Namespace) -> None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_path = _write_report("Import", f"import_{timestamp}.txt", summary_text)
             if report_path:
-                print(f"REKITBOX_REPORT_PATH: {report_path}", flush=True)
+                print(f"FABLEGEAR_REPORT_PATH: {report_path}", flush=True)
         except Exception:
             log.exception("Import failed")
             sys.exit(1)
@@ -336,7 +336,7 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         output = Path(args.output)
     else:
         # Default: write into REPORTS_DIR/Duplicates/ if archive is configured,
-        # otherwise fall back to ~/rekordbox-toolkit/
+        # otherwise fall back to ~/fablegear/
         try:
             try:
                 from FableGear.config import REPORTS_DIR  # noqa: PLC0415
@@ -420,7 +420,7 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         _emit_report("\n".join(lines), "Duplicates",
                      f"duplicates_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
         if groups:
-            print(f"REKITBOX_REPORT_PATH: {output}", flush=True)
+            print(f"FABLEGEAR_REPORT_PATH: {output}", flush=True)
 
 
 def _run_shared_report(args, all_results, root_sections, _quarantine_dir) -> None:
@@ -636,7 +636,7 @@ def cmd_process(args: argparse.Namespace) -> None:
             done += 1
 
             print(
-                "REKITBOX_PROGRESS: " + _json.dumps({
+                "FABLEGEAR_PROGRESS: " + _json.dumps({
                     "done": done, "total": total, "remaining": total - done,
                     "clean": clean, "errors": errors, "edited": edited,
                     "tags_written": tags_written, "bpm_key_written": bpm_key_written,
@@ -924,7 +924,7 @@ def cmd_convert(args: argparse.Namespace) -> None:
 
     def _emit_progress() -> None:
         print(
-            "REKITBOX_PROGRESS: " + json.dumps({
+            "FABLEGEAR_PROGRESS: " + json.dumps({
                 "done":      done,
                 "total":     total,
                 "remaining": total - done,
@@ -1235,6 +1235,7 @@ def cmd_novelty(args: argparse.Namespace) -> None:
 
 def cmd_rename(args: argparse.Namespace) -> None:
     """Rename audio files based on their ID3/tag metadata to clean filenames."""
+    from db_connection import write_db
     from renamer import rename_directory
 
     root = Path(args.path)
@@ -1243,8 +1244,12 @@ def cmd_rename(args: argparse.Namespace) -> None:
         log.error("PATH is not a directory: %s", root)
         sys.exit(1)
 
-    dry_run     = not args.no_dry_run
-    max_workers = max(1, getattr(args, "workers", 1))
+    dry_run = not args.no_dry_run
+    requested_workers = max(1, getattr(args, "workers", 1))
+    max_workers = 1
+
+    if requested_workers != 1:
+        log.info("Rename runs sequentially; ignoring workers=%d", requested_workers)
 
     if dry_run:
         log.info("DRY RUN — no files will be renamed. Pass --no-dry-run to execute.")
@@ -1255,7 +1260,11 @@ def cmd_rename(args: argparse.Namespace) -> None:
     )
 
     try:
-        results = rename_directory(root, db=None, dry_run=dry_run, max_workers=max_workers)
+        if dry_run:
+            results = rename_directory(root, db=None, dry_run=True, max_workers=max_workers)
+        else:
+            with write_db(LOCAL_DB) as db:
+                results = rename_directory(root, db=db, dry_run=False, max_workers=max_workers)
     except Exception:
         log.exception("Rename failed")
         sys.exit(1)
@@ -1414,7 +1423,7 @@ Examples:
     p_dupes.add_argument(
         "--output", "-o",
         metavar="FILE",
-        help="CSV output path (default: ~/rekordbox-toolkit/duplicate_report.csv)",
+        help="CSV output path (default: ~/fablegear/duplicate_report.csv)",
     )
     p_dupes.add_argument(
         "--workers", "-w",

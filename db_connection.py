@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / db_connection.py
+fablegear / db_connection.py
 
 Safe database connection wrapper. Enforces:
   - Timestamped backup before any write operation
@@ -94,7 +94,7 @@ def _backup_db(db_path: Path) -> Path:
         if volume_path and not volume_path.exists():
             drive_hint = f"\n\nThe drive '{volume_path}' is not mounted. Please ensure the drive is connected and mounted before running this operation."
         elif volume_path and volume_path.exists():
-            drive_hint = f"\n\nThe drive is mounted, but the database file doesn't exist at the expected location. Check your configuration in ~/.rekordbox-toolkit/config.json"
+            drive_hint = f"\n\nThe drive is mounted, but the database file doesn't exist at the expected location. Check your configuration in ~/.fablegear/config.json"
         
         raise RuntimeError(
             f"Database not found at {db_path}{drive_hint}"

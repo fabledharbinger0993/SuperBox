@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / key_mapper.py
+fablegear / key_mapper.py
 
 Resolves any key notation (Camelot, Open Key, standard) to a DjmdKey.ID.
 

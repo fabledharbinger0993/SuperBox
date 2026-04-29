@@ -9,7 +9,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-STORE_PATH = Path.home() / ".rekordbox-toolkit" / "renamer_learned.json"
+STORE_PATH = Path.home() / ".fablegear" / "renamer_learned.json"
 SCHEMA_VERSION = 1
 
 

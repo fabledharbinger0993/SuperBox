@@ -48,7 +48,7 @@ _PLAYBACK_IMPORT_ERROR: str | None = "; ".join(_playback_import_errors) or None
 # ── Resource root — handles both dev and PyInstaller bundle ──────────────────
 
 _REPO_ROOT = Path(
-    os.environ.get("REKITBOX_ROOT")
+    os.environ.get("FABLEGEAR_ROOT")
     or getattr(sys, "_MEIPASS", None)
     or Path(__file__).parent.resolve()
 )
@@ -137,8 +137,8 @@ def _backup_dir() -> Path:
 
 def _current_fablegear_mode() -> str:
     try:
-        from config import REKITBOX_MODE  # noqa: PLC0415
-        return str(REKITBOX_MODE).strip() or "rural"
+        from config import FABLEGEAR_MODE  # noqa: PLC0415
+        return str(FABLEGEAR_MODE).strip() or "rural"
     except Exception:
         return "rural"
 
@@ -198,7 +198,7 @@ def _backup_info() -> dict:
 
 def _release_info() -> dict:
     """Return a short git-based release blurb for the UI status row."""
-    env_version = os.environ.get("REKITBOX_VERSION", "").strip()
+    env_version = os.environ.get("FABLEGEAR_VERSION", "").strip()
     if env_version:
         return {
             "exists": True,
@@ -499,8 +499,8 @@ def _stream_pipeline(steps: list[dict]):
             try:
                 for line in iter(process.stdout.readline, ""):
                     stripped = line.rstrip()
-                    if stripped.startswith("REKITBOX_REPORT_PATH: "):
-                        last_report_path = stripped[len("REKITBOX_REPORT_PATH: "):]
+                    if stripped.startswith("FABLEGEAR_REPORT_PATH: "):
+                        last_report_path = stripped[len("FABLEGEAR_REPORT_PATH: "):]
                     yield f"data: {json.dumps({'line': stripped})}\n\n"
                 process.wait()
                 exit_code = process.returncode

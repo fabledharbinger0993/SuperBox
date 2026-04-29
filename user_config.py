@@ -1,7 +1,7 @@
 """
-rekordbox-toolkit / user_config.py
+fablegear / user_config.py
 
-Manages the user's persistent configuration at ~/.rekordbox-toolkit/config.json.
+Manages the user's persistent configuration at ~/.fablegear/config.json.
 
 This module has NO dependencies on other toolkit modules — config.py imports
 from here, not the other way around. Keep it that way.
@@ -12,7 +12,7 @@ Config file schema
   "local_db":        "/Users/name/Library/Pioneer/rekordbox/master.db",
   "device_db":       "/Volumes/MYDRIVE/PIONEER/Master/master.db",
   "music_root":      "/Volumes/MYDRIVE/MY MUSIC",
-  "backup_dir":      "/Users/name/.rekordbox-toolkit/backups",
+  "backup_dir":      "/Users/name/.fablegear/backups",
   "target_lufs":     -8.0,
   "lufs_tolerance":  0.5,
   "excluded_dirs":   ["ollama", "DJMT PRIMARY_PROCESSING_LOGIC"]
@@ -45,7 +45,7 @@ from pathlib import Path
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 
-CONFIG_DIR  = Path.home() / ".rekordbox-toolkit"
+CONFIG_DIR  = Path.home() / ".fablegear"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 CONFIG_PATH = CONFIG_FILE  # alias used by app.py routes
 
@@ -155,7 +155,7 @@ def load_user_config() -> dict:
 def save_user_config(cfg: dict) -> None:
     """
     Write cfg to the config file as formatted JSON.
-    Creates ~/.rekordbox-toolkit/ if it doesn't exist.
+    Creates ~/.fablegear/ if it doesn't exist.
     Uses an atomic write (temp file + rename) so a crash mid-write cannot
     corrupt the existing config.
     """

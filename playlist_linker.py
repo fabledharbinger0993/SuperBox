@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / playlist_linker.py
+fablegear / playlist_linker.py
 
 Links imported tracks to existing Rekordbox playlists by matching
 filesystem folder names to playlist names already in the database.

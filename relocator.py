@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / relocator.py
+fablegear / relocator.py
 
 Batch-updates FolderPath values in DjmdContent when files have been
 moved or renamed. The equivalent of Rekordbox's one-at-a-time "Relocate"

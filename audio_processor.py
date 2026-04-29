@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / audio_processor.py
+fablegear / audio_processor.py
 
 Analyses and normalises audio files in-place. No database interaction.
 
@@ -804,7 +804,7 @@ def process_directory(
 
     def _emit_progress() -> None:
         print(
-            "REKITBOX_PROGRESS: " + json.dumps({
+            "FABLEGEAR_PROGRESS: " + json.dumps({
                 "done":          done,
                 "total":         total,
                 "remaining":     total - done,
@@ -955,7 +955,7 @@ def process_directory(
             log.warning("Could not write scan index: %s", exc)
 
     # Emit structured error summary so the UI can build actionable next steps.
-    # Emitted as REKITBOX_ERROR_SUMMARY: {json} — parsed by the JS SSE handler.
+    # Emitted as FABLEGEAR_ERROR_SUMMARY: {json} — parsed by the JS SSE handler.
     errored_results = [r for r in results if r.errors]
     if errored_results:
         def _short_err(r: ProcessResult) -> str:
@@ -978,7 +978,7 @@ def process_directory(
                 other_list.append(entry)
 
         print(
-            "REKITBOX_ERROR_SUMMARY: " + json.dumps({
+            "FABLEGEAR_ERROR_SUMMARY: " + json.dumps({
                 "corrupt":       corrupt_list,
                 "decode_failed": decode_list,
                 "tag_failed":    tag_list,

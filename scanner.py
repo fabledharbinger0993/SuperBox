@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / scanner.py
+fablegear / scanner.py
 
 Filesystem walker and metadata extractor.
 No database interaction. Returns structured TrackInfo dataclasses.

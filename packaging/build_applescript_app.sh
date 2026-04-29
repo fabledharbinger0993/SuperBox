@@ -1,12 +1,12 @@
 #!/bin/bash
-# Build RekitBox .app wrappers from AppleScript and set custom icon
+# Build FABLEGEAR .app wrappers from AppleScript and set custom icon
 # Usage: bash build_applescript_app.sh [main|agent|both]
 set -e
 
 MODE="${1:-both}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ICON_PNG="$SCRIPT_DIR/rekitbox-app-icon.png"
-ICON_ICNS="$SCRIPT_DIR/rekitbox-app-icon.icns"
+ICON_PNG="$SCRIPT_DIR/FABLEGEAR-app-icon.png"
+ICON_ICNS="$SCRIPT_DIR/FABLEGEAR-app-icon.icns"
 
 # Convert PNG to ICNS (requires sips and iconutil)
 if [ -f "$ICON_PNG" ] && [ ! -f "$ICON_ICNS" ]; then
@@ -48,17 +48,17 @@ build_app() {
 # Build requested apps
 case "$MODE" in
   main)
-    build_app "RekitBox" "$SCRIPT_DIR/RekitBoxLauncher.applescript"
+    build_app "FABLEGEAR" "$SCRIPT_DIR/FABLEGEARLauncher.applescript"
     ;;
   agent)
-    build_app "RekitBox Agent" "$SCRIPT_DIR/RekitBoxAgentLauncher.applescript"
+    build_app "FABLEGEAR Agent" "$SCRIPT_DIR/FABLEGEARAgentLauncher.applescript"
     ;;
   both|*)
-    build_app "RekitBox" "$SCRIPT_DIR/RekitBoxLauncher.applescript"
-    build_app "RekitBox Agent" "$SCRIPT_DIR/RekitBoxAgentLauncher.applescript"
+    build_app "FABLEGEAR" "$SCRIPT_DIR/FABLEGEARLauncher.applescript"
+    build_app "FABLEGEAR Agent" "$SCRIPT_DIR/FABLEGEARAgentLauncher.applescript"
     ;;
 esac
 
 echo ""
 echo "📦 Apps ready in: $SCRIPT_DIR"
-echo "To install: cp -r \"$SCRIPT_DIR/RekitBox\"*.app ~/Applications/"
+echo "To install: cp -r \"$SCRIPT_DIR/FABLEGEAR\"*.app ~/Applications/"

@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / importer.py
+fablegear / importer.py
 
 Writes tracks from the filesystem into the Rekordbox database.
 
@@ -20,7 +20,7 @@ is rolled back and the ImportReport counts are corrected — no silent partial i
 
 Resume mechanism:
     Pass resume=True to import_directory() (and --resume on the CLI) to re-use
-    a progress state file at ~/.rekordbox-toolkit/import_progress.json. The file
+    a progress state file at ~/.fablegear/import_progress.json. The file
     records all successfully-imported paths for each root directory. On resume,
     files already in the progress state are skipped without re-importing them.
 
@@ -57,7 +57,7 @@ log = logging.getLogger(__name__)
 
 # ─── Resume / progress state ──────────────────────────────────────────────────
 
-_PROGRESS_FILE = Path.home() / ".rekordbox-toolkit" / "import_progress.json"
+_PROGRESS_FILE = Path.home() / ".fablegear" / "import_progress.json"
 
 
 def _load_progress(root: Path) -> set[str]:
@@ -384,7 +384,7 @@ def import_directory(
     dry_run : bool
         Scan and report without writing. Useful for metadata preview.
     resume : bool
-        Load a progress state from ~/.rekordbox-toolkit/import_progress.json
+        Load a progress state from ~/.fablegear/import_progress.json
         and skip any files that were successfully imported in a previous
         interrupted run. Progress is saved after every committed batch and
         cleared automatically on clean completion.

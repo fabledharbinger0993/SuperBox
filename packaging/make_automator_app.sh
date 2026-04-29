@@ -1,15 +1,15 @@
 #!/bin/bash
 # make_automator_app.sh
-# Creates a new Automator .app wrapper for RekitBox
+# Creates a new Automator .app wrapper for FABLEGEAR
 # Usage: bash make_automator_app.sh
 
 set -e
 
-APP_NAME="RekitBox"
+APP_NAME="FABLEGEAR"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_PATH="$SCRIPT_DIR/${APP_NAME}.app"
-ICON_PNG="$SCRIPT_DIR/rekitbox-app-icon.png"
-ICON_ICNS="$SCRIPT_DIR/rekitbox-app-icon.icns"
+ICON_PNG="$SCRIPT_DIR/FABLEGEAR-app-icon.png"
+ICON_ICNS="$SCRIPT_DIR/FABLEGEAR-app-icon.icns"
 
 # 1. Create temporary Automator workflow
 TMP_WF="$SCRIPT_DIR/${APP_NAME}_workflow.workflow"

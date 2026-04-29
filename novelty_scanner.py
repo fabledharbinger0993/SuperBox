@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / novelty_scanner.py
+fablegear / novelty_scanner.py
 
 Identifies tracks that exist ONLY on a source drive / library and have no
 confirmed match in the destination library — then copies them across using
@@ -87,7 +87,7 @@ class NovelScanResult:
 # ─── Index helpers ────────────────────────────────────────────────────────────
 
 def _load_scan_index() -> dict[str, dict]:
-    """Load ~/rekordbox-toolkit/scan_index.json if it exists.
+    """Load ~/fablegear/scan_index.json if it exists.
 
     scan_index.json is written as a JSON array of objects, each with a
     "path" key. Convert to {path: entry} dict for O(1) lookup.
@@ -359,7 +359,7 @@ def scan_novel(
 
     def _emit():
         print(
-            "REKITBOX_PROGRESS: " + json.dumps({
+            "FABLEGEAR_PROGRESS: " + json.dumps({
                 "done":           done,
                 "total":          total,
                 "remaining":      total - done,

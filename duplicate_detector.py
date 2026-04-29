@@ -1,5 +1,5 @@
 """
-rekordbox-toolkit / duplicate_detector.py
+fablegear / duplicate_detector.py
 
 Finds acoustically identical audio files using Chromaprint fingerprinting
 via the fpcalc binary (brew install chromaprint) and the pyacoustid wrapper.
@@ -918,7 +918,7 @@ def scan_duplicates(
     if index or tag_match:
         files = _candidate_pairs(all_files, index, tag_match=tag_match)
         print(
-            f"REKITBOX_PREFILTER: "
+            f"FABLEGEAR_PREFILTER: "
             + json.dumps({
                 "total": len(all_files),
                 "candidates": len(files),
@@ -931,7 +931,7 @@ def scan_duplicates(
         log.info("No scan index found — fingerprinting all files (run Tag Tracks first to speed this up)")
 
     # Emit the match mode for the frontend SSE stream
-    print(f"REKITBOX_MATCH_MODE: {match_mode}", flush=True)
+    print(f"FABLEGEAR_MATCH_MODE: {match_mode}", flush=True)
 
     total = len(files)
     log.info(
@@ -1235,7 +1235,7 @@ def write_trash_rescue_report(
         w = f.write
 
         w("╔══════════════════════════════════════════════════════════════════════╗\n")
-        w("║          !!!  REKITBOX TRASH RESCUE REPORT  !!!                     ║\n")
+        w("║          !!!  FABLEGEAR TRASH RESCUE REPORT  !!!                     ║\n")
         w("║                                                                      ║\n")
         w("║  STOP. READ THIS BEFORE DELETING ANYTHING.                          ║\n")
         w("║                                                                      ║\n")
