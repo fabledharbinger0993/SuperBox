@@ -1,5 +1,5 @@
 """
-RekitBox / main.py
+FableGear / main.py
 
 Native-window entry point for both development and PyInstaller builds.
 
@@ -93,11 +93,11 @@ if __name__ == '__main__':
     if not _server_running():
         threading.Thread(target=_start_server, daemon=True).start()
         if not _wait_for_server():
-            print('RekitBox: server failed to start', file=sys.stderr)
+            print('FableGear: server failed to start', file=sys.stderr)
             sys.exit(1)
 
     # Splash: play intro video on every launch if the file exists
-    _splash_video = _ROOT / 'static' / 'rekitbox-splash.mp4'
+    _splash_video = _ROOT / 'static' / 'fablegear-splash.mp4'
     start_url = f'http://127.0.0.1:{_PORT}/splash' if _splash_video.exists() else _LOCAL_URL
 
     import webview
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     _api = _Api()
 
     window = webview.create_window(
-        title='RekitBox',
+        title='FableGear',
         url=start_url,
         width=1400,
         height=900,

@@ -1,5 +1,5 @@
 """
-helpers.py — Shared infrastructure for RekitBox Flask blueprints.
+helpers.py — Shared infrastructure for FableGear Flask blueprints.
 
 Contains shared globals, utilities, and SSE streaming primitives that all
 blueprint modules and app.py import.  Does NOT import from app.py or any
@@ -135,7 +135,7 @@ def _backup_dir() -> Path:
         return Path.home() / "rekordbox-toolkit" / "backups"
 
 
-def _current_rekitbox_mode() -> str:
+def _current_fablegear_mode() -> str:
     try:
         from config import REKITBOX_MODE  # noqa: PLC0415
         return str(REKITBOX_MODE).strip() or "rural"

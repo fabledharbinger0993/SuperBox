@@ -1,5 +1,5 @@
 """
-Splash player for RekitBox
+Splash player for FableGear
 Plays a short MP4 animation before launching the main app window.
 Falls back directly to main.py if the splash stack is unavailable.
 """
@@ -38,7 +38,7 @@ def play_splash_and_continue(video_path, main_entry):
     class SplashWindow(QWidget):
         def __init__(self, splash_path, on_finish):
             super().__init__()
-            self.setWindowTitle("RekitBox")
+            self.setWindowTitle("FableGear")
             self.setWindowFlags(self.windowFlags() | 0x00080000)  # Qt.Tool
             self.setFixedSize(480, 270)
             layout = QVBoxLayout()
@@ -94,6 +94,6 @@ def play_splash_and_continue(video_path, main_entry):
         finish()
 
 if __name__ == "__main__":
-    splash = Path(__file__).parent / "static/rekitbox-splash.mp4"
+    splash = Path(__file__).parent / "static/fablegear-splash.mp4"
     main_py = str(Path(__file__).parent / "main.py")
     play_splash_and_continue(str(splash), main_py)

@@ -3,5 +3,5 @@ scripts/agent_workflow.sh
 scripts/rekit_agent.py
 scripts/sync_public_repo.sh
 docs/agent-workflow.md
-.rekitbox-agent.env
-.rekitbox-agent.env.example
+.fablegear-agent.env
+.fablegear-agent.env.example

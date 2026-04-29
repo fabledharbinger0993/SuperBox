@@ -1,5 +1,5 @@
 """
-update_checker.py — GitHub release update checker for RekitBox.
+update_checker.py — GitHub release update checker for FableGear.
 
 Checks whether a newer release exists on GitHub at startup (after a short
 delay) and caches the result. The Flask API exposes /api/update/status so
@@ -16,7 +16,7 @@ Status dict shape:
         "current_version":  str | None,   # local git tag or commit SHA (short)
         "latest_version":   str | None,   # latest GitHub release tag
         "release_url":      str | None,   # HTML URL of the latest release page
-        "download_url":     str | None,   # direct download URL for RekitBox.zip
+        "download_url":     str | None,   # direct download URL for FableGear.zip
         "is_git_install":   bool,         # False if running from a ZIP extract
         "checked_at":       str | None,   # ISO timestamp of last check
         "error":            str | None,
@@ -35,8 +35,8 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-_GITHUB_API    = "https://api.github.com/repos/fabledharbinger0993/RekitBox/releases/latest"
-_DOWNLOAD_URL  = "https://github.com/fabledharbinger0993/RekitBox/releases/latest/download/RekitBox.zip"
+_GITHUB_API    = "https://api.github.com/repos/fabledharbinger0993/FableGear/releases/latest"
+_DOWNLOAD_URL  = "https://github.com/fabledharbinger0993/FableGear/releases/latest/download/FableGear.zip"
 _STARTUP_DELAY = 20       # seconds after boot before first check (non-blocking)
 _REQUEST_TIMEOUT = 8      # seconds for the GitHub API call
 
@@ -60,7 +60,7 @@ def check_now() -> dict:
     Hit the GitHub releases API, compare against the local install, update cache.
     Returns the new status dict.
     """
-    log.info("update_checker: checking for RekitBox updates …")
+    log.info("update_checker: checking for FableGear updates …")
 
     current_version, is_git = _local_version()
 
@@ -68,7 +68,7 @@ def check_now() -> dict:
         req  = urllib.request.Request(
             _GITHUB_API,
             headers={"Accept": "application/vnd.github+json",
-                     "User-Agent": "RekitBox-update-checker/1.0"},
+                     "User-Agent": "FableGear-update-checker/1.0"},
         )
         with urllib.request.urlopen(req, timeout=_REQUEST_TIMEOUT) as resp:
             data = json.loads(resp.read())
@@ -95,7 +95,7 @@ def check_now() -> dict:
             )
         else:
             log.info(
-                "update_checker: RekitBox is up to date (local=%s latest=%s)",
+                "update_checker: FableGear is up to date (local=%s latest=%s)",
                 current_version, latest_tag,
             )
 

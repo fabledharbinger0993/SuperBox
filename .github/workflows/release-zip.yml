@@ -1,9 +1,9 @@
-name: Attach RekitBox.zip to release
+name: Attach FableGear.zip to release
 
-# Every release needs a RekitBox.zip containing the bootstrap RekitBox.app
+# Every release needs a FableGear.zip containing the bootstrap FableGear.app
 # bundle so the in-app update checker can resolve
-# https://github.com/.../releases/latest/download/RekitBox.zip. The bundle
-# itself is committed at packaging/RekitBox.app/ — when users unzip the
+# https://github.com/.../releases/latest/download/FableGear.zip. The bundle
+# itself is committed at packaging/FableGear.app/ — when users unzip the
 # download they get a double-clickable .app that clones the repo on first
 # run and hands off to launch.sh afterwards.
 
@@ -23,20 +23,20 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
-      - name: Build RekitBox.app bundle
+      - name: Build FableGear.app bundle
         run: |
-          mkdir -p dist/RekitBox.app/Contents/MacOS
-          mkdir -p dist/RekitBox.app/Contents/Resources
+          mkdir -p dist/FableGear.app/Contents/MacOS
+          mkdir -p dist/FableGear.app/Contents/Resources
           
           # Create launcher script
-          cat > dist/RekitBox.app/Contents/MacOS/RekitBox << 'LAUNCHER'
+          cat > dist/FableGear.app/Contents/MacOS/FableGear << 'LAUNCHER'
           #!/bin/bash
-          # RekitBox bootstrap launcher
+          # FableGear bootstrap launcher
           # First run: clones the repo. Every run: hands off to launch.sh.
           
-          PARENT_DIR="$HOME/RekitBox"
-          INSTALL_DIR="$PARENT_DIR/RekitBox"
-          REPO_URL="https://github.com/fabledharbinger0993/RekitBox.git"
+          PARENT_DIR="$HOME/FableGear"
+          INSTALL_DIR="$PARENT_DIR/FableGear"
+          REPO_URL="https://github.com/fabledharbinger0993/FableGear.git"
           
           if [ -d "$INSTALL_DIR/.git" ]; then
             # Already installed — hand off to launch.sh (handles git pull + server start)
@@ -48,20 +48,20 @@ jobs:
             osascript -e "tell application \"Terminal\" to activate"
           fi
           LAUNCHER
-          chmod +x dist/RekitBox.app/Contents/MacOS/RekitBox
+          chmod +x dist/FableGear.app/Contents/MacOS/FableGear
           
           # Create Info.plist
-          cat > dist/RekitBox.app/Contents/Info.plist << 'PLIST'
+          cat > dist/FableGear.app/Contents/Info.plist << 'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
             <key>CFBundleExecutable</key>
-            <string>RekitBox</string>
+            <string>FableGear</string>
             <key>CFBundleIdentifier</key>
-            <string>com.fabledharbinger.rekitbox</string>
+            <string>com.fabledharbinger.fablegear</string>
             <key>CFBundleName</key>
-            <string>RekitBox</string>
+            <string>FableGear</string>
             <key>CFBundlePackageType</key>
             <string>APPL</string>
             <key>CFBundleShortVersionString</key>
@@ -77,30 +77,30 @@ jobs:
           PLIST
           
           # Create PkgInfo
-          echo -n "APPL????" > dist/RekitBox.app/Contents/PkgInfo
+          echo -n "APPL????" > dist/FableGear.app/Contents/PkgInfo
           
           # Create app icon from PNG (prefer new icon, fall back to legacy)
-          ICON_SRC="static/icon-rekitbox-app.png"
+          ICON_SRC="static/icon-fablegear-app.png"
           [ ! -f "$ICON_SRC" ] && ICON_SRC="static/RB_LOGO.png"
           
           if [ -f "$ICON_SRC" ]; then
-            ICONSET_DIR="$(mktemp -d)/rekitbox.iconset"
+            ICONSET_DIR="$(mktemp -d)/fablegear.iconset"
             mkdir -p "$ICONSET_DIR"
             for size in 16 32 64 128 256 512; do
               sips -z $size $size "$ICON_SRC" --out "$ICONSET_DIR/icon_${size}x${size}.png" >/dev/null 2>&1
               double=$((size * 2))
               sips -z $double $double "$ICON_SRC" --out "$ICONSET_DIR/icon_${size}x${size}@2x.png" >/dev/null 2>&1
             done
-            iconutil -c icns "$ICONSET_DIR" -o dist/RekitBox.app/Contents/Resources/applet.icns
+            iconutil -c icns "$ICONSET_DIR" -o dist/FableGear.app/Contents/Resources/applet.icns
           fi
 
-      - name: Build RekitBox.zip
+      - name: Build FableGear.zip
         run: |
           cd dist
-          zip -r -y /tmp/RekitBox.zip RekitBox.app
-          unzip -l /tmp/RekitBox.zip
+          zip -r -y /tmp/FableGear.zip FableGear.app
+          unzip -l /tmp/FableGear.zip
 
       - name: Upload to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${{ github.event.release.tag_name }}" /tmp/RekitBox.zip --clobber --repo "$GITHUB_REPOSITORY"
+        run: gh release upload "${{ github.event.release.tag_name }}" /tmp/FableGear.zip --clobber --repo "$GITHUB_REPOSITORY"

@@ -1,4 +1,4 @@
-# RekitBox Duplicate Detection Tuning Guide
+# FableGear Duplicate Detection Tuning Guide
 
 **Purpose**: Document current threshold settings and provide tuning guidance for duplicate detection.
 

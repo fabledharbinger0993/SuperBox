@@ -1,4 +1,4 @@
-# RekitBox-Native Minimal Media Player
+# FableGear-Native Minimal Media Player
 
 ## Purpose
 
@@ -30,4 +30,4 @@
 
 ---
 
-This plan enables safe, local audio preview/cueing for RekitBox-native workflows.
+This plan enables safe, local audio preview/cueing for FableGear-native workflows.

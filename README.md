@@ -1,8 +1,8 @@
-# RekitBox
+# FableGear
 
 **A free, open-source rekordbox library toolkit for DJs with large, mature libraries.**
 
-[![Download](https://img.shields.io/github/v/release/fabledharbinger0993/RekitBox?label=Download%20RekitBox&style=for-the-badge&color=6d28d9&logo=apple&logoColor=white)](https://github.com/fabledharbinger0993/RekitBox/releases/latest)
+[![Download](https://img.shields.io/github/v/release/fabledharbinger0993/FableGear?label=Download%20FableGear&style=for-the-badge&color=6d28d9&logo=apple&logoColor=white)](https://github.com/fabledharbinger0993/FableGear/releases/latest)
 
 macOS · Free · No account required · Rekordbox must be closed for write operations
 
@@ -10,27 +10,27 @@ macOS · Free · No account required · Rekordbox must be closed for write opera
 
 ## Install
 
-1. Click **Download RekitBox** above
-2. Unzip — you get **RekitBox.app**
+1. Click **Download FableGear** above
+2. Unzip — you get **FableGear.app**
 3. Move it to your Desktop or Applications folder
 4. Right-click → **Open** → **Open** (required once — see Gatekeeper note below)
-5. A setup window installs any missing dependencies, then RekitBox opens as a native app
+5. A setup window installs any missing dependencies, then FableGear opens as a native app
 
-> **First launch** opens a Terminal window and automatically installs everything needed — Homebrew, `ffmpeg`, `chromaprint`, and all Python packages. This runs once and takes a few minutes. After that RekitBox opens as a **standalone native window** — no browser required.
+> **First launch** opens a Terminal window and automatically installs everything needed — Homebrew, `ffmpeg`, `chromaprint`, and all Python packages. This runs once and takes a few minutes. After that FableGear opens as a **standalone native window** — no browser required.
 
-**"RekitBox is damaged" or "cannot be opened"?**
+**"FableGear is damaged" or "cannot be opened"?**
 This is macOS Gatekeeper — it blocks apps that aren't signed with an Apple Developer certificate.
 
 To allow it, do one of these:
 
-1. Right-click `RekitBox.app` → **Open** → **Open Anyway** in the dialog that appears.
-2. Go to **System Settings → Privacy & Security**, scroll down until you see *"RekitBox was blocked from use"*, then click **Open Anyway**.
+1. Right-click `FableGear.app` → **Open** → **Open Anyway** in the dialog that appears.
+2. Go to **System Settings → Privacy & Security**, scroll down until you see *"FableGear was blocked from use"*, then click **Open Anyway**.
 
 ---
 
 ## What it does
 
-RekitBox fills the gaps Rekordbox leaves open. It reads and writes the Rekordbox database directly and runs entirely on your local machine — no cloud, no account, no subscription.
+FableGear fills the gaps Rekordbox leaves open. It reads and writes the Rekordbox database directly and runs entirely on your local machine — no cloud, no account, no subscription.
 
 ### Core pipeline — run in order
 
@@ -68,7 +68,7 @@ Chain any combination of tools into one automated run. Choose **auto mode** (run
 - **Browse buttons** — every path field also has a Browse… button that opens the native macOS folder picker
 - **Library indicator pill** — each tool shows a pinned 📍 pill marking your current rekordbox library root so you always know what you're operating on
 - **Session pills** — completed operations tracked for the session, click to re-open output
-- **Glossary** — built-in glossary of every technical term used in RekitBox
+- **Glossary** — built-in glossary of every technical term used in FableGear
 
 ---
 
@@ -80,17 +80,17 @@ Chain any combination of tools into one automated run. Choose **auto mode** (run
 
 ---
 
-## RekitGo + RekitBox repo strategy
+## FableGo + FableGear repo strategy
 
-RekitGo is intentionally kept in this same repository (`ios/RekitGo`) rather than split into a separate repo.
+FableGo is intentionally kept in this same repository (`ios/FableGo`) rather than split into a separate repo.
 
 Why this is the current default:
 
-- RekitGo depends directly on RekitBox's `/api/mobile/*` surface and auth flow
+- FableGo depends directly on FableGear's `/api/mobile/*` surface and auth flow
 - Backend/mobile changes are easier to ship safely when versioned together
 - One repo keeps release coordination and API compatibility checks in one place
 
-If RekitGo eventually needs an independent release cadence, separate contributor model, or public SDK-style API contract, splitting it into its own repo would make sense.
+If FableGo eventually needs an independent release cadence, separate contributor model, or public SDK-style API contract, splitting it into its own repo would make sense.
 
 ---
 
@@ -102,12 +102,12 @@ This repo now supports optional local auto-sync to GitHub when opened in VS Code
 - Autosync only runs on allowed branches (default: `main`) and skips while git is mid-merge/rebase/cherry-pick.
 - Before pushing, autosync fetches/rebases to avoid push-loop conflicts.
 - Releases remain manual. Nothing in auto-sync creates tags or releases.
-- Published releases always get `RekitBox.zip` attached automatically via `.github/workflows/release-zip.yml`.
+- Published releases always get `FableGear.zip` attached automatically via `.github/workflows/release-zip.yml`.
 
 ### One-time setup
 
 ```bash
-cd "/Users/cameronkelly/FabledHarbinger/Git Repos/RekitBox"
+cd "/Users/cameronkelly/FabledHarbinger/Git Repos/FableGear"
 chmod +x scripts/autosync.sh scripts/release.sh
 ```
 
@@ -165,11 +165,11 @@ Create a release with a notes file:
 - current branch matches release branch (default `main`)
 - local `main` matches `origin/main`
 - tag format validation (`vX.Y.Z`)
-- waits until `RekitBox.zip` is confirmed attached (or fails on timeout)
+- waits until `FableGear.zip` is confirmed attached (or fails on timeout)
 
 ### Private AI workflow (optional)
 
-Private repository automation can run from inside the RekitBox venv:
+Private repository automation can run from inside the FableGear venv:
 
 ```bash
 ./scripts/agent_workflow.sh once
@@ -188,10 +188,10 @@ See `docs/agent-workflow.md` for full setup and safety switches.
 
 ### Agent edition package (separate venv)
 
-RekitBox can now be packaged in two tracks:
+FableGear can now be packaged in two tracks:
 
-- `RekitBox.zip` -> regular runtime (`launch.sh`, `venv`)
-- `RekitBox-Agent.zip` -> agent runtime (`launch_agent.sh`, `venv-agent`)
+- `FableGear.zip` -> regular runtime (`launch.sh`, `venv`)
+- `FableGear-Agent.zip` -> agent runtime (`launch_agent.sh`, `venv-agent`)
 
 Build the agent package locally:
 
@@ -200,7 +200,7 @@ Build the agent package locally:
 ```
 
 The agent installer launches `launch_agent.sh` and provisions an isolated
-`venv-agent`, so your standard RekitBox environment remains untouched.
+`venv-agent`, so your standard FableGear environment remains untouched.
 
 ---
 
@@ -215,7 +215,7 @@ The agent installer launches `launch_agent.sh` and provisions an isolated
 | [pyloudnorm](https://github.com/csteinmetz1/pyloudnorm) | EBU R128 loudness measurement |
 | [Flask](https://flask.palletsprojects.com) + [Waitress](https://docs.pylonsproject.org/projects/waitress) | Local web server — everything runs on localhost, no internet at runtime |
 | [pywebview](https://pywebview.flowrl.com) | Wraps WKWebView in a native macOS window — no browser required |
-| [PyInstaller](https://pyinstaller.org) | Bundles Python + all dependencies into a self-contained `RekitBox.app` |
+| [PyInstaller](https://pyinstaller.org) | Bundles Python + all dependencies into a self-contained `FableGear.app` |
 
 ---
 

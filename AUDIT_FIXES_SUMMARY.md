@@ -1,4 +1,4 @@
-# RekitBox Security & Quality Audit — Fixes Applied
+# FableGear Security & Quality Audit — Fixes Applied
 
 **Date**: April 25, 2026  
 **Audit Request**: Comprehensive security and quality audit  
@@ -339,7 +339,7 @@ def broadcast(message: str) -> None:
         log.debug("Removing %d dead WebSocket connections", len(dead))
 ```
 
-**Impact**: Improves debugging capabilities for RekitGo iOS app integration and WebSocket connection issues.
+**Impact**: Improves debugging capabilities for FableGo iOS app integration and WebSocket connection issues.
 
 ---
 
@@ -406,8 +406,8 @@ def broadcast(message: str) -> None:
 5. **Progress Locking**: Run parallel imports to same root, verify JSON integrity
 
 ### Manual Verification
-1. Restart RekitBox server and verify all endpoints load
-2. Test mobile API authentication with RekitGo app
+1. Restart FableGear server and verify all endpoints load
+2. Test mobile API authentication with FableGo app
 3. Run a full library scan with live SSE streaming
 4. Test cancel button during long-running operations
 5. Verify SSE temp file cleanup in logs
@@ -448,7 +448,7 @@ def broadcast(message: str) -> None:
 - [ ] Create git commit with comprehensive message
 - [ ] Tag release with version bump (v2.1.x → v2.2.0)
 - [ ] Push to GitHub repository
-- [ ] Sync with public repo at `fabledharbinger0993/RekitBox`
+- [ ] Sync with public repo at `fabledharbinger0993/FableGear`
 
 ---
 

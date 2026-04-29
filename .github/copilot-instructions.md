@@ -1,9 +1,9 @@
-# Copilot Instructions For RekitBox
+# Copilot Instructions For FableGear
 
 ## Runtime Context
-- Project root: /Users/cameronkelly/FabledHarbinger/Git Repos/RekitBox-private-main
-- RekitBox runs local-only on localhost:5001 via Flask/Waitress.
-- Native window shell is in main.py (pywebview) and UI is templates/index.html + static/rekitbox.js.
+- Project root: /Users/cameronkelly/FabledHarbinger/Git Repos/FableGear-private-main
+- FableGear runs local-only on localhost:5001 via Flask/Waitress.
+- Native window shell is in main.py (pywebview) and UI is templates/index.html + static/fablegear.js.
 - Rekordbox DB operations use pyrekordbox wrappers in db_connection.py.
 
 ## Hard Safety Rules
@@ -24,7 +24,7 @@
   - validate payloads strictly
   - return JSON with ok/error keys
   - avoid blocking operations on UI thread
-- Frontend changes should stay in static/rekitbox.js and templates/index.html.
+- Frontend changes should stay in static/fablegear.js and templates/index.html.
 - Keep UI additions compact and non-invasive.
 - Preserve local-first behavior (no CDN, no required internet services).
 

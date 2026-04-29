@@ -24,17 +24,20 @@ env/
 # Secrets / config
 *.env
 .env
-.rekitbox-agent.env
+.fablegear-agent.env
 settings.json
 
 # Setup sentinel (written by setup.sh, local to each machine)
 .superbox_ready
 
+# Dev mode marker (skips git pull on launch)
+.dev
+
 # Test artifacts
 *.bak
 *.tmp
 SuperBox.zip
-RekitBox.zip
+FableGear.zip
 
 # The static folder holds CSS/JS/images only.
 # index.html lives ONLY in templates/ and is served by render_template().

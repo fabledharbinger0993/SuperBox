@@ -1,5 +1,5 @@
 """
-RekitBox / app.py  —  thin factory
+FableGear / app.py  —  thin factory
 
 Registers blueprints, applies Flask extensions, runs startup side-effects,
 and keeps the small set of core routes that do not belong in any blueprint.
@@ -94,7 +94,7 @@ _SPLASH_HTML = """\
 <html>
 <head>
   <meta charset="utf-8">
-  <title>RekitBox</title>
+  <title>FableGear</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -116,7 +116,7 @@ _SPLASH_HTML = """\
 </head>
 <body>
   <video id="splash" autoplay playsinline>
-    <source src="/static/rekitbox-splash.mp4" type="video/mp4">
+    <source src="/static/fablegear-splash.mp4" type="video/mp4">
   </video>
   <script>
     var v = document.getElementById('splash');
@@ -219,7 +219,7 @@ def api_export_rekordbox():
 @app.route("/api/config")
 def api_config():
     """Expose the configured default paths so the UI can pre-fill forms."""
-    from helpers import _current_rekitbox_mode, _backup_dir  # noqa: PLC0415
+    from helpers import _current_fablegear_mode, _backup_dir  # noqa: PLC0415
     try:
         from config import (  # noqa: PLC0415
             DJMT_DB, MUSIC_ROOT, SKIP_DIRS,
@@ -228,7 +228,7 @@ def api_config():
         )
         from user_config import load_user_config as _luc  # noqa: PLC0415
         _ucfg = _luc()
-        current_mode = _current_rekitbox_mode()
+        current_mode = _current_fablegear_mode()
         return jsonify({
             "music_root":       str(MUSIC_ROOT),
             "djmt_db":          str(DJMT_DB),
@@ -244,7 +244,7 @@ def api_config():
             "configured":       True,
         })
     except Exception:
-        current_mode = _current_rekitbox_mode()
+        current_mode = _current_fablegear_mode()
         return jsonify({
             "music_root":      "",
             "djmt_db":         "",
@@ -272,7 +272,7 @@ def api_state():
 
 @app.route("/api/setup-archive", methods=["POST"])
 def api_setup_archive():
-    """Create the RekitBox Archive folder structure on the DJ drive."""
+    """Create the FableGear Archive folder structure on the DJ drive."""
     try:
         from config import ensure_archive_structure  # noqa: PLC0415
         ensure_archive_structure()
@@ -299,7 +299,7 @@ def api_settings():
             cfg["mode"] = data["mode"]
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             _json.dump(cfg, f, indent=2)
-        return jsonify({"ok": True, "note": "Restart RekitBox for changes to take effect."})
+        return jsonify({"ok": True, "note": "Restart FableGear for changes to take effect."})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -315,7 +315,7 @@ def api_update_status():
 @app.route("/api/update/apply", methods=["POST"])
 def api_update_apply():
     """
-    Pull the latest release in-place, then relaunch RekitBox.
+    Pull the latest release in-place, then relaunch FableGear.
 
     Flow:
       1. Refuse if a scan/subprocess is running or Rekordbox is open.
@@ -413,7 +413,7 @@ def api_brew_upgrade():
     names = [p["name"] for p in outdated if p.get("name")]
     if not names:
         def _nothing():
-            yield "data: No outdated RekitBox packages found.\n\n"
+            yield "data: No outdated FableGear packages found.\n\n"
             yield "data: [DONE]\n\n"
         return Response(
             _nothing(),
@@ -518,7 +518,7 @@ def api_fs_list():
 
 # ── Setup / state persistence ─────────────────────────────────────────────────
 
-_REKITBOX_STATE = Path.home() / ".rekordbox-toolkit" / "rekitbox-state.json"
+_REKITBOX_STATE = Path.home() / ".rekordbox-toolkit" / "fablegear-state.json"
 
 
 @app.route("/api/setup-status")
@@ -611,7 +611,7 @@ def disable_cache_on_static_files(response):
 if __name__ == "__main__":
     print()
     print("  ┌─────────────────────────────────────┐")
-    print("  │  RekitBox  ·  rekordbox-toolkit UI  │")
+    print("  │  FableGear  ·  rekordbox-toolkit UI  │")
     print("  │  http://localhost:5001              │")
     print("  └─────────────────────────────────────┘")
     print()

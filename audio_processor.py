@@ -774,7 +774,7 @@ def process_directory(
     quarantine_dir : Path | None
         If provided, any file whose result is corrupt (cannot be opened
         at the binary level) is moved here after processing. Pass the
-        RekitBox Archive Quarantine path from config or a custom location.
+        FableGear Archive Quarantine path from config or a custom location.
     """
     import concurrent.futures
     from scanner import scan_directory

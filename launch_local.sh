@@ -1,5 +1,5 @@
 #!/bin/bash
-# launch_local.sh — Local-dev launcher for RekitBox
+# launch_local.sh — Local-dev launcher for FableGear
 #
 # Identical to launch.sh but:
 #   - Hardwired to the canonical local repo (no clone, no git pull)
@@ -8,10 +8,10 @@
 # Use this as the Automator app target during active development.
 # Switch back to launch.sh (or the bootstrap script) for public releases.
 
-SCRIPT_DIR="/Users/cameronkelly/FABLEDHARBINGER/GIT_REPOS/RekitBox"
+SCRIPT_DIR="/Users/cameronkelly/FABLEDHARBINGER/GIT_REPOS/FableGear"
 VENV="$SCRIPT_DIR/.venv"
-SENTINEL="$SCRIPT_DIR/.rekitbox_ready"
-LOG="$SCRIPT_DIR/rekitbox.log"
+SENTINEL="$SCRIPT_DIR/.fablegear_ready"
+LOG="$SCRIPT_DIR/fablegear.log"
 
 # ── Locate Homebrew (works on both Apple Silicon and Intel) ───────────────
 _brew() {
@@ -62,12 +62,12 @@ PIP="$VENV/bin/pip"
 "$PIP" install --upgrade --quiet -r "$SCRIPT_DIR/requirements_ui.txt" >> "$LOG" 2>&1
 "$PIP" install --upgrade --quiet -r "$SCRIPT_DIR/requirements.txt"    >> "$LOG" 2>&1
 
-# ── Bring up Tailscale for RekitGo remote access (best-effort) ───────────
+# ── Bring up Tailscale for FableGo remote access (best-effort) ───────────
 if command -v tailscale &>/dev/null; then
   tailscale up --accept-routes >> "$LOG" 2>&1 &
 fi
 
-# ── Launch RekitBox ───────────────────────────────────────────────────────
+# ── Launch FableGear ───────────────────────────────────────────────────────
 nohup "$PYTHON" "$SCRIPT_DIR/main.py" >> "$LOG" 2>&1 &
 
 # ── Close Terminal window if launched interactively ───────────────────────

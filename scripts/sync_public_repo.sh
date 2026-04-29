@@ -4,8 +4,8 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-PUBLIC_REPO_URL="${PUBLIC_REPO_URL:-https://github.com/fabledharbinger0993/RekitBox.git}"
-PUBLIC_REPO_PATH="${PUBLIC_REPO_PATH:-$REPO_ROOT/../RekitBox}"
+PUBLIC_REPO_URL="${PUBLIC_REPO_URL:-https://github.com/fabledharbinger0993/FableGear.git}"
+PUBLIC_REPO_PATH="${PUBLIC_REPO_PATH:-$REPO_ROOT/../FableGear}"
 PUBLIC_REPO_BRANCH="${PUBLIC_REPO_BRANCH:-main}"
 SYNC_MESSAGE_PREFIX="${PUBLIC_SYNC_COMMIT_PREFIX:-sync(private->public)}"
 EXCLUDES_FILE="${PUBLIC_SYNC_EXCLUDES_FILE:-$REPO_ROOT/.public-sync-excludes}"
@@ -89,7 +89,7 @@ case "${1:-}" in
 Usage: ./scripts/sync_public_repo.sh <init|once>
 
 Environment:
-  PUBLIC_REPO_PATH=<path>        (default: ../RekitBox)
+  PUBLIC_REPO_PATH=<path>        (default: ../FableGear)
   PUBLIC_REPO_URL=<url>          (default: GitHub public repo)
   PUBLIC_REPO_BRANCH=<branch>    (default: main)
   PUBLIC_SYNC_EXCLUDES_FILE=<path>

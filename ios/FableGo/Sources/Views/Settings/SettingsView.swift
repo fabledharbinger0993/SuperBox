@@ -16,8 +16,8 @@ struct SettingsView: View {
                 if isInitialSetup {
                     Section {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Welcome to RekitGo").font(.headline)
-                            Text("Enter your RekitBox server address and the token shown in the 📱 pairing panel.")
+                            Text("Welcome to FableGo").font(.headline)
+                            Text("Enter your FableGear server address and the token shown in the 📱 pairing panel.")
                                 .font(.caption).foregroundStyle(.secondary)
                         }.padding(.vertical, 4)
                     }
@@ -33,7 +33,7 @@ struct SettingsView: View {
                 }
 
                 Section("Auth Token") {
-                    SecureField("Paste token from RekitBox pairing panel", text: $token)
+                    SecureField("Paste token from FableGear pairing panel", text: $token)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                 }
@@ -63,7 +63,7 @@ struct SettingsView: View {
                     }
                 }
             }
-            .navigationTitle(isInitialSetup ? "Set Up RekitGo" : "Settings")
+            .navigationTitle(isInitialSetup ? "Set Up FableGo" : "Settings")
             .onAppear {
                 if let cfg = store.api.config {
                     host  = cfg.host
@@ -94,7 +94,7 @@ struct SettingsView: View {
         Task {
             do {
                 try await store.api.ping()
-                status  = "✓ Connected to RekitBox"
+                status  = "✓ Connected to FableGear"
             } catch {
                 status  = "✗ \(error.localizedDescription)"
                 store.api.config = nil

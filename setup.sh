@@ -1,21 +1,21 @@
 #!/bin/bash
-# RekitBox — first-run dependency installer
+# FableGear — first-run dependency installer
 # Opened automatically by launch.sh when Homebrew formulas or the Python
 # venv are missing. Runs in a visible Terminal window so the user can see
 # progress and respond to any password prompts.
 #
-# When complete it touches ../.rekitbox_ready so launch.sh knows to proceed.
+# When complete it touches ../.fablegear_ready so launch.sh knows to proceed.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV="$SCRIPT_DIR/../venv"
-SENTINEL="$SCRIPT_DIR/../.rekitbox_ready"
+SENTINEL="$SCRIPT_DIR/../.fablegear_ready"
 
 # ── Banner ────────────────────────────────────────────────────────────────
 clear
 echo ""
 echo "  ╔════════════════════════════════════════════════════════╗"
-echo "  ║            RekitBox — First-Run Setup                  ║"
-echo "  ║  This runs once. RekitBox will launch when it's done.  ║"
+echo "  ║            FableGear — First-Run Setup                  ║"
+echo "  ║  This runs once. FableGear will launch when it's done.  ║"
 echo "  ╚════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -44,7 +44,7 @@ if [ -z "$BREW" ]; then
   if [ -z "$BREW" ]; then
     echo ""
     echo "  ✗  Homebrew installation failed. Check the output above."
-    echo "     Fix the issue, then double-click RekitBox again."
+    echo "     Fix the issue, then double-click FableGear again."
     read -rp "     Press Return to close this window." _
     exit 1
   fi
@@ -115,20 +115,20 @@ ok "All Python packages installed"
 
 pip install "mcp[cli]"
 # ── Create launcher .app ─────────────────────────────────────────────────
-step "Creating RekitBox.app launcher"
+step "Creating FableGear.app launcher"
 
-APP_DEST="$HOME/Applications/RekitBox.app"
-PACKAGED_APP="$SCRIPT_DIR/packaging/RekitBox.app"
+APP_DEST="$HOME/Applications/FableGear.app"
+PACKAGED_APP="$SCRIPT_DIR/packaging/FableGear.app"
 
 mkdir -p "$HOME/Applications"
 
 # Prefer the bundled shell-script launcher because Finder surfaces generic
 # "/bin/bash" alerts when the AppleScript do-shell-script wrapper fails.
-# The packaged .app already knows how to hand off to ~/RekitBox/RekitBox.
+# The packaged .app already knows how to hand off to ~/FableGear/FableGear.
 rm -rf "$APP_DEST"
 if [ -d "$PACKAGED_APP" ]; then
   cp -R "$PACKAGED_APP" "$APP_DEST"
-  chmod +x "$APP_DEST/Contents/MacOS/RekitBox" 2>/dev/null || true
+  chmod +x "$APP_DEST/Contents/MacOS/FableGear" 2>/dev/null || true
 else
   LAUNCH_PATH="$SCRIPT_DIR/launch.sh"
   osacompile -o "$APP_DEST" - 2>/dev/null <<APPLESCRIPT
@@ -137,11 +137,11 @@ APPLESCRIPT
 fi
 
 if [ -d "$APP_DEST" ]; then
-  ok "RekitBox.app created at ~/Applications/RekitBox.app"
+  ok "FableGear.app created at ~/Applications/FableGear.app"
   info "Drag it to your Dock for one-click access."
   info "Or double-click it from ~/Applications."
 else
-  info "Could not create RekitBox.app — run launch.sh directly from Terminal."
+  info "Could not create FableGear.app — run launch.sh directly from Terminal."
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ touch "$SENTINEL"
 
 echo ""
 echo "  ╔════════════════════════════════════════════════════════╗"
-echo "  ║  ✓  Setup complete. RekitBox is launching now.         ║"
+echo "  ║  ✓  Setup complete. FableGear is launching now.         ║"
 echo "  ║     This window will close in 4 seconds.               ║"
 echo "  ╚════════════════════════════════════════════════════════╝"
 echo ""

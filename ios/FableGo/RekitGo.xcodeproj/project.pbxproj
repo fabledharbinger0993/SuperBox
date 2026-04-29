@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1BD409462CB1647F95B058B8 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A31724244ED9ABCF268FB4D3 /* AppStore.swift */; };
-		4CD9CF31A7A58EAD4309FE04 /* RekitGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4304452ECAA75AFE3A8C38D5 /* RekitGoApp.swift */; };
+		4CD9CF31A7A58EAD4309FE04 /* FableGoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4304452ECAA75AFE3A8C38D5 /* FableGoApp.swift */; };
 		72D7FE83673B097939AAA665 /* ExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DFF772EC87D65B7F9B9AB2D /* ExportView.swift */; };
 		8C6B6BF6A40563A6D44D7BB2 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4E3B82617C58FC2AE046E931 /* Assets.xcassets */; };
 		98B9384FBB9CEF2CDD89C31D /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8752864BB2BCDC464E6288D /* Models.swift */; };
@@ -23,7 +23,7 @@
 /* Begin PBXFileReference section */
 		2259A92DD669733E2052E3B8 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		3025E47887EFA368F403C2CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		4304452ECAA75AFE3A8C38D5 /* RekitGoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RekitGoApp.swift; sourceTree = "<group>"; };
+		4304452ECAA75AFE3A8C38D5 /* FableGoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FableGoApp.swift; sourceTree = "<group>"; };
 		4CDF123094B1CFF53CED3177 /* PlaylistsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistsView.swift; sourceTree = "<group>"; };
 		4E3B82617C58FC2AE046E931 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4FFF551373DFF8C9103C5FED /* DownloadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownloadsView.swift; sourceTree = "<group>"; };
@@ -32,7 +32,7 @@
 		A31724244ED9ABCF268FB4D3 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		B8752864BB2BCDC464E6288D /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		CCAAD09E4C6822662F0999A9 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
-		DED407D5C99982AD9714353D /* RekitGo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RekitGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DED407D5C99982AD9714353D /* FableGo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FableGo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E40E515D8FE4BC20DD3C6C13 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -59,7 +59,7 @@
 				4E3B82617C58FC2AE046E931 /* Assets.xcassets */,
 				E40E515D8FE4BC20DD3C6C13 /* ContentView.swift */,
 				3025E47887EFA368F403C2CE /* Info.plist */,
-				4304452ECAA75AFE3A8C38D5 /* RekitGoApp.swift */,
+				4304452ECAA75AFE3A8C38D5 /* FableGoApp.swift */,
 				F204CEE094A361B679410B9A /* Models */,
 				3884559AD78781046EEC7901 /* Network */,
 				CE4840DA5C01F452CAEED5C1 /* Store */,
@@ -115,7 +115,7 @@
 		B132C25F742EA6C152598539 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				DED407D5C99982AD9714353D /* RekitGo.app */,
+				DED407D5C99982AD9714353D /* FableGo.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -147,9 +147,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C32344EC17BAE2B28DB8864D /* RekitGo */ = {
+		C32344EC17BAE2B28DB8864D /* FableGo */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = FA95CF22CE20BDD7165B56EC /* Build configuration list for PBXNativeTarget "RekitGo" */;
+			buildConfigurationList = FA95CF22CE20BDD7165B56EC /* Build configuration list for PBXNativeTarget "FableGo" */;
 			buildPhases = (
 				F1EDB12CF320EB7757672D7D /* Sources */,
 				B4452E483632C80A7A86F46C /* Resources */,
@@ -158,11 +158,11 @@
 			);
 			dependencies = (
 			);
-			name = RekitGo;
+			name = FableGo;
 			packageProductDependencies = (
 			);
-			productName = RekitGo;
-			productReference = DED407D5C99982AD9714353D /* RekitGo.app */;
+			productName = FableGo;
+			productReference = DED407D5C99982AD9714353D /* FableGo.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -179,7 +179,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 8F4C586353395D9E00D34378 /* Build configuration list for PBXProject "RekitGo" */;
+			buildConfigurationList = 8F4C586353395D9E00D34378 /* Build configuration list for PBXProject "FableGo" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -193,7 +193,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				C32344EC17BAE2B28DB8864D /* RekitGo */,
+				C32344EC17BAE2B28DB8864D /* FableGo */,
 			);
 		};
 /* End PBXProject section */
@@ -222,7 +222,7 @@
 				A8A10EDC672A6BE00DBCEDB0 /* LibraryView.swift in Sources */,
 				98B9384FBB9CEF2CDD89C31D /* Models.swift in Sources */,
 				C4078FEBDCB7FD79BD8BBF72 /* PlaylistsView.swift in Sources */,
-				4CD9CF31A7A58EAD4309FE04 /* RekitGoApp.swift in Sources */,
+				4CD9CF31A7A58EAD4309FE04 /* FableGoApp.swift in Sources */,
 				D429D62A84EA82A9C53DA039 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -286,7 +286,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fabledharbinger.rekitgo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fabledharbinger.fablego;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
@@ -344,7 +344,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = com.fabledharbinger.rekitgo;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fabledharbinger.fablego;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -386,7 +386,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		8F4C586353395D9E00D34378 /* Build configuration list for PBXProject "RekitGo" */ = {
+		8F4C586353395D9E00D34378 /* Build configuration list for PBXProject "FableGo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4DCB818ACD4317319E52ABC4 /* Debug */,
@@ -395,7 +395,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		FA95CF22CE20BDD7165B56EC /* Build configuration list for PBXNativeTarget "RekitGo" */ = {
+		FA95CF22CE20BDD7165B56EC /* Build configuration list for PBXNativeTarget "FableGo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				9115CD5A3D9E0FDB06ED7600 /* Debug */,

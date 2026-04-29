@@ -1,4 +1,4 @@
-name: RekitGo
+name: FableGo
 options:
   bundleIdPrefix: com.fabledharbinger
   deploymentTarget:
@@ -9,10 +9,10 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     DEVELOPMENT_TEAM: ""          # fill in your Apple dev team ID
-    PRODUCT_BUNDLE_IDENTIFIER: com.fabledharbinger.rekitgo
+    PRODUCT_BUNDLE_IDENTIFIER: com.fabledharbinger.fablego
 
 targets:
-  RekitGo:
+  FableGo:
     type: application
     platform: iOS
     sources:
@@ -25,10 +25,10 @@ targets:
     info:
       path: Sources/Info.plist
       properties:
-        CFBundleName: RekitGo
+        CFBundleName: FableGo
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
         UILaunchScreen: {}
-        NSLocalNetworkUsageDescription: "RekitGo connects to your RekitBox server on your local network."
+        NSLocalNetworkUsageDescription: "FableGo connects to your FableGear server on your local network."
         NSBonjourServices:
           - _http._tcp

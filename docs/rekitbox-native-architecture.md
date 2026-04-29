@@ -1,4 +1,4 @@
-# RekitBox-Native Library/Playlist/USB Architecture
+# FableGear-Native Library/Playlist/USB Architecture
 
 ## 1. Core Data Model
 - **Track**: { id, title, artist, album, path, bpm, key, cues, tags, date_added, ... }
@@ -25,7 +25,7 @@
 
 ## 5. Compatibility Layer
 - Pyrekordbox as the bridge for DB read/write and schema updates
-- RekitBox never overwrites Rekordbox DB without explicit user action
+- FableGear never overwrites Rekordbox DB without explicit user action
 - All destructive actions require confirmation and backup
 
 ## 6. Extensibility
@@ -34,4 +34,4 @@
 
 ---
 
-This architecture enables RekitBox to function as a standalone, Rekordbox-compatible DJ library manager, maximizing user freedom while maintaining legal and technical safety.
+This architecture enables FableGear to function as a standalone, Rekordbox-compatible DJ library manager, maximizing user freedom while maintaining legal and technical safety.

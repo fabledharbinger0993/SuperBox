@@ -31,7 +31,7 @@ try:
 except NotConfiguredError as _exc:
     raise RuntimeError(str(_exc)) from _exc
 
-# RekitBox mode: 'rural' (no AI) or 'suburban' (AI enabled)
+# FableGear mode: 'rural' (no AI) or 'suburban' (AI enabled)
 REKITBOX_MODE = _cfg.get("mode", "suburban")
 
 # ─── Database and filesystem paths ───────────────────────────────────────────
@@ -45,13 +45,13 @@ DJMT_DB = Path(_cfg["device_db"])
 # Music library root on the DJ drive
 MUSIC_ROOT = Path(_cfg["music_root"])
 
-# ─── RekitBox Archive ─────────────────────────────────────────────────────────
+# ─── FableGear Archive ─────────────────────────────────────────────────────────
 #
-# All RekitBox-generated data lives in one folder beside the music library:
+# All FableGear-generated data lives in one folder beside the music library:
 #
 #   <drive root>/
 #   ├── DJMT PRIMARY/       ← music library
-#   └── RekitBox Archive/   ← auto-created on first run
+#   └── FableGear Archive/   ← auto-created on first run
 #       ├── Savepoints/     ← timestamped DB backups before every write
 #       ├── Quarantine/     ← problem files moved here from triage
 #       ├── Reports/        ← audit summaries, duplicate CSVs, scan reports
@@ -73,7 +73,7 @@ ARCHIVE_ENABLED: bool = _archive_mode != "none"
 if _archive_mode == "custom" and _custom_archive:
     ARCHIVE_ROOT = Path(_custom_archive)
 else:
-    ARCHIVE_ROOT = MUSIC_ROOT.parent / "RekitBox Archive"
+    ARCHIVE_ROOT = MUSIC_ROOT.parent / "FableGear Archive"
 
 SAVEPOINTS_DIR = ARCHIVE_ROOT / "Savepoints"
 QUARANTINE_DIR = ARCHIVE_ROOT / "Quarantine"
@@ -96,7 +96,7 @@ BACKUP_DIR = SAVEPOINTS_DIR
 
 def ensure_archive_structure() -> None:
     """
-    Create the full RekitBox Archive folder tree on the DJ drive if it doesn't
+    Create the full FableGear Archive folder tree on the DJ drive if it doesn't
     exist yet. Safe to call on every startup — uses exist_ok=True throughout.
     Skips silently if the drive isn't mounted or if archive is disabled.
     Applies the branded green-folder Finder icon to every directory created.
@@ -181,8 +181,8 @@ SKIP_DIRS: set[str] = {
     "__MACOSX", ".Spotlight-V100", ".fseventsd", ".DocumentRevisions-V100",
     ".TemporaryItems", ".Trashes",
     # Common non-music app data that ends up inside music drives
-    "ollama", "RekitBox Archive",
-    # Processing artifacts left by RekitBox or other tools
+    "ollama", "FableGear Archive",
+    # Processing artifacts left by FableGear or other tools
     "DJMT PRIMARY_PROCESSING_LOGIC", "POST PROCESS ZIP ARCHIVE",
 }
 

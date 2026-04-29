@@ -1,18 +1,18 @@
 #!/bin/bash
-# RekitBox build script
+# FableGear build script
 #
-# Produces dist/RekitBox.app — a self-contained macOS application bundle.
-# Run this from the RekitBox/ directory (where this file lives).
+# Produces dist/FableGear.app — a self-contained macOS application bundle.
+# Run this from the FableGear/ directory (where this file lives).
 #
 # Requirements:
 #   - The venv must exist (run launch.sh once to create it, or: python3 -m venv ../venv)
 #   - pywebview and pyinstaller must be installed (pip install -r requirements.txt)
 #
 # Output:
-#   dist/RekitBox.app     ← drag this to /Applications or zip for distribution
+#   dist/FableGear.app     ← drag this to /Applications or zip for distribution
 #
 # After building:
-#   cd dist && zip -r RekitBox.zip RekitBox.app
+#   cd dist && zip -r FableGear.zip FableGear.app
 
 set -e
 
@@ -22,7 +22,7 @@ PYTHON="$VENV/bin/python"
 
 cd "$SCRIPT_DIR"
 
-echo "── RekitBox build ───────────────────────────────────────"
+echo "── FableGear build ───────────────────────────────────────"
 
 # Ensure venv exists
 if [ ! -f "$PYTHON" ]; then
@@ -40,16 +40,16 @@ echo "→ Cleaning previous build…"
 rm -rf build dist
 
 # Run PyInstaller
-echo "→ Building RekitBox.app…"
-"$VENV/bin/pyinstaller" RekitBox.spec --noconfirm
+echo "→ Building FableGear.app…"
+"$VENV/bin/pyinstaller" FableGear.spec --noconfirm
 
 echo ""
-echo "✓ Done: dist/RekitBox.app"
+echo "✓ Done: dist/FableGear.app"
 echo ""
 echo "  To distribute:"
-echo "    cd dist && zip -r RekitBox.zip RekitBox.app"
+echo "    cd dist && zip -r FableGear.zip FableGear.app"
 echo ""
 echo "  NOTE: macOS Gatekeeper will show a security warning for unsigned apps."
 echo "        Users right-click → Open to bypass it (same as the current zip)."
 echo "        To remove the warning permanently, code-sign with an Apple Developer"
-echo "        account: set codesign_identity in RekitBox.spec."
+echo "        account: set codesign_identity in FableGear.spec."

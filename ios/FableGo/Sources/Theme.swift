@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - RekitGo Brand Colors
+// MARK: - FableGo Brand Colors
 // Palette: Charcoal · Electric Blue · Turquoise
 
 extension Color {

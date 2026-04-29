@@ -1,4 +1,4 @@
-# RekitBox Shell Injection Prevention Guide
+# FableGear Shell Injection Prevention Guide
 
 **Purpose**: Document best practices and provide pre-commit validation for subprocess calls to prevent shell injection vulnerabilities.
 
@@ -101,7 +101,7 @@ subprocess.run(
 
 ---
 
-## Current RekitBox Subprocess Calls (Audit Results)
+## Current FableGear Subprocess Calls (Audit Results)
 
 ### ✅ Safe Calls (Already Correct)
 
@@ -134,7 +134,7 @@ Add this to `.git/hooks/pre-commit` to prevent unsafe patterns from being commit
 
 ```bash
 #!/bin/bash
-# RekitBox security: Block shell=True in subprocess calls
+# FableGear security: Block shell=True in subprocess calls
 
 set -e
 
@@ -172,7 +172,7 @@ echo "✅ No shell injection risks detected"
 ### Installation
 
 ```bash
-cd /Users/cameronkelly/FABLEDHARBINGER/GIT_REPOS/RekitBox
+cd /Users/cameronkelly/FABLEDHARBINGER/GIT_REPOS/FableGear
 chmod +x .git/hooks/pre-commit
 ```
 

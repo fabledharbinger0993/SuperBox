@@ -2,7 +2,7 @@
 routes_mobile.py — ── The Overlord ──
 
 Flask Blueprint: all /api/mobile/* REST + WebSocket endpoints for the
-RekitGo iOS companion app, plus the /api/connectivity pairing panel route.
+FableGo iOS companion app, plus the /api/connectivity pairing panel route.
 """
 
 import datetime
@@ -38,11 +38,11 @@ _ANALYSIS_LOCK: threading.Lock = threading.Lock()
 
 def _get_mobile_token() -> str:
     """
-    Return the RekitGo Bearer token, generating it if absent.
+    Return the FableGo Bearer token, generating it if absent.
 
     Token is persisted in ~/.rekordbox-toolkit/config.json under "mobile_token".
     Printed to console once on first generation so the user can copy it.
-    Returns empty string if RekitBox hasn't been configured yet.
+    Returns empty string if FableGear hasn't been configured yet.
     """
     try:
         from user_config import load_user_config, save_user_config, config_exists  # noqa: PLC0415
@@ -55,7 +55,7 @@ def _get_mobile_token() -> str:
             print()
             print("  ┌──────────────────────────────────────────────────────────┐")
             print(f"  │  REKITGO TOKEN: {cfg['mobile_token']}  │")
-            print("  │  Copy this into RekitGo → Settings → Auth Token        │")
+            print("  │  Copy this into FableGo → Settings → Auth Token        │")
             print("  └──────────────────────────────────────────────────────────┘")
             print()
         return cfg["mobile_token"]
@@ -122,14 +122,14 @@ def _check_mobile_auth():
 
 @bp.route("/api/mobile/ping")
 def mobile_ping():
-    """Health check for RekitGo. No auth required."""
+    """Health check for FableGo. No auth required."""
     try:
         from update_checker import _local_version  # noqa: PLC0415
         _ver, _ = _local_version()
     except Exception:
         _ver = None
     ver = _ver or "unknown"
-    return jsonify({"status": "ok", "version": ver, "rekitbox_version": ver})
+    return jsonify({"status": "ok", "version": ver, "fablegear_version": ver})
 
 
 # ── Connectivity / QR pairing ─────────────────────────────────────────────────
@@ -137,7 +137,7 @@ def mobile_ping():
 @bp.route("/api/connectivity")
 def api_connectivity():
     """
-    Connection info for the RekitGo pairing panel in the RekitBox desktop UI.
+    Connection info for the FableGo pairing panel in the FableGear desktop UI.
     No auth required — served to the local desktop page only.
     """
     import socket
@@ -197,7 +197,7 @@ def api_connectivity():
     qr_svg: "str | None" = None
     if token and best_ip:
         qr_svg = _make_styled_qr(
-            f"rekitgo://{best_ip}:5001?token={token}",
+            f"fablego://{best_ip}:5001?token={token}",
             fill="#ff6600",
         )
 
@@ -210,8 +210,8 @@ def api_connectivity():
     qr_tailscale_ios = _make_styled_qr(
         "https://apps.apple.com/app/tailscale/id1470499037", fill=_green
     )
-    qr_rekitgo_ios = _make_styled_qr(
-        "https://github.com/fabledharbinger0993/RekitBox", fill=_green
+    qr_fablego_ios = _make_styled_qr(
+        "https://github.com/fabledharbinger0993/FableGear", fill=_green
     )
 
     return jsonify({
@@ -224,7 +224,7 @@ def api_connectivity():
         "qr_pwa_url":       qr_pwa_url,
         "qr_tailscale_mac": qr_tailscale_mac,
         "qr_tailscale_ios": qr_tailscale_ios,
-        "qr_rekitgo_ios":   qr_rekitgo_ios,
+        "qr_fablego_ios":   qr_fablego_ios,
     })
 
 
@@ -499,7 +499,7 @@ def _push_analysis_event(
     key: "str | None" = None,
     error: "str | None" = None,
 ) -> None:
-    """Push a WebSocket analysis_update event to all connected RekitGo clients."""
+    """Push a WebSocket analysis_update event to all connected FableGo clients."""
     try:
         import ws_bus  # noqa: PLC0415
         ws_bus.broadcast(json.dumps({
@@ -928,7 +928,7 @@ def mobile_export_status(job_id: str):
 @sock.route("/api/mobile/events")
 def mobile_events(ws):
     """
-    WebSocket event bus for RekitGo.
+    WebSocket event bus for FableGo.
 
     The mobile app connects here on startup and holds the connection open.
     Auth checked via the before_request hook.

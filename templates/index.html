@@ -4,15 +4,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RekitBox — rekordbox-toolkit</title>
-<link rel="stylesheet" href="/static/rekitbox.css">
-<link rel="icon" type="image/png" href="/static/RB_LOGO.png">
+<title>FableGear — rekordbox-toolkit</title>
+<link rel="stylesheet" href="/static/fablegear.css">
+<link rel="icon" type="image/png" href="/static/icon-FableGear-logo.png">
 <!-- PWA -->
 <link rel="manifest" href="/static/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="RekitGo">
-<link rel="apple-touch-icon" href="/static/icon-rekitgo.png">
+<meta name="apple-mobile-web-app-title" content="FableGo">
+<link rel="apple-touch-icon" href="/static/icon-fablego.png">
 <meta name="theme-color" content="#ff6600">
 <!-- CSP: restrict manifest to same-origin only -->
 <meta http-equiv="Content-Security-Policy" content="manifest-src 'self';">
@@ -20,7 +20,7 @@
 
  
   
-/* RekitBox modal animation system */
+/* FableGear modal animation system */
 @keyframes sb-modal-in    {from{opacity:0;transform:scale(.92) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes sb-modal-out   {from{opacity:1;transform:scale(1) translateY(0)} to{opacity:0;transform:scale(.95) translateY(6px)}}
 @keyframes sb-modal-shrink{0%{opacity:1;transform:scale(1) translate(0,0)} 100%{opacity:0;transform:scale(.06) translate(52vw,46vh)}}
@@ -35,11 +35,11 @@
 
 {% include 'partials/header.html' %}
 
-<!-- ══ RekitBox update modal ══════════════════════════════════════════════════ -->
+<!-- ══ FableGear update modal ══════════════════════════════════════════════════ -->
 <div id="rkb-update-overlay">
   <div id="rkb-update-dialog">
     <div class="rkb-update-icon">⬆</div>
-    <h2 id="rkb-update-title">RekitBox Update Available</h2>
+    <h2 id="rkb-update-title">FableGear Update Available</h2>
     <p id="rkb-update-body"></p>
     <div id="rkb-update-actions">
       <button type="button"<"name"> id="rkb-update-skip" onclick="rkbUpdateSkip()">Continue with current</button>
@@ -48,12 +48,12 @@
   </div>
 </div>
 
-<!-- ══ RekitBox update banner (fallback after modal dismiss) ═════════════════ -->
-<div id="rekitbox-update-banner">
+<!-- ══ FableGear update banner (fallback after modal dismiss) ═════════════════ -->
+<div id="fablegear-update-banner">
   <span class="brew-icon">⬆</span>
-  <span class="brew-msg" id="rekitbox-update-msg">A new version of RekitBox is available.</span>
-  <a id="rekitbox-update-link" href="#" target="_blank" rel="noopener" class="brew-btn">Download</a>
-  <button type="button" class="brew-dismiss" onclick="rekitboxUpdateDismiss()" title="Dismiss">✕</button>
+  <span class="brew-msg" id="fablegear-update-msg">A new version of FableGear is available.</span>
+  <a id="fablegear-update-link" href="#" target="_blank" rel="noopener" class="brew-btn">Download</a>
+  <button type="button" class="brew-dismiss" onclick="fablegearUpdateDismiss()" title="Dismiss">✕</button>
 </div>
 
 <!-- ══ Brew update banner ═══════════════════════════════════════════════════ -->
@@ -151,7 +151,7 @@
 <div id="report-modal-backdrop" class="hidden">
   <div id="report-modal">
     <div class="rmod-header">
-      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="rb-logo-icon">
+      <img src="/static/icon-FableGear-logo.png" alt="" role="presentation" class="rb-logo-icon">
       <div class="rmod-header-text">
         <h2 id="rmod-title">Step Complete</h2>
         <p class="rmod-save-path" id="rmod-save-path"></p>
@@ -175,7 +175,7 @@
 <footer>
   <img src="/static/logo-guthrie.png" alt="Guthrie Entertainment" class="footer-logo">
   <span class="footer-tagline">
-    <strong>REKITBOX</strong>
+    <strong>FABLEGEAR</strong>
     &nbsp;·&nbsp; Guthrie Entertainment LLC &nbsp;·&nbsp; Osos Discos
   </span>
 </footer>
@@ -206,7 +206,7 @@
     <span class="nav-right-label">Files</span>
   </button>
   <button type="button" id="nav-btn-db" class="nav-right-btn" onclick="openDbPanel('audit')" title="RekordBox DB Tools">
-    <img src="/static/RB_LOGO.png" class="nav-right-icon" alt="DB Tools">
+    <img src="/static/icon-FableGear-logo.png" class="nav-right-icon" alt="DB Tools">
     <span class="nav-right-label">DB Tools</span>
   </button>
 
@@ -235,7 +235,7 @@
     
     <!-- Header -->
     <div class="settings-header">
-      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="icon-wiz-start">
+      <img src="/static/icon-FableGear-logo.png" alt="" role="presentation" class="icon-wiz-start">
       <h2>⚙ Archive &amp; Log Settings</h2>
       <button type="button" class="settings-close" onclick="closeSettings()">✕</button>
     </div>
@@ -250,7 +250,7 @@
             <input type="radio" name="archive-mode" value="auto">
             <div>
               <div class="settings-radio-label">🟢 Auto — beside the library (recommended)</div>
-              <div class="settings-radio-desc">Creates <code>RekitBox Archive/</code> at the same root level as your music folder. Everything is co-located with your library and travels with the drive.</div>
+              <div class="settings-radio-desc">Creates <code>FableGear Archive/</code> at the same root level as your music folder. Everything is co-located with your library and travels with the drive.</div>
             </div>
           </label>
 
@@ -269,7 +269,7 @@
             <input type="radio" name="archive-mode" value="none">
             <div>
               <div class="settings-radio-label">🔴 Disabled — no logging</div>
-              <div class="settings-radio-desc">RekitBox runs without creating any files on disk. Some features will be slower or unavailable — see below.</div>
+              <div class="settings-radio-desc">FableGear runs without creating any files on disk. Some features will be slower or unavailable — see below.</div>
             </div>
           </label>
 
@@ -340,9 +340,9 @@
 <div id="welcome-backdrop" class="hidden">
   <div id="welcome-modal">
     <div class="welcome-header">
-      <img src="/static/RB_LOGO.png" alt="" role="presentation" class="rb-logo-icon">
+      <img src="/static/icon-FableGear-logo.png" alt="" role="presentation" class="rb-logo-icon">
       <div class="welcome-header-text">
-        <h2>Welcome to RekitBox</h2>
+        <h2>Welcome to FableGear</h2>
         <p>A free, open-source rekordbox library toolkit by Guthrie Entertainment LLC</p>
       </div>
     </div>
@@ -350,8 +350,8 @@
     <!-- Step 1: Intro -->
     <div class="welcome-step active" id="wstep-intro">
       <div class="welcome-step-body">
-        <p class="welcome-step-sub">RekitBox gives DJs tools that Rekordbox doesn't ship with — bulk path repair, audio tag writing, acoustic duplicate detection, and library organisation. Everything runs locally. No internet, no accounts, no subscription.</p>
-        <p class="welcome-step-sub">Before diving in, we need two quick decisions about what RekitBox is allowed to access. Takes about 30 seconds.</p>
+        <p class="welcome-step-sub">FableGear gives DJs tools that Rekordbox doesn't ship with — bulk path repair, audio tag writing, acoustic duplicate detection, and library organisation. Everything runs locally. No internet, no accounts, no subscription.</p>
+        <p class="welcome-step-sub">Before diving in, we need two quick decisions about what FableGear is allowed to access. Takes about 30 seconds.</p>
       </div>
       <div class="welcome-footer">
         <button type="button" class="welcome-got-it" onclick="welcomeShowStep('read')">Get Started →</button>
@@ -363,9 +363,9 @@
       <div class="welcome-step-body">
         <div>
           <span class="welcome-perm-badge read">● Read Only</span>
-          <p class="welcome-step-title welcome-step-title-mt">May RekitBox read your RekordBox database?</p>
+          <p class="welcome-step-title welcome-step-title-mt">May FableGear read your RekordBox database?</p>
         </div>
-        <p class="welcome-step-sub">Reading the database lets RekitBox see what tracks are in your library, where their files are, and whether any paths are broken. It never modifies anything at this stage.</p>
+        <p class="welcome-step-sub">Reading the database lets FableGear see what tracks are in your library, where their files are, and whether any paths are broken. It never modifies anything at this stage.</p>
         <div class="welcome-tool-list">
           <div class="welcome-tool-item"><strong>▣ Library Audit</strong><span>Maps your full library, flags broken paths, orphaned entries, and missing tags.</span></div>
           <div class="welcome-tool-item"><strong>🏷 Tag Tracks</strong><span>Cross-references the database when prioritising which files need analysis.</span></div>
@@ -383,9 +383,9 @@
       <div class="welcome-step-body">
         <div>
           <span class="welcome-perm-badge write">● Read &amp; Write</span>
-          <p class="welcome-step-title welcome-step-title-mt">May RekitBox write to your RekordBox database?</p>
+          <p class="welcome-step-title welcome-step-title-mt">May FableGear write to your RekordBox database?</p>
         </div>
-        <p class="welcome-step-sub">Some tools make changes to your library. RekitBox always creates a timestamped database backup before any write operation, and RekordBox must be closed first.</p>
+        <p class="welcome-step-sub">Some tools make changes to your library. FableGear always creates a timestamped database backup before any write operation, and RekordBox must be closed first.</p>
         <div class="welcome-tool-list">
           <div class="welcome-tool-item"><strong>📍 Fix Broken Paths</strong><span>Updates file paths in the database after a drive rename or folder move.</span></div>
           <div class="welcome-tool-item"><strong>＋ Import Tracks</strong><span>Adds new audio files to your Rekordbox library.</span></div>
@@ -403,7 +403,7 @@
     <div class="welcome-step" id="wstep-ready">
       <div class="welcome-step-body" id="wstep-ready-body"></div>
       <div class="welcome-footer">
-        <button type="button" class="welcome-got-it" onclick="completeSetup()">Start RekitBox →</button>
+        <button type="button" class="welcome-got-it" onclick="completeSetup()">Start FableGear →</button>
       </div>
     </div>
 
@@ -413,7 +413,7 @@
       <div class="welcome-section">
         <h3>Why this exists</h3>
         <p>Rekordbox is an excellent performance tool. As a library manager, it has real limits. It doesn't write analysis results to your actual audio files — only its own database. BPM, key, and path data all live inside Rekordbox's private database, which means a library rebuild, a drive rename, or a corrupt database wipes all of it with no recovery path.</p>
-        <p>Path breakage is the other one. Move a folder, rename a drive, plug into a different USB port — Rekordbox loses every file it can't find and gives you no tools to fix it in bulk. RekitBox was built to solve exactly these problems: to give DJs with large, mature libraries a safety net that Rekordbox doesn't provide, and to ensure your library data outlives any single piece of software.</p>
+        <p>Path breakage is the other one. Move a folder, rename a drive, plug into a different USB port — Rekordbox loses every file it can't find and gives you no tools to fix it in bulk. FableGear was built to solve exactly these problems: to give DJs with large, mature libraries a safety net that Rekordbox doesn't provide, and to ensure your library data outlives any single piece of software.</p>
       </div>
 
       <div class="welcome-section">
@@ -489,8 +489,8 @@
         <p><strong>Drag and drop</strong> — every path input on every card and in the Pipeline Builder accepts a file or folder dragged directly from Finder. Drop anything onto the field. A faint purple dashed ring marks each drop target; it glows neon on hover. The full path populates instantly and the field flashes green to confirm.</p>
         <p><strong>Session pills</strong> — completed operations are tracked as pills in the bottom-right corner for the duration of your session. Click any pill to re-open that step's full output log.</p>
         <p><strong>Report viewer</strong> — after any tool run, a report card appears inside the card showing a summary of what happened. Click <em>View Full Report</em> to open the complete output in a scrollable modal.</p>
-        <p><strong>Owl / Glossary</strong> — the owl icon (bottom right) opens a floating glossary of every technical term used in RekitBox. Click any term in the glossary for a full explanation card. Useful if you're not sure what a Camelot key, an orphaned entry, or EBU R128 means.</p>
-        <p><strong>Settings</strong> — the ⚙ gear icon (top right) controls archive mode (which drive RekitBox writes backups to), log retention, and scan exclusions. Changes take effect immediately.</p>
+        <p><strong>Owl / Glossary</strong> — the owl icon (bottom right) opens a floating glossary of every technical term used in FableGear. Click any term in the glossary for a full explanation card. Useful if you're not sure what a Camelot key, an orphaned entry, or EBU R128 means.</p>
+        <p><strong>Settings</strong> — the ⚙ gear icon (top right) controls archive mode (which drive FableGear writes backups to), log retention, and scan exclusions. Changes take effect immediately.</p>
       </div>
 
       <div class="welcome-section">
@@ -506,7 +506,7 @@
           </div>
           <div class="welcome-tool">
             <div class="welcome-tool-name">pyrekordbox</div>
-            <div class="welcome-tool-desc">Reads and writes Rekordbox's SQLite database directly. This is what lets RekitBox import tracks, fix paths, and link playlists without Rekordbox needing to be open. Rekordbox must be closed before any write operation.</div>
+            <div class="welcome-tool-desc">Reads and writes Rekordbox's SQLite database directly. This is what lets FableGear import tracks, fix paths, and link playlists without Rekordbox needing to be open. Rekordbox must be closed before any write operation.</div>
           </div>
           <div class="welcome-tool">
             <div class="welcome-tool-name">mutagen</div>
@@ -528,27 +528,27 @@
         <div class="welcome-compare-row">
           <div class="welcome-compare">
             <div class="welcome-compare-name">vs Mixed In Key</div>
-            <div class="welcome-compare-desc">MIK is excellent and arguably the most accurate BPM/key tool built specifically for DJs. $58 one-time, polished, years of refinement. RekitBox uses librosa — solid and research-grade — but MIK has the edge on complex or atonal tracks. If you use MIK, RekitBox respects it: it won't overwrite existing tags unless you explicitly ask.</div>
+            <div class="welcome-compare-desc">MIK is excellent and arguably the most accurate BPM/key tool built specifically for DJs. $58 one-time, polished, years of refinement. FableGear uses librosa — solid and research-grade — but MIK has the edge on complex or atonal tracks. If you use MIK, FableGear respects it: it won't overwrite existing tags unless you explicitly ask.</div>
           </div>
           <div class="welcome-compare">
             <div class="welcome-compare-name">vs Lexicon</div>
-            <div class="welcome-compare-desc">Lexicon is the best cross-platform DJ library manager right now, ~$10/month. If you work across Serato, Traktor, and Rekordbox, Lexicon is probably the right tool. RekitBox is Rekordbox-specific, free, and focused on the safety and recovery problems Lexicon doesn't prioritize. They solve different problems.</div>
+            <div class="welcome-compare-desc">Lexicon is the best cross-platform DJ library manager right now, ~$10/month. If you work across Serato, Traktor, and Rekordbox, Lexicon is probably the right tool. FableGear is Rekordbox-specific, free, and focused on the safety and recovery problems Lexicon doesn't prioritize. They solve different problems.</div>
           </div>
           <div class="welcome-compare">
             <div class="welcome-compare-name">vs Rekordbox's own analysis</div>
-            <div class="welcome-compare-desc">Rekordbox's BPM analysis is fine. The difference is where the results live. Rekordbox writes to its database only — results do not survive a rebuild. RekitBox writes to the file tags. Those tags live in the audio file forever, across any software and any database rebuild.</div>
+            <div class="welcome-compare-desc">Rekordbox's BPM analysis is fine. The difference is where the results live. Rekordbox writes to its database only — results do not survive a rebuild. FableGear writes to the file tags. Those tags live in the audio file forever, across any software and any database rebuild.</div>
           </div>
           <div class="welcome-compare">
             <div class="welcome-compare-name">vs MusicBrainz Picard</div>
-            <div class="welcome-compare-desc">Picard identifies recordings and corrects metadata — titles, artists, albums. RekitBox deliberately doesn't touch any of that. The scope is narrow by design: BPM, key, loudness, path integrity, and library safety. Different tool, different job.</div>
+            <div class="welcome-compare-desc">Picard identifies recordings and corrects metadata — titles, artists, albums. FableGear deliberately doesn't touch any of that. The scope is narrow by design: BPM, key, loudness, path integrity, and library safety. Different tool, different job.</div>
           </div>
         </div>
       </div>
 
       <div class="welcome-section">
         <h3>The philosophy</h3>
-        <p>Every write operation in RekitBox creates a timestamped backup before touching anything. Database changes, audio rewrites, path updates — all logged and reversible. Files are moved to Trash rather than permanently deleted unless you explicitly choose otherwise. The goal is that nothing RekitBox has ever done to your library should be unrecoverable.</p>
-        <p>Rekordbox must be closed before any write operation. RekitBox will warn you if it detects Rekordbox is running.</p>
+        <p>Every write operation in FableGear creates a timestamped backup before touching anything. Database changes, audio rewrites, path updates — all logged and reversible. Files are moved to Trash rather than permanently deleted unless you explicitly choose otherwise. The goal is that nothing FableGear has ever done to your library should be unrecoverable.</p>
+        <p>Rekordbox must be closed before any write operation. FableGear will warn you if it detects Rekordbox is running.</p>
         <p>No cloud. No accounts. No subscription. No internet dependency at runtime. Your library data stays on your machine.</p>
         <p class="welcome-tip-block">
           💡 You can revisit this window anytime — including the archive folder setup below — by clicking the <strong>lightbulb icon</strong> in the bottom-right corner of the screen.
@@ -563,7 +563,7 @@
 <!-- ══ Scan bar ═══════════════════════════════════════════════════════════ -->
 <div id="scan-bar">
   <!-- Shown only when idle (no active scan) -->
-  <span id="scan-bar-idle">RekitBox — Ready</span>
+  <span id="scan-bar-idle">FableGear — Ready</span>
    <!-- Stat counters scroll horizontally when they overflow, so the action
        buttons in .scan-bar-right stay anchored to the right edge. -->
   <div class="scan-bar-scroll">
@@ -619,7 +619,7 @@
   <div id="log-output"></div>
 </div>
 
-<script src="/static/rekitbox.js"></script>
+<script src="/static/fablegear.js"></script>
 
 <!-- ══ DB Panel ══════════════════════════════════════════════════════════════
      Slide-in 400px panel. Only the active section is visible.               -->
@@ -655,7 +655,7 @@
     <!-- Header bar -->
     <div class="le-header">
       <div class="le-header-left">
-        <img src="/static/RB_LOGO.png" alt="" role="presentation" class="icon-rb-logo-sm">
+        <img src="/static/icon-FableGear-logo.png" alt="" role="presentation" class="icon-rb-logo-sm">
         <span class="le-title">Library &amp; Playlist Editor</span>
       </div>
       <div class="le-header-center">
@@ -849,16 +849,16 @@
   </div>
 </div>
 
-<!-- ══ RekitGo walkthrough modal ════════════════════════════════════════════ -->
-<div id="rekitgo-backdrop" onclick="closeRekitGo()"></div>
-<div id="rekitgo-panel">
+<!-- ══ FableGo walkthrough modal ════════════════════════════════════════════ -->
+<div id="fablego-backdrop" onclick="closeFableGo()"></div>
+<div id="fablego-panel">
 
   <!-- Header -->
-  <div class="rekitgo-header">
-    <span class="rekitgo-title">
-      <img src="/static/icon-rekitgo.png" class="rekitgo-title-icon" alt="RekitGo"> RekitGo
+  <div class="fablego-header">
+    <span class="fablego-title">
+      <img src="/static/icon-fablego.png" class="fablego-title-icon" alt="FableGo"> FableGo
     </span>
-    <button type="button" class="rekitgo-close" onclick="closeRekitGo()">✕</button>
+    <button type="button" class="fablego-close" onclick="closeFableGo()">✕</button>
   </div>
 
   <!-- Step indicator -->
@@ -887,7 +887,7 @@
   <!-- ── Page 1: Overview ─────────────────────────────────────────────────── -->
   <div class="rkg-page" id="rkg-page-1">
     <p class="rkg-section-body">
-      <strong>RekitGo</strong> is the iPhone companion to RekitBox. Queue downloads, browse your library, manage playlists, and export to Pioneer drives — all from your phone.
+      <strong>FableGo</strong> is the iPhone companion to FableGear. Queue downloads, browse your library, manage playlists, and export to Pioneer drives — all from your phone.
     </p>
     <p class="rkg-section-body">
       It installs as a <strong>web app (PWA)</strong> — no App Store, no Xcode, no cost. Just open it in Safari and tap <em>Add to Home Screen</em>.
@@ -906,7 +906,7 @@
   <!-- ── Page 2: Mac Tailscale ────────────────────────────────────────────── -->
   <div class="rkg-page hidden" id="rkg-page-2">
     <p class="rkg-section-body">
-      Install <strong>Tailscale</strong> on this Mac so your iPhone can reach RekitBox remotely.
+      Install <strong>Tailscale</strong> on this Mac so your iPhone can reach FableGear remotely.
     </p>
     <div id="rkg-qr-ts-mac" class="rkg-qr-box">
       <p class="rkg-qr-caption">tailscale.com/download/macos</p>
@@ -924,7 +924,7 @@
   <!-- ── Page 3: iPhone install ─────────────────────────────────────────── -->
   <div class="rkg-page hidden" id="rkg-page-3">
     <p class="rkg-section-body">
-      Scan the QR code below on your iPhone to open RekitGo in Safari, then install it to your home screen.
+      Scan the QR code below on your iPhone to open FableGo in Safari, then install it to your home screen.
     </p>
     <div class="rkg-qr-pair">
       <div>
@@ -934,45 +934,45 @@
         </div>
       </div>
       <div>
-        <div class="rkg-qr-label">Open RekitGo</div>
-        <div id="rkg-qr-rekitgo-ios" class="rkg-qr-box">
+        <div class="rkg-qr-label">Open FableGo</div>
+        <div id="rkg-qr-fablego-ios" class="rkg-qr-box">
           <p class="rkg-qr-caption">Scan → opens in Safari</p>
         </div>
       </div>
     </div>
     <ul class="rkg-checklist">
-      <li>Scan the <strong>Open RekitGo</strong> QR with your iPhone camera</li>
+      <li>Scan the <strong>Open FableGo</strong> QR with your iPhone camera</li>
       <li>It opens in <strong>Safari</strong> — tap the <strong>Share</strong> button (□↑) at the bottom</li>
       <li>Tap <strong>Add to Home Screen</strong> → tap <strong>Add</strong></li>
-      <li>RekitGo now lives on your home screen like a native app</li>
+      <li>FableGo now lives on your home screen like a native app</li>
     </ul>
     <div class="rkg-notice">
-      <strong>Remote access?</strong> Install Tailscale on your iPhone and sign in with the same account as this Mac — then RekitGo works from anywhere, not just home Wi-Fi.
+      <strong>Remote access?</strong> Install Tailscale on your iPhone and sign in with the same account as this Mac — then FableGo works from anywhere, not just home Wi-Fi.
     </div>
   </div>
 
   <!-- ── Page 4: Connect ────────────────────────────────────────────────────── -->
   <div class="rkg-page hidden" id="rkg-page-4">
-    <div id="rekitgo-status-row">
-      <span id="rekitgo-status-dot"></span>
-      <span id="rekitgo-status-label">Checking…</span>
+    <div id="fablego-status-row">
+      <span id="fablego-status-dot"></span>
+      <span id="fablego-status-label">Checking…</span>
     </div>
-    <div id="rekitgo-qr-wrap" class="rkg-qr-box">
-      <div id="rekitgo-qr"></div>
+    <div id="fablego-qr-wrap" class="rkg-qr-box">
+      <div id="fablego-qr"></div>
       <p class="rkg-qr-caption">Scan on iPhone → opens in Safari → Add to Home Screen</p>
     </div>
-    <div id="rekitgo-detail">
-      <div class="rekitgo-row">
-        <span class="rekitgo-key">Local URL</span>
-        <span class="rekitgo-val rekitgo-mono" id="rekitgo-local">—</span>
+    <div id="fablego-detail">
+      <div class="fablego-row">
+        <span class="fablego-key">Local URL</span>
+        <span class="fablego-val fablego-mono" id="fablego-local">—</span>
       </div>
-      <div class="rekitgo-row" id="rekitgo-ts-row">
-        <span class="rekitgo-key">Remote URL</span>
-        <span class="rekitgo-val rekitgo-mono" id="rekitgo-tailscale">—</span>
+      <div class="fablego-row" id="fablego-ts-row">
+        <span class="fablego-key">Remote URL</span>
+        <span class="fablego-val fablego-mono" id="fablego-tailscale">—</span>
       </div>
     </div>
-    <p class="rekitgo-offline-msg" id="rekitgo-offline-msg">
-      RekitBox is running offline — local tools work normally.<br>
+    <p class="fablego-offline-msg" id="fablego-offline-msg">
+      FableGear is running offline — local tools work normally.<br>
       Connect to Wi-Fi or install <strong>Tailscale</strong> for remote access.
     </p>
   </div>
@@ -993,7 +993,7 @@
   <div class="toolkit-panel">
     <div class="toolkit-header">
       <button type="button" class="toolkit-close-btn" onclick="closeToolkitModal()" title="Close Toolkit (Esc)">×</button>
-      <h2 class="toolkit-title">RekitBox Toolkit</h2>
+      <h2 class="toolkit-title">FableGear Toolkit</h2>
       <p class="toolkit-subtitle">All tools — run individually or chain into pipelines</p>
     </div>
     <div class="toolkit-content" id="toolkit-content">

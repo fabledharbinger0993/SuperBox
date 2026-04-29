@@ -3,7 +3,7 @@
 	"git.autofetch": true,
 
 	// ── CSS linter ─────────────────────────────────────────────────────────
-	// RekitBox runs in pywebview (Chromium). Suppress Safari/iOS compat noise.
+	// FableGear runs in pywebview (Chromium). Suppress Safari/iOS compat noise.
 	"css.lint.vendorPrefix": "ignore",
 	"css.lint.compatibleVendorPrefixes": "ignore",
 	"css.lint.unknownVendorSpecificProperties": "ignore",
@@ -35,7 +35,7 @@
 		"Omnis",
 		"Pyrekordbox",
 		"Rekit",
-		"rekitbox",
+		"fablegear",
 		"Rekordbox",
 		"shellenv",
 		"venv",

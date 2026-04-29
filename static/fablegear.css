@@ -376,7 +376,7 @@ input[type="range"] { -webkit-app-region: no-drag; }
 }
 
 /* ── Brew update banner ────────────────────────────────────────────────── */
-#rekitbox-update-banner {
+#fablegear-update-banner {
   display: none;
   align-items: center;
   gap: 12px;
@@ -2265,17 +2265,17 @@ body.log-open #owl-hover-panel         { bottom: calc(var(--log-h) + var(--scan-
   letter-spacing: .02em;
 }
 
-/* ── RekitGo panel ─────────────────────────────────────────────────────── */
-#rekitgo-backdrop {
+/* ── FableGo panel ─────────────────────────────────────────────────────── */
+#fablego-backdrop {
   display: none;
   position: fixed; inset: 0; z-index: 10000;
   background: rgba(0,0,0,.55);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
-#rekitgo-backdrop.open { display: block; }
+#fablego-backdrop.open { display: block; }
 
-#rekitgo-panel {
+#fablego-panel {
   display: none;
   position: fixed;
   top: 50%; left: 50%;
@@ -2290,36 +2290,36 @@ body.log-open #owl-hover-panel         { bottom: calc(var(--log-h) + var(--scan-
   box-shadow: 0 24px 80px rgba(0,0,0,.85);
   overflow: hidden;
 }
-#rekitgo-panel.open { display: flex; }
-#rekitgo-panel::before {
+#fablego-panel.open { display: flex; }
+#fablego-panel::before {
   content: '';
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: 220px; height: 220px;
-  background: url('/static/icon-rekitgo.png') center / contain no-repeat;
+  background: url('/static/icon-fablego.png') center / contain no-repeat;
   opacity: 0.04;
   pointer-events: none;
   z-index: 0;
 }
 
-.rekitgo-header {
+.fablego-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 18px 20px 14px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   position: relative; z-index: 1;
 }
-.rekitgo-title {
+.fablego-title {
   font-size: .95rem; font-weight: 700; color: var(--text);
   display: flex; align-items: center; gap: 8px;
 }
-.rekitgo-title-icon { width: 22px; height: 22px; object-fit: contain; border-radius: 4px; }
-.rekitgo-close {
+.fablego-title-icon { width: 22px; height: 22px; object-fit: contain; border-radius: 4px; }
+.fablego-close {
   background: none; border: none; color: var(--text-dim);
   font-size: 1rem; cursor: pointer; padding: 2px 6px; border-radius: 4px;
 }
-.rekitgo-close:hover { color: var(--text); background: var(--surface-hi); }
+.fablego-close:hover { color: var(--text); background: var(--surface-hi); }
 
 .rkg-steps {
   display: flex; align-items: center; justify-content: center;
@@ -2418,35 +2418,35 @@ body.log-open #owl-hover-panel         { bottom: calc(var(--log-h) + var(--scan-
 .rkg-qr-pair .rkg-qr-box { align-self: stretch; }
 .rkg-qr-pair .rkg-qr-box svg { width: 120px; height: 120px; }
 
-#rekitgo-status-row {
+#fablego-status-row {
   display: flex; align-items: center; gap: 8px;
 }
-#rekitgo-status-dot {
+#fablego-status-dot {
   width: 10px; height: 10px; border-radius: 50%;
   background: var(--text-dim); flex-shrink: 0;
   transition: background .3s;
 }
-#rekitgo-status-dot.remote { background: var(--safe); box-shadow: 0 0 6px var(--safe); }
-#rekitgo-status-dot.lan    { background: var(--caution); box-shadow: 0 0 6px var(--caution); }
-#rekitgo-status-dot.offline { background: var(--danger); }
-#rekitgo-status-label { font-size: .78rem; color: var(--text-dim); }
+#fablego-status-dot.remote { background: var(--safe); box-shadow: 0 0 6px var(--safe); }
+#fablego-status-dot.lan    { background: var(--caution); box-shadow: 0 0 6px var(--caution); }
+#fablego-status-dot.offline { background: var(--danger); }
+#fablego-status-label { font-size: .78rem; color: var(--text-dim); }
 
-#rekitgo-detail { display: flex; flex-direction: column; gap: 6px; }
-.rekitgo-row {
+#fablego-detail { display: flex; flex-direction: column; gap: 6px; }
+.fablego-row {
   display: flex; align-items: baseline; justify-content: space-between;
   font-size: .72rem;
 }
-.rekitgo-key { color: var(--text-muted); }
-.rekitgo-val {
+.fablego-key { color: var(--text-muted); }
+.fablego-val {
   color: var(--text); text-align: right; max-width: 220px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.rekitgo-mono { font-family: var(--mono); font-size: .65rem; color: var(--text-dim); }
-.rekitgo-offline-msg {
+.fablego-mono { font-family: var(--mono); font-size: .65rem; color: var(--text-dim); }
+.fablego-offline-msg {
   font-size: .75rem; color: var(--text-dim); line-height: 1.55;
   text-align: center;
 }
-.rekitgo-offline-msg strong { color: var(--text-muted); }
+.fablego-offline-msg strong { color: var(--text-muted); }
 
 .rkg-footer {
   display: flex; align-items: center; justify-content: space-between;
@@ -3422,7 +3422,7 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: url('/static/icon-rekitbox-app.png') center / 420px 420px no-repeat;
+  background: url('/static/icon-fablegear-app.png') center / 420px 420px no-repeat;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: pixelated;
   opacity: 0.08;
@@ -4603,16 +4603,16 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 .icon-rb-logo   { width: 26px; height: 26px; object-fit: contain; opacity: .7; mix-blend-mode: screen; flex-shrink: 0; }
 
 /* ── Header elements ────────────────────────────────────────────────────── */
-#rekitbox-header-logo { height: 36px; object-fit: contain; object-position: left; mix-blend-mode: screen; flex-shrink: 0; }
+#fablegear-header-logo { height: 36px; object-fit: contain; object-position: left; mix-blend-mode: screen; flex-shrink: 0; }
 #view-output-btn { display: none; background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); border-radius: 5px; padding: 4px 12px; font-size: .78rem; letter-spacing: .04em; cursor: pointer; }
-#rekitbox-update-link { text-decoration: none; }
+#fablegear-update-link { text-decoration: none; }
 
 /* ── Status pills ───────────────────────────────────────────────────────── */
 #backup-pill          { display: none; }
 #backup-pill  .dot    { background: var(--text-dim); }
 #release-pill .dot    { background: var(--accent); }
 
-/* ── RekitBox update overlay ────────────────────────────────────────────── */
+/* ── FableGear update overlay ────────────────────────────────────────────── */
 #rkb-update-overlay {
   display: none; position: fixed; inset: 0; z-index: 9000;
   background: rgba(4,2,14,0.82);
@@ -4810,9 +4810,9 @@ footer {
 .le-sidebar-bottom    { margin-top: auto; }
 .le-empty-music-icon  { font-size: 2.5rem; margin-bottom: 12px; }
 
-/* ── RekitGo / mobile panel ─────────────────────────────────────────────── */
+/* ── FableGo / mobile panel ─────────────────────────────────────────────── */
 .rkg-optional-label { font-weight: 400; opacity: .6; }
-#rekitgo-offline-msg { display: none; }
+#fablego-offline-msg { display: none; }
 .rkg-prev-hidden     { visibility: hidden; }
 .rkg-counter         { font-size: .72rem; color: var(--text-dim); }
 

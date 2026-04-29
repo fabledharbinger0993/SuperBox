@@ -1,11 +1,11 @@
-# RekitBox-Native USB Export & File Structure
+# FableGear-Native USB Export & File Structure
 
 ## Export Workflow
 
 1. User selects target USB drive
-2. RekitBox validates drive (format, free space, folder structure)
+2. FableGear validates drive (format, free space, folder structure)
 3. Pyrekordbox writes Rekordbox-compatible SQLite DB to drive
-4. RekitBox generates all required folders/files (PIONEER, contents, playlists, cues, etc.)
+4. FableGear generates all required folders/files (PIONEER, contents, playlists, cues, etc.)
 5. Optionally, custom folder structure for advanced users
 6. Final validation: check for all required files, report errors
 
@@ -37,4 +37,4 @@
 
 ---
 
-This plan ensures RekitBox can export fully compatible USBs for Pioneer hardware, with robust validation and user safety.
+This plan ensures FableGear can export fully compatible USBs for Pioneer hardware, with robust validation and user safety.

@@ -1,4 +1,4 @@
-# RekitBox runs inside pywebview which uses the macOS system WebKit (WKWebView),
+# FableGear runs inside pywebview which uses the macOS system WebKit (WKWebView),
 # equivalent to the current Safari / Chrome engine on macOS.
 # Scoping to last 2 Chrome versions silences false Safari/iOS compat warnings
 # in VS Code's CSS language service for properties like -webkit-app-region.

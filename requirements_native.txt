@@ -1,4 +1,4 @@
-# RekitBox Native Minimal Requirements
+# FableGear Native Minimal Requirements
 Flask
 pyrekordbox
 mutagen

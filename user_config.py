@@ -493,7 +493,7 @@ def interactive_setup(*, update: bool = False) -> dict:
 
     # ── Mode selection ──
     print()
-    print("  Select RekitBox mode:")
+    print("  Select FableGear mode:")
     print("    1. Suburban (AI enabled, recommended)")
     print("    2. Rural (no AI, pure toolkit)")
     mode_choice = ""

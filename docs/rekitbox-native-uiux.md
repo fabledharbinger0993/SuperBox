@@ -1,4 +1,4 @@
-# RekitBox-Native UI/UX Plan
+# FableGear-Native UI/UX Plan
 
 ## Library Browser
 
@@ -33,4 +33,4 @@
 
 ---
 
-This UI/UX plan supports a seamless, RekitBox-native workflow for library management, playlisting, and export, with robust safety and user feedback.
+This UI/UX plan supports a seamless, FableGear-native workflow for library management, playlisting, and export, with robust safety and user feedback.

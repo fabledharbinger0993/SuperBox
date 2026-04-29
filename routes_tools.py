@@ -296,7 +296,7 @@ def api_process():
         tf = tempfile.NamedTemporaryFile(
             mode="w",
             suffix=".txt",
-            prefix="rekitbox_smart_skip_",
+            prefix="fablegear_smart_skip_",
             delete=False,
             encoding="utf-8",
         )
@@ -326,7 +326,7 @@ def api_process_retry():
         return jsonify({"error": "paths list is required"}), 400
 
     tf = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", prefix="rekitbox_retry_",
+        mode="w", suffix=".txt", prefix="fablegear_retry_",
         delete=False, encoding="utf-8",
     )
     tf.write("\n".join(paths))

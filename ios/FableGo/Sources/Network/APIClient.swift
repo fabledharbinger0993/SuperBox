@@ -12,7 +12,7 @@ enum APIError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notConfigured:        return "No server configured. Add your RekitBox address in Settings."
+        case .notConfigured:        return "No server configured. Add your FableGear address in Settings."
         case .httpError(let code):  return "Server returned \(code)."
         case .decodingError(let e): return "Response parse failed: \(e.localizedDescription)"
         case .networkError(let e):  return e.localizedDescription
@@ -28,7 +28,7 @@ final class APIClient: ObservableObject {
 
     static let shared = APIClient()
     private static let configDefaultsKey = "serverConfig"
-    private static let tokenService = "com.fabledharbinger.rekitgo"
+    private static let tokenService = "com.fabledharbinger.fablego"
     private static let tokenAccount = "mobile_token"
     private static let wsReconnectDelay: TimeInterval = 3
 
@@ -218,7 +218,7 @@ final class APIClient: ObservableObject {
                 }
         guard let cfg = config else { return }
         guard let url = URL(string: "ws://\(cfg.host):\(cfg.port)/api/mobile/events") else {
-            print("[RekitGo] connectWebSocket: invalid URL for host \(cfg.host)")
+            print("[FableGo] connectWebSocket: invalid URL for host \(cfg.host)")
             return
         }
         disconnectWebSocket()

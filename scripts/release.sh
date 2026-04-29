@@ -14,7 +14,7 @@ RELEASE_BRANCH="${RELEASE_BRANCH:-main}"
 RELEASE_REMOTE="${RELEASE_REMOTE:-origin}"
 RELEASE_WAIT_SECONDS="${RELEASE_WAIT_SECONDS:-300}"
 RELEASE_WAIT_INTERVAL="${RELEASE_WAIT_INTERVAL:-5}"
-ZIP_ASSET_NAME="${RELEASE_ZIP_ASSET:-RekitBox.zip}"
+ZIP_ASSET_NAME="${RELEASE_ZIP_ASSET:-FableGear.zip}"
 
 # VS Code tasks or non-interactive shells may not export SHELL, which causes
 # noisy GitHub CLI tip messages about unknown shell targets.

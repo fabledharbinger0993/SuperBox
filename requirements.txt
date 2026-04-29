@@ -46,7 +46,7 @@ yt-dlp>=2024.1
 # Requires ffmpeg (already a system dep) for post-download format conversion.
 
 qrcode[svg]>=7.4
-# QR code generation for the RekitGo pairing panel (inline SVG, no Pillow needed).
+# QR code generation for the FableGo pairing panel (inline SVG, no Pillow needed).
 
 pywebview>=5.0
 # Native OS window (WKWebView on macOS) — replaces the browser launch step.
@@ -58,4 +58,4 @@ PyQt5>=5.15
 
 pyinstaller>=6.0
 # Bundles Python + all deps into a standalone .app.  Run build.sh to produce
-# dist/RekitBox.app.  Not needed at runtime — dev/build tool only.
+# dist/FableGear.app.  Not needed at runtime — dev/build tool only.

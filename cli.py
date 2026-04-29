@@ -32,7 +32,7 @@ from datetime import datetime
 from pathlib import Path
 
 try:
-    from RekitBox.config import LOCAL_DB, MUSIC_ROOT   # when run as a package
+    from FableGear.config import LOCAL_DB, MUSIC_ROOT   # when run as a package
 except ImportError:
     from config import LOCAL_DB, MUSIC_ROOT             # when run as a script
 
@@ -68,7 +68,7 @@ def _write_report(subdir: str, filename: str, text: str) -> str | None:
     """
     try:
         try:
-            from RekitBox.config import REPORTS_DIR  # noqa: PLC0415
+            from FableGear.config import REPORTS_DIR  # noqa: PLC0415
         except ImportError:
             from config import REPORTS_DIR           # noqa: PLC0415
 
@@ -339,7 +339,7 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         # otherwise fall back to ~/rekordbox-toolkit/
         try:
             try:
-                from RekitBox.config import REPORTS_DIR  # noqa: PLC0415
+                from FableGear.config import REPORTS_DIR  # noqa: PLC0415
             except ImportError:
                 from config import REPORTS_DIR           # noqa: PLC0415
             out_dir = REPORTS_DIR / "Duplicates"
@@ -388,7 +388,7 @@ def cmd_duplicates(args: argparse.Namespace) -> None:
         if result.unique_in_trash:
             print(f"  ║  {len(result.unique_in_trash):>5} tracks exist ONLY in a trash folder            ║")
             print(f"  ║        → NOT included in the pruning CSV                    ║")
-            print(f"  ║        → RekitBox does not offer an automated rescue step   ║")
+            print(f"  ║        → FableGear does not offer an automated rescue step   ║")
             print(f"  ║        → move these files manually before clearing trash    ║")
         if trapped_keeps:
             print(f"  ║  {trapped_keeps:>5} duplicate groups have their best copy in trash   ║")

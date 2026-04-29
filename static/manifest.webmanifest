@@ -1,7 +1,7 @@
 {
-  "name": "RekitGo",
-  "short_name": "RekitGo",
-  "description": "iPhone companion to RekitBox — queue downloads, browse your library, manage playlists.",
+  "name": "FableGo",
+  "short_name": "FableGo",
+  "description": "iPhone companion to FableGear — queue downloads, browse your library, manage playlists.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,13 +10,13 @@
   "theme_color": "#ff6600",
   "icons": [
     {
-      "src": "/static/icon-rekitgo.png",
+      "src": "/static/icon-fablego.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/static/RB_LOGO.png",
+      "src": "/static/icon-FableGear-logo.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any"

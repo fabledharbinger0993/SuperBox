@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 #
-# RekitBox PyInstaller spec
+# FableGear PyInstaller spec
 #
 # Build with:  bash build.sh
-# Output:      dist/RekitBox.app
+# Output:      dist/FableGear.app
 #
 # The bundle is self-contained — Python, all pip dependencies, templates, and
 # static assets are packed inside.  No Python or Homebrew needed on the user's
@@ -12,7 +12,7 @@
 
 from pathlib import Path
 
-SRC = Path('.')  # run PyInstaller from the RekitBox/ directory
+SRC = Path('.')  # run PyInstaller from the FableGear/ directory
 
 a = Analysis(
     [str(SRC / 'main.py')],
@@ -58,7 +58,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='RekitBox',
+    name='FableGear',
     debug=False,
     strip=False,
     upx=False,
@@ -67,7 +67,7 @@ exe = EXE(
     target_arch=None,        # universal2 can be forced here if needed
     codesign_identity=None,  # set to your Apple Developer ID to code-sign
     entitlements_file=None,
-    icon=str(SRC / 'static' / 'RekitBox.icns'),
+    icon=str(SRC / 'static' / 'FableGear.icns'),
 )
 
 coll = COLLECT(
@@ -78,17 +78,17 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='RekitBox',
+    name='FableGear',
 )
 
 app = BUNDLE(
     coll,
-    name='RekitBox.app',
-    icon=str(SRC / 'static' / 'RekitBox.icns'),
-    bundle_identifier='com.fabledharbinger.rekitbox',
+    name='FableGear.app',
+    icon=str(SRC / 'static' / 'FableGear.icns'),
+    bundle_identifier='com.fabledharbinger.fablegear',
     info_plist={
-        'CFBundleName':             'RekitBox',
-        'CFBundleDisplayName':      'RekitBox',
+        'CFBundleName':             'FableGear',
+        'CFBundleDisplayName':      'FableGear',
         'CFBundleShortVersionString': '1.0.7',
         'NSPrincipalClass':         'NSApplication',
         'NSHighResolutionCapable':  True,
@@ -100,6 +100,6 @@ app = BUNDLE(
         # Required so macOS shows the Automation permission prompt when the
         # bundled app queries Finder's selection via osascript.  Without this
         # key macOS silently blocks the osascript call, breaking drag-and-drop.
-        'NSAppleEventsUsageDescription': 'RekitBox uses Finder to read the path of folders you drag and drop into the app.',
+        'NSAppleEventsUsageDescription': 'FableGear uses Finder to read the path of folders you drag and drop into the app.',
     },
 )

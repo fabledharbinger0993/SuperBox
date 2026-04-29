@@ -1,20 +1,20 @@
-# RekitBox — Claude Context
+# FableGear — Claude Context
 
 ## What this is
 
-RekitBox is a local rekordbox library management toolkit. Flask backend, single-page HTML/JS/CSS frontend. Runs entirely on the local machine — no internet dependency, no cloud, no AI at runtime. The only network call is the optional git pull on launch.
+FableGear is a local rekordbox library management toolkit. Flask backend, single-page HTML/JS/CSS frontend. Runs entirely on the local machine — no internet dependency, no cloud, no AI at runtime. The only network call is the optional git pull on launch.
 
 ## Core philosophy
 
 - **Function before aesthetics.** Never sacrifice working behaviour for visual polish.
 - **Local-first, always.** No CDN links, no external fonts, no runtime API calls. If it requires internet, it doesn't belong here.
-- **Rekordbox is the source of truth.** RekitBox reads and writes the rekordbox database (`master.db`) via pyrekordbox. Every operation that touches the DB or moves files requires explicit user confirmation. Rekordbox must be closed before any write operation.
-- **One source of truth.** The canonical codebase lives at `FabledHarbinger/Git Repos/RekitBox`. The GitHub repo (`fabledharbinger0993/RekitBox`) must always reflect this.
+- **Rekordbox is the source of truth.** FableGear reads and writes the rekordbox database (`master.db`) via pyrekordbox. Every operation that touches the DB or moves files requires explicit user confirmation. Rekordbox must be closed before any write operation.
+- **One source of truth.** The canonical codebase lives at `FabledHarbinger/Git Repos/FableGear`. The GitHub repo (`fabledharbinger0993/FableGear`) must always reflect this.
 
 ## How to start Claude Code on this project
 
 Open Claude Code with working directory set to:
-`/Users/cameronkelly/FabledHarbinger/Git Repos/RekitBox`
+`/Users/cameronkelly/FabledHarbinger/Git Repos/FableGear`
 
 That's it. This file will orient the session.
 
@@ -23,12 +23,12 @@ That's it. This file will orient the session.
 - **Backend:** Python 3, Flask served by Waitress
 - **Database access:** pyrekordbox (reads rekordbox master.db)
 - **Audio analysis:** librosa (BPM/key), Chromaprint/fpcalc (acoustic fingerprinting)
-- **Frontend:** Single HTML template (`templates/index.html`) + extracted stylesheet (`static/rekitbox.css`)
+- **Frontend:** Single HTML template (`templates/index.html`) + extracted stylesheet (`static/fablegear.css`)
 - **Launch:** `launch.sh` → sets up venv, pulls latest, starts Waitress on `localhost:5001`, opens browser. Wrapped as a Mac `.app` via Automator for dock access.
 
-## Mobile backend (RekitGo companion app)
+## Mobile backend (FableGo companion app)
 
-`app.py` includes a full `/api/mobile/*` REST + WebSocket API for the RekitGo iOS app.
+`app.py` includes a full `/api/mobile/*` REST + WebSocket API for the FableGo iOS app.
 
 - Bearer token auth (`mobile_token` in `~/.rekordbox-toolkit/config.json`)
 - `GET /api/mobile/ping` — health check (no auth)
@@ -44,7 +44,7 @@ That's it. This file will orient the session.
 ## Project structure
 
 ```
-RekitBox/
+FableGear/
 ├── app.py                  # Flask routes + SSE streaming + mobile API
 ├── scanner.py              # Filesystem audio scanner
 ├── duplicate_detector.py   # Chromaprint fingerprinting + pre-filter by key/BPM/duration
@@ -65,7 +65,7 @@ RekitBox/
 ├── templates/
 │   └── index.html          # Single-page app (HTML + JS only, CSS extracted)
 ├── static/
-│   ├── rekitbox.css        # All styles (extracted from index.html for browser caching)
+│   ├── fablegear.css        # All styles (extracted from index.html for browser caching)
 │   └── [icons]             # PNG icons for each tool card
 ├── launch.sh               # Startup script (Automator-safe: silences stdout for dock icon)
 └── requirements.txt
@@ -73,7 +73,7 @@ RekitBox/
 
 ## CSS architecture
 
-Styles live in `static/rekitbox.css`. Key design tokens in `:root`:
+Styles live in `static/fablegear.css`. Key design tokens in `:root`:
 
 - `--log-h: 340px` — log panel height (fixed overlay)
 - `--scan-bar-h: 44px` — scan bar height. **All bottom offsets that reference the scan bar use `var(--scan-bar-h)`.** Do not hardcode `44px` in layout calculations.
@@ -92,7 +92,7 @@ Floating buttons (owl, lightbulb, session pills) shift up when `body.log-open` i
 
 ## Key decisions made (don't undo without reason)
 
-- **`exec > /dev/null 2>&1` in launch.sh is intentional.** Automator treats any stdout as an error. Server logs still go to `rekitbox.log` via explicit redirect.
+- **`exec > /dev/null 2>&1` in launch.sh is intentional.** Automator treats any stdout as an error. Server logs still go to `fablegear.log` via explicit redirect.
 - **`git pull --ff-only` on launch is intentional.** Keeps the running app current. `--ff-only` prevents silent merges.
 - **No Tailwind, no component frameworks.** Single CSS file, custom tokens, flat structure. Right-sized for a single-page local tool.
 - **The multi-step confirmation UI for destructive actions** (prune, organize in assimilate mode) places each confirm button at a different screen corner deliberately — prevents muscle-memory clicking through a dangerous operation.
@@ -106,6 +106,6 @@ Floating buttons (owl, lightbulb, session pills) shift up when `body.log-open` i
 
 ## GitHub
 
-Repo: `https://github.com/fabledharbinger0993/RekitBox`
+Repo: `https://github.com/fabledharbinger0993/FableGear`
 The public-facing repo must stay current — it's what users download from the website.
 Always push to `main` after significant changes.

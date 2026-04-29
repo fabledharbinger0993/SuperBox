@@ -1,7 +1,7 @@
 """
-RekitBox / state_tracker.py
+FableGear / state_tracker.py
 Per-library persistent step tracking.
-Stored as <library_root>/.rekitbox_state.json
+Stored as <library_root>/.fablegear_state.json
 Created lazily on first use.
 """
 
@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from datetime import datetime, timezone
 
-STATE_FILENAME = ".rekitbox_state.json"
+STATE_FILENAME = ".fablegear_state.json"
 log = logging.getLogger(__name__)
 
 def _state_path(library_root: str) -> Path:
@@ -24,7 +24,7 @@ def load_state(library_root: str) -> dict:
     if not path.exists():
         return {
             "library_root": str(library_root),
-            "rekitbox_version": "1.4.0",
+            "fablegear_version": "1.4.0",
             "steps_completed": {},
             "last_updated": datetime.now(timezone.utc).isoformat()
         }

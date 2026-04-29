@@ -1,7 +1,7 @@
 """
-brew_updater.py — background Homebrew update checker for RekitBox.
+brew_updater.py — background Homebrew update checker for FableGear.
 
-Checks whether the Homebrew formulae RekitBox depends on are outdated.
+Checks whether the Homebrew formulae FableGear depends on are outdated.
 Runs once at startup (after a short delay so it doesn't slow the boot)
 and then again every 7 days in a daemon thread.
 
@@ -29,7 +29,7 @@ from datetime import datetime
 
 log = logging.getLogger(__name__)
 
-# ── Packages RekitBox directly depends on via Homebrew ────────────────────────
+# ── Packages FableGear directly depends on via Homebrew ────────────────────────
 
 # Detect the running Python's formula name (e.g. "python@3.14")
 _PY_FORMULA = f"python@{sys.version_info.major}.{sys.version_info.minor}"
@@ -63,7 +63,7 @@ _status: dict = {
 
 def check_now() -> dict:
     """
-    Run ``brew outdated --json=v2``, filter to RekitBox deps, update cache.
+    Run ``brew outdated --json=v2``, filter to FableGear deps, update cache.
     Returns the new status dict.
     """
     log.info("brew_updater: checking for Homebrew updates …")
@@ -101,7 +101,7 @@ def check_now() -> dict:
             names = ", ".join(p["name"] for p in outdated)
             log.info("brew_updater: %d package(s) outdated — %s", len(outdated), names)
         else:
-            log.info("brew_updater: all RekitBox Homebrew packages are up to date")
+            log.info("brew_updater: all FableGear Homebrew packages are up to date")
 
     except FileNotFoundError:
         msg = "brew not found — Homebrew may not be installed"

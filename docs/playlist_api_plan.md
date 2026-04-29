@@ -1,4 +1,4 @@
-# RekitBox Playlist/Track API Plan
+# FableGear Playlist/Track API Plan
 
 ## Endpoints (all local, Flask)
 

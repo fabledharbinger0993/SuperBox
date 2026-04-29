@@ -1,4 +1,4 @@
-"""ws_bus.py — Thread-safe WebSocket broadcast registry for RekitGo.
+"""ws_bus.py — Thread-safe WebSocket broadcast registry for FableGo.
 
 All mobile_events WebSocket connections register here on connect and
 unregister on disconnect.  Background threads (analysis, export, download)
