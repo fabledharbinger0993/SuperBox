@@ -4,11 +4,11 @@
 # venv are missing. Runs in a visible Terminal window so the user can see
 # progress and respond to any password prompts.
 #
-# When complete it touches ../.fablegear_ready so launch.sh knows to proceed.
+# When complete it touches .fablegear_ready so launch.sh knows to proceed.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VENV="$SCRIPT_DIR/../venv"
-SENTINEL="$SCRIPT_DIR/../.fablegear_ready"
+VENV="$SCRIPT_DIR/venv"
+SENTINEL="$SCRIPT_DIR/.fablegear_ready"
 
 # ── Banner ────────────────────────────────────────────────────────────────
 clear
