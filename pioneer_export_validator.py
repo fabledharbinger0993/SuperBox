@@ -10,10 +10,11 @@ Centralizes all Pioneer USB export constraints and validation logic:
 All export operations should call validate_export_paths() before committing
 to the database. This ensures fail-fast behavior and clear error reporting.
 """
+from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List
 
 
 # ─── Constants ────────────────────────────────────────────────────────────────
@@ -70,7 +71,7 @@ def validate_folderpath_length(path: str) -> None:
         raise FolderPathTooLongError(path, len(path))
 
 
-def validate_no_collisions(paths: list[str]) -> None:
+def validate_no_collisions(paths: List[str]) -> None:
     """
     Raise PathCollisionError if two paths would map to the same sanitized FolderPath.
     
@@ -78,7 +79,7 @@ def validate_no_collisions(paths: list[str]) -> None:
       - /Contents/Artist_Album.mp3  (original)
       - /Contents/Artist-Album.mp3  (would sanitize to same path if not careful)
     """
-    seen: dict[str, str] = {}
+    seen: Dict[str, str] = {}
     
     for path in paths:
         # Use the actual path as-is; collisions only occur if two DIFFERENT
@@ -103,7 +104,7 @@ def validate_file_exists(path: str) -> None:
 def build_export_metadata(
     source_path: str,
     dest_path: str,
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """
     Build complete metadata for a track being exported to Pioneer drive.
     
@@ -132,7 +133,7 @@ def build_export_metadata(
     }
 
 
-def validate_export_paths(export_entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def validate_export_paths(export_entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Validate all paths in an export batch before committing to database.
     

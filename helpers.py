@@ -8,6 +8,7 @@ blueprint — this is the clean layer that prevents circular imports.
 The _stream() generator defined here is the canonical fix for the bug where
 _sse_response() called an undefined _stream local.
 """
+from __future__ import annotations
 
 import datetime
 import json
@@ -29,7 +30,7 @@ from pioneer_export_validator import validate_export_paths, build_export_metadat
 
 # ── Playback backend (optional) ───────────────────────────────────────────────
 
-_playback_import_errors: list[str] = []
+_playback_import_errors: list = []
 
 try:
     import sounddevice as _sounddevice  # type: ignore[import-untyped]
