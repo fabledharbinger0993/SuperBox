@@ -100,6 +100,47 @@ def config_exists() -> bool:
     return CONFIG_FILE.exists()
 
 
+def get_drive_status() -> dict:
+    """
+    Return a dict describing which configured drive paths are currently
+    accessible. Never raises — safe to call at any time, including before
+    config.json exists.
+
+    Keys:
+      configured       bool  — config.json exists and has all required keys
+      local_db_ok      bool  — local Rekordbox DB file is reachable
+      device_db_ok     bool  — device (DJ-drive) DB file is reachable
+      music_root_ok    bool  — music library root directory exists
+      local_db_path    str   — configured path (or None)
+      device_db_path   str   — configured path (or None)
+      music_root_path  str   — configured path (or None)
+    """
+    result: dict = {
+        "configured":      False,
+        "local_db_ok":     False,
+        "device_db_ok":    False,
+        "music_root_ok":   False,
+        "local_db_path":   None,
+        "device_db_path":  None,
+        "music_root_path": None,
+    }
+    try:
+        cfg = load_user_config()
+        result["configured"] = True
+        local_p  = Path(cfg["local_db"])
+        device_p = Path(cfg["device_db"])
+        music_p  = Path(cfg["music_root"])
+        result["local_db_path"]   = str(local_p)
+        result["device_db_path"]  = str(device_p)
+        result["music_root_path"] = str(music_p)
+        result["local_db_ok"]     = local_p.exists()
+        result["device_db_ok"]    = device_p.exists()
+        result["music_root_ok"]   = music_p.exists()
+    except Exception:
+        pass
+    return result
+
+
 def load_user_config() -> dict:
     """
     Load and return the config dict from disk.

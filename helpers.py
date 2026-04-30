@@ -138,6 +138,68 @@ def _backup_dir() -> Path:
         return Path.home() / "rekordbox-toolkit" / "backups"
 
 
+def _drives_guard(*needs: str):
+    """
+    Verify that required drive-backed resources are accessible before a route
+    proceeds.  Call at the top of any handler that uses the DJ drive or music
+    library, *before* any lazy imports that depend on config.py.
+
+    Parameters
+    ----------
+    *needs : str
+        Any subset of 'local_db', 'device_db', 'music_root'.
+        Omit a key if that resource is not required for the operation.
+
+    Returns
+    -------
+    None
+        All required resources are accessible — safe to continue.
+    (Response, int)
+        A JSON error response with HTTP 503 and ``drives_offline: true``.
+        Return this immediately from the route handler.
+
+    Example
+    -------
+    guard = _drives_guard('device_db', 'music_root')
+    if guard:
+        return guard
+    """
+    from user_config import get_drive_status  # noqa: PLC0415
+    status = get_drive_status()
+
+    if not status["configured"]:
+        return jsonify({
+            "ok": False,
+            "error": "FableGear is not configured yet.",
+            "hint": "Run: python3 cli.py setup",
+            "drives_offline": True,
+        }), 503
+
+    def _vol_name(path_str):
+        if not path_str:
+            return "drive"
+        parts = Path(path_str).parts
+        return parts[2] if len(parts) >= 3 and parts[1] == "Volumes" else path_str
+
+    missing = []
+    if "local_db" in needs and not status["local_db_ok"]:
+        missing.append("local Rekordbox database not found — is Rekordbox installed?")
+    if "device_db" in needs and not status["device_db_ok"]:
+        missing.append(f"DJ drive database offline — connect \"{_vol_name(status['device_db_path'])}\" and try again")
+    if "music_root" in needs and not status["music_root_ok"]:
+        missing.append(f"music library offline — connect \"{_vol_name(status['music_root_path'])}\" and try again")
+
+    if missing:
+        return jsonify({
+            "ok": False,
+            "error": "; ".join(missing),
+            "hint": "Reconnect the drive and try again.",
+            "drives_offline": True,
+        }), 503
+
+    return None
+
+
 def _current_fablegear_mode() -> str:
     try:
         from config import FABLEGEAR_MODE  # noqa: PLC0415

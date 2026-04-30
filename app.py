@@ -150,10 +150,12 @@ def splash():
 
 @app.route("/api/status")
 def api_status():
+    from user_config import get_drive_status  # noqa: PLC0415
     return jsonify({
         "rb_running": _rb_is_running(),
         "backup":     _backup_info(),
         "release":    _release_info(),
+        "drives":     get_drive_status(),
     })
 
 

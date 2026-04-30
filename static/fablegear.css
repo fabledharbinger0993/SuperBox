@@ -4693,6 +4693,19 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 .audit-row-mt        { margin-top: 10px; }
 .audit-btn-mt        { margin-top: 12px; }
 
+/* ── Drive-offline global banner ────────────────────────────────────────── */
+.drive-offline-banner {
+  background: rgba(240,180,75,.1);
+  border: 1px solid rgba(240,180,75,.35);
+  border-radius: 7px;
+  padding: 9px 14px;
+  font-size: .77rem;
+  color: var(--text-muted);
+  margin: 8px 0 4px;
+}
+.drive-offline-banner strong { color: var(--warn); display: block; margin-bottom: 3px; }
+.drive-offline-banner div    { line-height: 1.5; }
+
 /* ── Inline icon buttons ────────────────────────────────────────────────── */
 .icon-btn-sm-invert { width: 16px; height: 16px; filter: brightness(0) invert(1); }
 

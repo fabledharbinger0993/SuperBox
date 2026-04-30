@@ -999,7 +999,45 @@ async function refreshStatus() {
         rp.style.display = 'none';
       }
     }
+
+    // ── Drive-offline banner ──────────────────────────────────────────────
+    _updateDriveBanner(data.drives);
   } catch (_) {}
+}
+
+function _driveName(pathStr) {
+  if (!pathStr) return 'drive';
+  const parts = pathStr.split('/');
+  // /Volumes/<name>/...
+  if (parts[1] === 'Volumes' && parts[2]) return parts[2];
+  return pathStr;
+}
+
+function _updateDriveBanner(drives) {
+  const banner = document.getElementById('drive-offline-banner');
+  const detail = document.getElementById('drive-offline-detail');
+  if (!banner || !detail) return;
+
+  if (!drives) { banner.style.display = 'none'; return; }
+
+  const msgs = [];
+  if (!drives.configured) {
+    msgs.push('FableGear is not configured — run <code>python3 cli.py setup</code>');
+  } else {
+    if (!drives.local_db_ok)
+      msgs.push('Local Rekordbox database not found — is Rekordbox installed?');
+    if (!drives.device_db_ok)
+      msgs.push(`DJ drive database offline — connect <strong>${_driveName(drives.device_db_path)}</strong>`);
+    if (!drives.music_root_ok)
+      msgs.push(`Music library offline — connect <strong>${_driveName(drives.music_root_path)}</strong>`);
+  }
+
+  if (msgs.length) {
+    detail.innerHTML = msgs.join('<br>');
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 refreshStatus();
 setInterval(refreshStatus, 6000);

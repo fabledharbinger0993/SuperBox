@@ -21,9 +21,16 @@ from typing import Generator
 
 from pyrekordbox import Rekordbox6Database
 
-from config import BACKUP_DIR, DJMT_DB, LOCAL_DB
-
 log = logging.getLogger(__name__)
+
+# Config constants are loaded lazily inside each function so that importing
+# this module never fails when config.json is absent or a drive is offline.
+# Call _get_config() at the top of any function that needs them.
+
+def _get_config():
+    """Lazily import config constants. Raises RuntimeError if not configured."""
+    from config import BACKUP_DIR, DJMT_DB, LOCAL_DB  # noqa: PLC0415
+    return BACKUP_DIR, DJMT_DB, LOCAL_DB
 
 # ─── Process detection ────────────────────────────────────────────────────────
 
@@ -87,18 +94,17 @@ def _backup_db(db_path: Path) -> Path:
     Returns the path of the backup file.
     Raises RuntimeError if the source file doesn't exist.
     """
+    BACKUP_DIR, DJMT_DB, LOCAL_DB = _get_config()
     if not db_path.exists():
-        # Check if the volume/drive is mounted
-        volume_path = Path(f"/{db_path.parts[1]}/{db_path.parts[2]}") if len(db_path.parts) >= 3 else None
+        # Give a friendly hint if it looks like a drive-mount issue
+        parts = db_path.parts
+        volume_path = Path(f"/{parts[1]}/{parts[2]}") if len(parts) >= 3 else None
         drive_hint = ""
         if volume_path and not volume_path.exists():
-            drive_hint = f"\n\nThe drive '{volume_path}' is not mounted. Please ensure the drive is connected and mounted before running this operation."
-        elif volume_path and volume_path.exists():
-            drive_hint = f"\n\nThe drive is mounted, but the database file doesn't exist at the expected location. Check your configuration in ~/.fablegear/config.json"
-        
-        raise RuntimeError(
-            f"Database not found at {db_path}{drive_hint}"
-        )
+            drive_hint = f" (drive '{parts[2]}' is not mounted — connect it and try again)"
+        elif volume_path:
+            drive_hint = " (drive is mounted but file not found — check ~/.fablegear/config.json)"
+        raise RuntimeError(f"Database not found at {db_path}{drive_hint}")
 
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -148,6 +154,7 @@ def open_db(
     RuntimeError
         If write=True and backup creation fails.
     """
+    BACKUP_DIR, DJMT_DB, LOCAL_DB = _get_config()
     target = db_path or LOCAL_DB
 
     if write:
@@ -202,6 +209,7 @@ def write_db(db_path: Path | None = None) -> Generator[Rekordbox6Database, None,
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format="%(levelname)s %(message)s")
 
+    _, DJMT_DB, _ = _get_config()
     print(f"Rekordbox running: {rekordbox_is_running()}")
 
     print("\n--- Read-only test ---")
