@@ -111,8 +111,9 @@ import hmac as _hmac  # noqa: E402
 def _check_mobile_auth():
     """
     Require Bearer token for all /api/mobile/* routes except /api/mobile/ping.
-    /api/connectivity is served without auth (desktop-only, already on localhost).
+    /api/connectivity is guarded by a localhost check in its own handler.
     Rate limited to 10 attempts per minute to resist brute-force.
+    NOTE: does not fire for @sock.route handlers — those check auth manually.
     """
     if not request.path.startswith("/api/mobile/"):
         return  # /api/connectivity and other non-mobile paths skip auth
@@ -156,8 +157,11 @@ def mobile_ping():
 def api_connectivity():
     """
     Connection info for the FableGo pairing panel in the FableGear desktop UI.
-    No auth required — served to the local desktop page only.
+    No auth required — localhost only.
     """
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        return jsonify({"error": "Forbidden"}), 403
+
     import socket
     import subprocess as _sp
 
@@ -971,10 +975,27 @@ def mobile_events(ws):
     WebSocket event bus for FableGo.
 
     The mobile app connects here on startup and holds the connection open.
-    Auth checked via the before_request hook.
     Keep-alive: client should send any message (e.g. "ping") every ~25s.
+
+    NOTE: @sock.route registers directly on the app, not the blueprint, so
+    @bp.before_request does NOT fire here. Auth is checked manually below.
     """
     import ws_bus  # noqa: PLC0415
+
+    # Manual auth check — blueprint before_request hooks do not fire for
+    # routes registered via @sock.route (app-level, not blueprint-level).
+    current_token = _read_mobile_token()
+    if not current_token:
+        ws.close(message=b"server_not_configured")
+        return
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer ") or not _hmac.compare_digest(auth_header[7:], current_token):
+        current_app.logger.warning(
+            "Mobile WS auth failed from %s", request.remote_addr
+        )
+        ws.close(message=b"unauthorized")
+        return
+
     ws_bus.register(ws)
     try:
         while True:

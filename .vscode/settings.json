@@ -40,5 +40,10 @@
 		"shellenv",
 		"venv",
 		"wavesurfer"
-	]
+	],
+	"python.testing.pytestArgs": [
+		"venv"
+	],
+	"python.testing.unittestEnabled": false,
+	"python.testing.pytestEnabled": true
 }

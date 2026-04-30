@@ -24,6 +24,8 @@ from flask_limiter.util import get_remote_address
 from flask_sock import Sock
 from mutagen import File as MutagenFile
 
+from pioneer_export_validator import validate_export_paths, build_export_metadata, validate_copied_file_exists
+
 
 # ── Playback backend (optional) ───────────────────────────────────────────────
 
@@ -625,16 +627,32 @@ def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
         return text or fallback
 
     def _export_relative_path(src_path: _Path, track) -> _Path:
+        """
+        Compute path relative to Contents directory on USB drive.
+        
+        For files under MUSIC_ROOT: use relative path from root (Artist/Album/track.mp3)
+        For files outside MUSIC_ROOT: use hash-based name to avoid collisions
+        
+        All paths are validated by pioneer_export_validator before DB insertion.
+        """
         try:
+            # If file is under MUSIC_ROOT, use its relative path structure
             return src_path.resolve().relative_to(_MUSIC_ROOT.resolve())
-        except Exception:
-            tail_parts = [segment for segment in src_path.parts if segment not in {src_path.anchor, "", "/"}]
-            if tail_parts and tail_parts[0] == "Volumes":
-                tail_parts = tail_parts[1:]
-            sanitized = [_safe_segment(segment, "item") for segment in tail_parts]
-            if not sanitized:
-                sanitized = [_safe_segment(src_path.name, "track")]
-            return _Path("External", *sanitized)
+        except (ValueError, OSError):
+            # File is outside MUSIC_ROOT (e.g., external drive)
+            # Use a deterministic path based on filename + hash to avoid collisions
+            import hashlib  # noqa: PLC0415
+            
+            file_stem = src_path.stem or "track"
+            file_ext = src_path.suffix or ""
+            
+            # Hash the full source path to create a unique identifier
+            path_hash = hashlib.md5(str(src_path.resolve()).encode()).hexdigest()[:8]
+            
+            # Return: External/<filename>-<hash>.<ext>
+            # This ensures deterministic, collision-free names
+            safe_name = _safe_segment(file_stem, "track")
+            return _Path("External") / f"{safe_name}-{path_hash}{file_ext}"
 
     def _push(update: dict) -> None:
         try:
@@ -716,6 +734,26 @@ def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
                     })
                 playlist_tracks[str(pl.ID)] = playlist_entries
 
+        # ── Validate all export paths before opening database ────────────────
+        try:
+            export_entries = list(export_tracks.values())
+            validated_entries = validate_export_paths(export_entries)
+            
+            # Update export_tracks with validated metadata
+            for entry in validated_entries:
+                dest_key = str(entry["dest_path"])
+                export_tracks[dest_key] = entry
+        except Exception as exc:
+            from pioneer_export_validator import PioneerExportError  # noqa: PLC0415
+            
+            if isinstance(exc, PioneerExportError):
+                error_msg = str(exc)
+            else:
+                error_msg = f"Path validation failed: {exc}"
+            
+            _update({"status": "failed", "errors": [error_msg], "current_track": ""})
+            return
+
         total = len(export_tracks)
         _update({"tracks_total": total, "tracks_done": 0, "status": "running"})
 
@@ -744,6 +782,9 @@ def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
                     dest_path.parent.mkdir(parents=True, exist_ok=True)
                     if (not dest_path.exists()) or dest_path.stat().st_size != source_path.stat().st_size:
                         _shutil.copy2(str(source_path), str(dest_path))
+                    
+                    # Validate copy succeeded (post-copy check)
+                    validate_copied_file_exists(str(dest_path))
                 except Exception as exc:
                     errors.append(f"Copy {source_path.name}: {exc}")
                     done += 1
@@ -764,7 +805,12 @@ def _run_export(job_id: str, playlist_ids: list, drive_path: str) -> None:
 
                 if usb_row is None:
                     try:
-                        usb_row = usb.add_content(dest_key)
+                        # Pass validated metadata fields to add_content
+                        usb_row = usb.add_content(
+                            dest_key,
+                            OrgFolderPath=entry.get("OrgFolderPath"),
+                            rb_LocalFolderPath=entry.get("rb_LocalFolderPath"),
+                        )
                         usb.flush()
                         path_to_usb_row[dest_key] = usb_row
                     except Exception as exc:
