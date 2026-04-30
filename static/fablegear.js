@@ -1008,35 +1008,163 @@ async function refreshStatus() {
 function _driveName(pathStr) {
   if (!pathStr) return 'drive';
   const parts = pathStr.split('/');
-  // /Volumes/<name>/...
   if (parts[1] === 'Volumes' && parts[2]) return parts[2];
   return pathStr;
 }
 
+// Tracks which drives were offline on last poll — used to auto-clear results
+// and reset dismiss state when drives come back online.
+let _lastDrivesOffline = false;
+let _driveBannerDismissed = false;
+
+function dismissDriveBanner() {
+  _driveBannerDismissed = true;
+  document.getElementById('drive-offline-banner').style.display = 'none';
+}
+
 function _updateDriveBanner(drives) {
-  const banner = document.getElementById('drive-offline-banner');
-  const detail = document.getElementById('drive-offline-detail');
+  const banner  = document.getElementById('drive-offline-banner');
+  const detail  = document.getElementById('drive-offline-detail');
+  const actions = document.getElementById('drive-offline-actions');
   if (!banner || !detail) return;
 
   if (!drives) { banner.style.display = 'none'; return; }
 
-  const msgs = [];
-  if (!drives.configured) {
-    msgs.push('FableGear is not configured — run <code>python3 cli.py setup</code>');
-  } else {
-    if (!drives.local_db_ok)
-      msgs.push('Local Rekordbox database not found — is Rekordbox installed?');
-    if (!drives.device_db_ok)
-      msgs.push(`DJ drive database offline — connect <strong>${_driveName(drives.device_db_path)}</strong>`);
-    if (!drives.music_root_ok)
-      msgs.push(`Music library offline — connect <strong>${_driveName(drives.music_root_path)}</strong>`);
+  const STEPS = {
+    not_configured: [
+      '1. Open a terminal in the FableGear folder.',
+      '2. Run: <code>python3 cli.py setup</code>',
+      '3. Follow the prompts to enter your DB and library paths.',
+    ],
+    local_db: [
+      '1. Confirm Rekordbox is installed on this Mac.',
+      '2. Open Rekordbox at least once so it creates its database.',
+      '3. Restart FableGear — the path should resolve automatically.',
+      '4. If the issue persists, use <em>Auto-detect</em> below.',
+    ],
+    device_db: [
+      '1. Connect the DJ drive (USB or Thunderbolt).',
+      '2. Wait for macOS to mount it — the banner will clear automatically.',
+      '3. If the drive name changed, use <em>Auto-detect</em> to find the new path.',
+    ],
+    music_root: [
+      '1. Connect the music library drive.',
+      '2. Wait for macOS to mount it — the banner will clear automatically.',
+      '3. If the drive name changed, use <em>Auto-detect</em> to find the new path.',
+    ],
+  };
+
+  function _stepsHtml(key) {
+    return `<ul class="drive-fix-steps">${STEPS[key].map(s => `<li>${s}</li>`).join('')}</ul>`;
   }
 
-  if (msgs.length) {
-    detail.innerHTML = msgs.join('<br>');
-    banner.style.display = 'block';
+  const msgs   = [];
+  let needsDrive = false;
+
+  if (!drives.configured) {
+    msgs.push(`<strong style="color:var(--warn)">Not configured</strong>${_stepsHtml('not_configured')}`);
   } else {
+    if (!drives.local_db_ok) {
+      msgs.push(`Local Rekordbox database not found${_stepsHtml('local_db')}`);
+    }
+    if (!drives.device_db_ok) {
+      msgs.push(`DJ drive database offline — <strong>${_driveName(drives.device_db_path)}</strong>${_stepsHtml('device_db')}`);
+      needsDrive = true;
+    }
+    if (!drives.music_root_ok) {
+      msgs.push(`Music library offline — <strong>${_driveName(drives.music_root_path)}</strong>${_stepsHtml('music_root')}`);
+      needsDrive = true;
+    }
+  }
+
+  const nowOffline = msgs.length > 0;
+
+  // If drives just came back online, un-dismiss the banner for next offline event
+  if (_lastDrivesOffline && !nowOffline) {
+    _driveBannerDismissed = false;
+    _clearDetectResults();
+  }
+  _lastDrivesOffline = nowOffline;
+
+  if (!nowOffline) {
     banner.style.display = 'none';
+    return;
+  }
+  if (_driveBannerDismissed) return;
+
+  detail.innerHTML = msgs.join('<hr style="border-color:rgba(255,255,255,.06);margin:6px 0">');
+  if (actions) actions.style.display = needsDrive ? 'flex' : 'none';
+  banner.style.display = 'block';
+}
+
+function _clearDetectResults() {
+  const r = document.getElementById('drive-detect-results');
+  const s = document.getElementById('drive-detect-status');
+  if (r) { r.innerHTML = ''; r.style.display = 'none'; }
+  if (s) s.textContent = '';
+}
+
+async function autodetectDrives() {
+  const status  = document.getElementById('drive-detect-status');
+  const results = document.getElementById('drive-detect-results');
+  if (!status || !results) return;
+
+  status.textContent = 'Scanning…';
+  results.style.display = 'none';
+  results.innerHTML = '';
+
+  try {
+    const data = await fetch('/api/drives/autodetect').then(r => r.json());
+    status.textContent = '';
+
+    const rows = [];
+
+    (data.device_db || []).forEach(p => {
+      rows.push(`<div class="candidate-row">
+        <span style="color:var(--text-muted);flex-shrink:0">DJ DB:</span>
+        <code>${p}</code>
+        <button class="btn btn-secondary btn-xs" onclick="applyDriveFix('device_db','${p.replace(/'/g,"\\'")}',this)">Apply</button>
+      </div>`);
+    });
+
+    (data.music_root || []).forEach(p => {
+      rows.push(`<div class="candidate-row">
+        <span style="color:var(--text-muted);flex-shrink:0">Music:</span>
+        <code>${p}</code>
+        <button class="btn btn-secondary btn-xs" onclick="applyDriveFix('music_root','${p.replace(/'/g,"\\'")}',this)">Apply</button>
+      </div>`);
+    });
+
+    if (rows.length === 0) {
+      results.innerHTML = '<span style="color:var(--text-muted)">No candidates found — connect the drive and try again.</span>';
+    } else {
+      results.innerHTML = rows.join('');
+    }
+    results.style.display = 'block';
+  } catch (_) {
+    status.textContent = 'Scan failed.';
+  }
+}
+
+async function applyDriveFix(key, path, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const res  = await fetch('/api/drives/apply-fix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: path }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      if (btn) { btn.textContent = '✓ Applied'; btn.style.color = 'var(--safe)'; }
+      // Trigger an immediate status refresh so the banner updates
+      setTimeout(refreshStatus, 400);
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
+      appendLog(`Drive fix failed: ${data.error}`, 'error');
+    }
+  } catch (_) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
   }
 }
 refreshStatus();

@@ -524,6 +524,108 @@ def api_set_music_root():
         return jsonify({"error": str(exc)}), 500
 
 
+@app.route("/api/drives/autodetect")
+def api_drives_autodetect():
+    """
+    Scan /Volumes/ for Pioneer DB files and music library roots.
+    Returns candidate paths for device_db and music_root so the user
+    can confirm and apply them with one click via /api/drives/apply-fix.
+    """
+    import os as _os  # noqa: PLC0415
+
+    device_db_candidates: list[str] = []
+    music_root_candidates: list[str] = []
+
+    volumes = Path("/Volumes")
+    if not volumes.exists():
+        return jsonify({"device_db": [], "music_root": []})
+
+    audio_exts = {".mp3", ".flac", ".aif", ".aiff", ".wav", ".m4a", ".ogg"}
+
+    for vol in sorted(volumes.iterdir()):
+        if not vol.is_dir():
+            continue
+        # Pioneer device DB
+        candidate_db = vol / "PIONEER" / "Master" / "master.db"
+        if candidate_db.exists():
+            device_db_candidates.append(str(candidate_db))
+        # Music root heuristic: at least 5 audio files anywhere in the first 3 levels
+        audio_count = 0
+        try:
+            for root, _dirs, files in _os.walk(vol):
+                depth = root.replace(str(vol), "").count(_os.sep)
+                if depth > 3:
+                    _dirs.clear()
+                    continue
+                for f in files:
+                    if Path(f).suffix.lower() in audio_exts:
+                        audio_count += 1
+                        if audio_count >= 5:
+                            break
+                if audio_count >= 5:
+                    break
+        except PermissionError:
+            pass
+        if audio_count >= 5:
+            music_root_candidates.append(str(vol))
+
+    return jsonify({
+        "device_db":   device_db_candidates,
+        "music_root":  music_root_candidates,
+    })
+
+
+@app.route("/api/drives/apply-fix", methods=["POST"])
+def api_drives_apply_fix():
+    """
+    Patch config.json with corrected drive paths.
+    Accepts any subset of: local_db, device_db, music_root.
+    Safe to call with partial updates — only provided keys are changed.
+    """
+    try:
+        from user_config import CONFIG_FILE, REQUIRED_KEYS, DEFAULTS  # noqa: PLC0415
+        import json as _json  # noqa: PLC0415
+
+        data = request.get_json(silent=True) or {}
+        patchable = {"local_db", "device_db", "music_root", "backup_dir"}
+        patch = {k: str(v).strip() for k, v in data.items()
+                 if k in patchable and str(v).strip()}
+        if not patch:
+            return jsonify({"error": "No valid keys provided"}), 400
+
+        # Load existing config if present, else start from empty dict
+        existing: dict = {}
+        if CONFIG_FILE.exists():
+            try:
+                existing = _json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        existing.update(patch)
+
+        # Validate all required keys are now present
+        missing = [k for k in REQUIRED_KEYS if not existing.get(k)]
+        if missing:
+            return jsonify({
+                "ok": False,
+                "error": f"Still missing required keys: {', '.join(missing)}",
+                "missing": missing,
+            }), 400
+
+        # Apply defaults for optional keys
+        for key, default in DEFAULTS.items():
+            if key not in existing:
+                existing[key] = default
+
+        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        CONFIG_FILE.write_text(
+            _json.dumps(existing, indent=2) + "\n", encoding="utf-8"
+        )
+        return jsonify({"ok": True, "patched": list(patch.keys())})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route("/api/quit", methods=["POST"])
 def api_quit():
     """Shut the server down cleanly after sending the response."""

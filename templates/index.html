@@ -95,8 +95,18 @@
 
   <!-- Drive-offline banner — shown by refreshStatus() when a configured drive is unreachable -->
   <div id="drive-offline-banner" class="drive-offline-banner" style="display:none">
-    <strong>⚡ Drive Offline</strong>
+    <div class="drive-offline-header">
+      <strong>⚡ Drive Offline</strong>
+      <button type="button" class="drive-offline-close" onclick="dismissDriveBanner()" title="Dismiss">
+        <img src="/static/close.png" alt="Close" class="drive-offline-close-img">
+      </button>
+    </div>
     <div id="drive-offline-detail"></div>
+    <div id="drive-offline-actions" class="drive-offline-actions" style="display:none">
+      <button type="button" class="btn btn-secondary btn-xs" onclick="autodetectDrives()">🔍 Auto-detect drives</button>
+      <span id="drive-detect-status" class="drive-detect-status"></span>
+    </div>
+    <div id="drive-detect-results" class="drive-detect-results" style="display:none"></div>
   </div>
 
   <!-- Library/Playlist Workspace -->
