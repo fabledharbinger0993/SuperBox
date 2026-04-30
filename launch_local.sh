@@ -8,7 +8,7 @@
 # Use this as the Automator app target during active development.
 # Switch back to launch.sh (or the bootstrap script) for public releases.
 
-SCRIPT_DIR="/Users/cameronkelly/FABLEDHARBINGER/GIT_REPOS/FableGear"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV="$SCRIPT_DIR/.venv"
 SENTINEL="$SCRIPT_DIR/.fablegear_ready"
 LOG="$SCRIPT_DIR/fablegear.log"

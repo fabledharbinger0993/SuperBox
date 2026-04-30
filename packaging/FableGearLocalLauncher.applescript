@@ -3,4 +3,4 @@
 -- No GitHub clone or git pull — safe to use during active development.
 -- Swap back to FABLEGEARLauncher.applescript for public releases.
 
-do shell script "bash '/Users/cameronkelly/FABLEDHARBINGER/GIT_REPOS/FABLEGEAR/launch_local.sh' > /dev/null 2>&1 &"
+do shell script "bash '/Volumes/DJMT/FABLEDHARBINGER/GIT_REPOS/FableGear/launch_local.sh' > /dev/null 2>&1 &"

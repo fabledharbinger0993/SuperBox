@@ -4,9 +4,9 @@
 # Or wrap in Automator > Application > Run Shell Script for a dock icon
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VENV="$SCRIPT_DIR/../venv"
-SENTINEL="$SCRIPT_DIR/../.fablegear_ready"
-LOG="$SCRIPT_DIR/../fablegear.log"
+VENV="$SCRIPT_DIR/venv"
+SENTINEL="$SCRIPT_DIR/.fablegear_ready"
+LOG="$SCRIPT_DIR/fablegear.log"
 
 # ── Locate Homebrew (works on both Apple Silicon and Intel) ───────────────
 _brew() {
