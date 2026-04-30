@@ -93,6 +93,14 @@
 <!-- ══ Main ════════════════════════════════════════════════════════════════ -->
 <main>
 
+  <!-- Hotplug drive detection banner — shown when a new volume is connected -->
+  <div id="hotplug-banner" class="hotplug-banner" style="display:none">
+    <span class="hotplug-icon">💿</span>
+    <span id="hotplug-banner-msg">New drive detected</span>
+    <button type="button" class="btn btn-neon btn-xs" id="hotplug-scan-btn" onclick="hotplugAcceptScan()">Scan for music</button>
+    <button type="button" class="brew-dismiss" onclick="hotplugDismiss()" title="Dismiss">✕</button>
+  </div>
+
   <!-- Drive-offline banner — shown by refreshStatus() when a configured drive is unreachable -->
   <div id="drive-offline-banner" class="drive-offline-banner" style="display:none">
     <div class="drive-offline-header">
@@ -236,6 +244,11 @@
     <img src="/static/icon-fg-files.png" class="nav-right-icon" alt="Files">
     <span class="nav-right-label">Files</span>
   </button>
+  <button type="button" id="nav-btn-drives" class="nav-right-btn" onclick="toggleRightNavDropdown('drives')" title="Connected Drives">
+    <img src="/static/icon-fg-rb-tools.png" class="nav-right-icon" alt="Drives">
+    <span class="nav-right-label">Drives</span>
+    <span class="nav-drives-badge" id="nav-drives-badge" style="display:none"></span>
+  </button>
   <button type="button" id="nav-btn-db" class="nav-right-btn" onclick="openDbPanel('audit')" title="RekordBox DB Tools">
     <img src="/static/icon-fg-rb-tools.png" class="nav-right-icon" alt="DB Tools">
     <span class="nav-right-label">DB Tools</span>
@@ -243,9 +256,12 @@
 
   <!-- Library dropdown -->
   <div id="dropdown-library" class="folder-dropdown"></div>
-  
+
   <!-- Files dropdown -->
   <div id="dropdown-files" class="folder-dropdown"></div>
+
+  <!-- Drives dropdown -->
+  <div id="dropdown-drives" class="folder-dropdown"></div>
 
   <!-- Session summary pills — stacked at bottom of right toolbar -->
   <div id="session-pills-container"></div>
@@ -688,6 +704,15 @@
       <div class="le-header-left">
         <img src="/static/icon-logo-fablegear.png" alt="" role="presentation" class="icon-rb-logo-sm">
         <span class="le-title">Library &amp; Playlist Editor</span>
+        <!-- Library source mode toggle -->
+        <div class="le-mode-toggle" id="le-mode-toggle" role="group" aria-label="Library source">
+          <button type="button" class="le-mode-btn le-mode-active" data-mode="db"
+                  onclick="setLibraryMode('db')" title="Rekordbox DB view">Rekordbox DB</button>
+          <button type="button" class="le-mode-btn" data-mode="fs"
+                  onclick="setLibraryMode('fs')" title="Browse all files on disk">Filesystem</button>
+          <button type="button" class="le-mode-btn" data-mode="split"
+                  onclick="setLibraryMode('split')" title="3-way comparison: canonical / scattered / unimported">Split View</button>
+        </div>
       </div>
       <div class="le-header-center">
         <input type="text" id="le-search" placeholder="Search tracks…" autocomplete="off">
@@ -771,25 +796,52 @@
     <!-- Three-pane body: sidebar | track list | tool drawer -->
     <div class="le-body">
 
-      <!-- Left: Playlist tree -->
+      <!-- Left: Playlist tree (DB mode) / FS folder nav (fs mode) -->
       <div class="le-sidebar" id="le-sidebar">
-        <div class="le-sidebar-section">All Tracks</div>
-        <button type="button" class="le-tree-item le-tree-all" onclick="leSelectAll()">
-          <span class="le-tree-icon">♫</span>
-          <span class="le-tree-label">All Tracks</span>
-          <span class="le-tree-count" id="le-all-count">—</span>
-        </button>
-        <div class="le-sidebar-section">Playlists</div>
-        <div id="le-playlist-tree"></div>
-        <div class="le-sidebar-section le-sidebar-bottom">History</div>
-        <button type="button" class="le-tree-item" id="le-history-btn" onclick="leSelectHistory(this)">
-          <span class="le-tree-icon">⏱</span>
-          <span class="le-tree-label">Recently Added</span>
-        </button>
+        <!-- DB mode sidebar -->
+        <div id="le-sidebar-db">
+          <div class="le-sidebar-section">All Tracks</div>
+          <button type="button" class="le-tree-item le-tree-all" onclick="leSelectAll()">
+            <span class="le-tree-icon">♫</span>
+            <span class="le-tree-label">All Tracks</span>
+            <span class="le-tree-count" id="le-all-count">—</span>
+          </button>
+          <div class="le-sidebar-section">Playlists</div>
+          <div id="le-playlist-tree"></div>
+          <div class="le-sidebar-section le-sidebar-bottom">History</div>
+          <button type="button" class="le-tree-item" id="le-history-btn" onclick="leSelectHistory(this)">
+            <span class="le-tree-icon">⏱</span>
+            <span class="le-tree-label">Recently Added</span>
+          </button>
+        </div>
+        <!-- FS mode sidebar: folder navigation breadcrumb + root jump -->
+        <div id="le-sidebar-fs" style="display:none">
+          <div class="le-sidebar-section">Filesystem</div>
+          <div class="le-fs-crumb" id="le-fs-crumb"></div>
+          <div id="le-fs-folder-list"></div>
+        </div>
       </div>
 
-      <!-- Center: Track list -->
+      <!-- Center: Track list (DB + FS mode) / Split view -->
       <div class="le-main" id="le-main">
+
+        <!-- Split view container (3 columns) — hidden unless mode=split -->
+        <div id="le-split-view" style="display:none">
+          <div class="le-split-col" id="le-split-col-library">
+            <div class="le-split-col-header le-split-green">In Library <span class="le-split-count" id="le-split-cnt-library"></span></div>
+            <div class="le-split-col-list" id="le-split-list-library"></div>
+          </div>
+          <div class="le-split-col" id="le-split-col-scattered">
+            <div class="le-split-col-header le-split-amber">Scattered <span class="le-split-count" id="le-split-cnt-scattered"></span></div>
+            <div class="le-split-col-list" id="le-split-list-scattered"></div>
+          </div>
+          <div class="le-split-col" id="le-split-col-unimported">
+            <div class="le-split-col-header le-split-blue">Not in Rekordbox <span class="le-split-count" id="le-split-cnt-unimported"></span></div>
+            <div class="le-split-list-hint" id="le-split-unimported-hint">Open a folder in Filesystem mode to compare against rekordbox</div>
+            <div class="le-split-col-list" id="le-split-list-unimported"></div>
+          </div>
+        </div>
+
         <div class="le-track-header">
           <div class="le-col le-col-play">Play</div>
           <div class="le-col le-col-num">#</div>

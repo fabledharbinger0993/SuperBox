@@ -16,6 +16,7 @@ Blueprint layout:
 
 import json
 import os
+import psutil
 import signal
 import subprocess
 import sys
@@ -213,6 +214,7 @@ def api_status():
         "release":    _release_info(),
         "drives":     get_drive_status(),
         "health":     _health_summary(findings),
+        "volumes":    _mounted_volumes(),
     })
 
 
@@ -531,6 +533,71 @@ def api_pick_folder():
     except Exception:
         pass
     return jsonify({"path": None})
+
+
+# ── Volume helpers ─────────────────────────────────────────────────────────────
+
+_AUDIO_BEARING_SKIP = frozenset({"Macintosh HD", "Recovery", "VM", "Preboot", "Update", "Data"})
+
+def _mounted_volumes() -> list:
+    """Return info about /Volumes/* mounts. Used by /api/status for hotplug detection."""
+    vols = []
+    try:
+        from config import MUSIC_ROOT as _MR  # noqa: PLC0415
+        music_root_str = str(_MR)
+        for p in psutil.disk_partitions(all=False):
+            mp = p.mountpoint
+            if not mp.startswith("/Volumes/"):
+                continue
+            name = Path(mp).name
+            if name in _AUDIO_BEARING_SKIP:
+                continue
+            try:
+                usage = psutil.disk_usage(mp)
+                free_gb = round(usage.free / 1e9, 1)
+                total_gb = round(usage.total / 1e9, 1)
+            except Exception:
+                free_gb = total_gb = None
+            pioneer_db = Path(mp) / "PIONEER" / "Master" / "master.db"
+            vols.append({
+                "name":            name,
+                "mountpoint":      mp,
+                "fstype":          p.fstype,
+                "free_gb":         free_gb,
+                "total_gb":        total_gb,
+                "has_pioneer_db":  pioneer_db.exists(),
+                "is_music_root":   music_root_str.startswith(mp),
+            })
+    except Exception:
+        pass
+    return vols
+
+
+@app.route("/api/fs/stream")
+def api_fs_stream():
+    """Stream an audio file by absolute path (filesystem mode — no rekordbox required).
+    Security: path must resolve under /Volumes/ or the configured MUSIC_ROOT.
+    """
+    import mimetypes  # noqa: PLC0415
+    if request.remote_addr not in ("127.0.0.1", "::1"):
+        return jsonify({"error": "Forbidden"}), 403
+    path_str = request.args.get("path", "")
+    if not path_str:
+        return jsonify({"error": "path required"}), 400
+    try:
+        p = Path(path_str).resolve()
+    except Exception:
+        return jsonify({"error": "Invalid path"}), 400
+    # Allow any path under /Volumes (covers all external drives)
+    if not str(p).startswith("/Volumes/") and not str(p).startswith("/Users/"):
+        return jsonify({"error": "Forbidden"}), 403
+    if not p.exists() or not p.is_file():
+        return jsonify({"error": "File not found"}), 404
+    AUDIO_EXTS = {".aiff", ".aif", ".wav", ".flac", ".mp3", ".m4a", ".m4p", ".ogg", ".opus", ".alac"}
+    if p.suffix.lower() not in AUDIO_EXTS:
+        return jsonify({"error": "Not an audio file"}), 400
+    mime, _ = mimetypes.guess_type(str(p))
+    return send_file(str(p), mimetype=mime or "audio/mpeg", conditional=True)
 
 
 @app.route("/api/fs/list")

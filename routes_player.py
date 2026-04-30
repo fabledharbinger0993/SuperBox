@@ -213,6 +213,47 @@ def _library_canonical_path_conflicts(db):
     return len(tracks), conflicts
 
 
+# ── Filesystem track helper ───────────────────────────────────────────────────
+
+_FS_AUDIO_EXTS = frozenset({
+    ".aiff", ".aif", ".aifc", ".wav", ".flac", ".mp3",
+    ".m4a", ".m4p", ".alac", ".ogg", ".opus",
+})
+_FS_TAG_LIMIT = 500   # stop reading mutagen beyond this many tracks in one folder
+
+
+def _fs_track_payload(path: Path) -> dict:
+    """Minimal metadata for a filesystem audio file (no rekordbox required).
+    Reads ID3/Vorbis/FLAC tags via mutagen (fast for local files).
+    Falls back to filename-only on any read error.
+    """
+    payload: dict = {
+        "source":      "filesystem",
+        "path":        str(path),
+        "filename":    path.name,
+        "title":       path.stem,
+        "artist":      "",
+        "album":       "",
+        "genre":       "",
+        "bpm":         None,
+        "key":         None,
+        "duration_s":  None,
+    }
+    try:
+        import mutagen  # noqa: PLC0415
+        f = mutagen.File(str(path), easy=True)
+        if f:
+            payload["title"]  = (f.get("title")  or [path.stem])[0]
+            payload["artist"] = (f.get("artist") or [""])[0]
+            payload["album"]  = (f.get("album")  or [""])[0]
+            payload["genre"]  = (f.get("genre")  or [""])[0]
+            if hasattr(f, "info") and hasattr(f.info, "length"):
+                payload["duration_s"] = round(f.info.length)
+    except Exception:
+        pass
+    return payload
+
+
 # ── Library track routes ──────────────────────────────────────────────────────
 
 @bp.route("/api/library/tracks")
@@ -226,6 +267,128 @@ def api_library_tracks():
             return jsonify(tracks)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
+
+@bp.route("/api/library/fs-browse")
+def api_library_fs_browse():
+    """Browse a directory for audio files — filesystem-first, no rekordbox needed.
+    Returns subdirectories + audio tracks in the requested folder.
+    Falls back to MUSIC_ROOT when no path is given.
+    """
+    from config import MUSIC_ROOT as _MR  # noqa: PLC0415
+    path_str = request.args.get("path", str(_MR))
+    try:
+        p = Path(path_str).resolve()
+    except Exception:
+        return jsonify({"error": "Invalid path"}), 400
+    if not p.exists() or not p.is_dir():
+        return jsonify({"error": f"Not a directory: {path_str}"}), 400
+
+    subdirs = []
+    tracks = []
+    try:
+        items = sorted(p.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
+        for item in items:
+            if item.name.startswith("."):
+                continue
+            if item.is_dir():
+                try:
+                    audio_count = sum(1 for f in item.iterdir()
+                                      if not f.name.startswith(".") and f.suffix.lower() in _FS_AUDIO_EXTS)
+                except PermissionError:
+                    audio_count = 0
+                subdirs.append({"name": item.name, "path": str(item), "audio_count": audio_count})
+            elif item.suffix.lower() in _FS_AUDIO_EXTS:
+                tracks.append(item)
+    except PermissionError:
+        return jsonify({"error": "Permission denied"}), 403
+
+    total_tracks = len(tracks)
+    truncated = total_tracks > _FS_TAG_LIMIT
+    # Read tags only for the first _FS_TAG_LIMIT tracks
+    track_payloads = [_fs_track_payload(t) for t in tracks[:_FS_TAG_LIMIT]]
+
+    music_root = str(_MR)
+    parent = str(p.parent) if str(p) != str(p.anchor) else None
+    return jsonify({
+        "path":           str(p),
+        "music_root":     music_root,
+        "in_music_root":  str(p).startswith(music_root),
+        "parent":         parent,
+        "subdirs":        subdirs,
+        "tracks":         track_payloads,
+        "track_count":    total_tracks,
+        "truncated":      truncated,
+    })
+
+
+@bp.route("/api/library/split-data")
+def api_library_split_data():
+    """Three-way library split:
+    • in_library  — rekordbox tracks whose path is inside MUSIC_ROOT (canonical)
+    • scattered   — rekordbox tracks whose path is outside MUSIC_ROOT, grouped by folder
+    • unimported  — filesystem audio files in fs_path not tracked by rekordbox DB
+
+    fs_path query param (optional): directory to scan for unimported files.
+    """
+    from db_connection import read_db  # noqa: PLC0415
+    from config import LOCAL_DB as _DB, MUSIC_ROOT as _MR  # noqa: PLC0415
+
+    music_root = str(_MR)
+
+    # ── Load rekordbox DB ────────────────────────────────────────────────────
+    try:
+        with read_db(_DB) as db:
+            all_db_tracks = [_library_track_payload(t) for t in db.get_content().all()]
+    except Exception as exc:
+        return jsonify({"error": f"rekordbox DB unavailable: {exc}"}), 500
+
+    # ── Classify by path ─────────────────────────────────────────────────────
+    in_library: list = []
+    scattered_map: dict = {}
+    db_path_set: set = set()
+
+    for track in all_db_tracks:
+        fp = (track.get("file_path") or "").strip()
+        db_path_set.add(fp)
+        if fp.startswith(music_root):
+            in_library.append(track)
+        else:
+            folder = str(Path(fp).parent) if fp else "Unknown location"
+            scattered_map.setdefault(folder, []).append(track)
+
+    # Flatten scattered into folder-header + track rows
+    scattered: list = []
+    for folder, folder_tracks in sorted(scattered_map.items()):
+        scattered.append({"type": "folder_header", "path": folder, "count": len(folder_tracks)})
+        scattered.extend(folder_tracks)
+
+    # ── Filesystem unimported scan ────────────────────────────────────────────
+    unimported: list = []
+    fs_path_str = request.args.get("fs_path", "")
+    if fs_path_str:
+        try:
+            fp_dir = Path(fs_path_str).resolve()
+            if fp_dir.is_dir():
+                for item in sorted(fp_dir.iterdir(), key=lambda x: x.name.lower()):
+                    if item.name.startswith(".") or not item.is_file():
+                        continue
+                    if item.suffix.lower() not in _FS_AUDIO_EXTS:
+                        continue
+                    if str(item) not in db_path_set:
+                        unimported.append({"path": str(item), "filename": item.name, "title": item.stem})
+        except Exception:
+            pass
+
+    return jsonify({
+        "music_root":        music_root,
+        "in_library":        in_library,
+        "in_library_count":  len(in_library),
+        "scattered":         scattered,
+        "scattered_count":   sum(1 for r in scattered if r.get("type") != "folder_header"),
+        "unimported":        unimported,
+        "unimported_count":  len(unimported),
+    })
 
 
 @bp.route("/api/library/integrity/canonical-paths")
