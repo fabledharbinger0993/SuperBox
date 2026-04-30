@@ -21,6 +21,7 @@ from helpers import (
     _MAX_EXPORT_JOBS,
     _MAX_ANALYSIS_JOBS,
     _evict_old_jobs,
+    _detect_pioneer_drive_layout,
     _run_export,
     REPO_ROOT,
 )
@@ -482,7 +483,7 @@ def mobile_rekordbox_add_track():
     try:
         with write_db(_DB) as db:
             track = db.add_content(file_path)
-            db.flush()
+            db.commit()
             track_id = str(track.ID)
         return jsonify({"track_id": track_id, "status": "added"}), 201
 
@@ -890,13 +891,13 @@ def mobile_drives():
             try:
                 usage = psutil.disk_usage(mp)
                 name = Path(mp).name
-                pioneer_db = Path(mp) / "PIONEER" / "Master" / "master.db"
+                drive_info = _detect_pioneer_drive_layout(mp)
                 drives.append({
                     "path":        mp,
                     "name":        name,
                     "free_bytes":  usage.free,
                     "total_bytes": usage.total,
-                    "pioneer":     pioneer_db.exists(),
+                    **drive_info,
                 })
             except (PermissionError, OSError):
                 continue
@@ -923,9 +924,11 @@ def mobile_export_start():
     if not drive_path:
         return jsonify({"error": "drive_path required"}), 400
 
-    usb_db = Path(drive_path) / "PIONEER" / "Master" / "master.db"
-    if not usb_db.exists():
-        return jsonify({"error": f"No PIONEER/Master/master.db on {drive_path}"}), 400
+    drive_info = _detect_pioneer_drive_layout(drive_path)
+    if not drive_info.get("pioneer"):
+        return jsonify({"error": f"No Pioneer export structure detected on {drive_path}"}), 400
+    if not drive_info.get("export_supported"):
+        return jsonify({"error": drive_info.get("export_error")}), 400
 
     job_id = str(uuid.uuid4())
 

@@ -3663,7 +3663,8 @@ const GLOSSARY = [
     body:`<p>The single SQLite file where RekordBox stores your entire library — every track, playlist, cue point, loop, hot cue color, and rating.</p>
 <p>Locations:<br>
 <code>~/Library/Pioneer/rekordbox/master.db</code> — your Mac<br>
-<code>/Volumes/[drive]/PIONEER/Master/master.db</code> — your export drive</p>
+<code>/Volumes/[drive]/PIONEER/Master/master.db</code> — some legacy/export targets<br>
+<code>/Volumes/[drive]/PIONEER/rekordbox/exportLibrary.db</code> + <code>export.pdb</code> — common Pioneer USB export layout</p>
 <p><strong>Every FableGear write operation creates a timestamped copy of this file in <code>~/rekordbox-toolkit/backups/</code> before touching it.</strong> The backup header in this app shows you when the last one was made.</p>`},
 
   { id:'cont', cat:'RekordBox', term:'DjmdContent',
@@ -3679,7 +3680,7 @@ const GLOSSARY = [
   { id:'cdj', cat:'RekordBox', term:'CDJ / XDJ',
     short:'Pioneer hardware DJ players used in clubs',
     body:`<p>Pioneer's professional media players — the industry standard hardware in most clubs, festivals, and touring setups.</p>
-<p>These players read directly from the exported <code>master.db</code> on your USB drive or rekordbox link. A corrupt or broken database means tracks won't load mid-set. This is why the backup-before-every-write rule is not negotiable.</p>`},
+<p>These players read Pioneer export metadata from your USB drive or rekordbox link. Depending on the export type, that may be a <code>master.db</code> or a Rekordbox USB export bundle like <code>exportLibrary.db</code> and <code>export.pdb</code>. A corrupt or broken export means tracks won't load mid-set. This is why the backup-before-every-write rule is not negotiable.</p>`},
 
   { id:'cam', cat:'RekordBox', term:'Camelot / Open Key',
     short:'Harmonic mixing notation systems',
@@ -5447,14 +5448,24 @@ async function leOpenExportModal() {
     if (!pioneer.length) {
       driveContainer.innerHTML = '<div class="le-export-no-drives">No Pioneer USB drives found. Insert a drive that Rekordbox has exported to at least once.</div>';
     } else {
-      driveContainer.innerHTML = pioneer.map((d, i) => `
+      const supported = pioneer.filter(d => d.export_supported);
+      _leExportDrivePath = supported.length ? supported[0].path : null;
+      driveContainer.innerHTML = pioneer.map(d => {
+        const checked = _leExportDrivePath === d.path ? 'checked' : '';
+        const disabled = d.export_supported ? '' : 'disabled';
+        const badge = d.export_supported ? 'Pioneer' : 'Detected Pioneer';
+        const note = d.export_supported
+          ? (d.layout === 'master-db' ? 'FableGear export supported' : (d.layout || 'Supported'))
+          : (d.export_error || 'Unsupported export target');
+        return `
         <label class="le-export-drive">
-          <input type="radio" name="le-export-drive" value="${_leEsc(d.path)}" ${i === 0 ? 'checked' : ''} onchange="_leExportDrivePath=this.value;_leExportUpdateSubmit()">
-          <span class="le-export-drive-pioneer">Pioneer</span>
+          <input type="radio" name="le-export-drive" value="${_leEsc(d.path)}" ${checked} ${disabled} onchange="_leExportDrivePath=this.value;_leExportUpdateSubmit()">
+          <span class="le-export-drive-pioneer">${_leEsc(badge)}</span>
           <span class="le-export-drive-name">${_leEsc(d.name)}</span>
           <span class="le-export-drive-meta">${_leExportGb(d.free_bytes)} free / ${_leExportGb(d.total_bytes)}</span>
-        </label>`).join('');
-      _leExportDrivePath = pioneer[0].path;
+          <span class="le-export-drive-meta">${_leEsc(note)}</span>
+        </label>`;
+      }).join('');
     }
   } catch (_) {
     driveContainer.innerHTML = '<div class="le-export-no-drives">Could not scan drives.</div>';
@@ -5515,19 +5526,22 @@ function _leExportPoll(jobId) {
       const job = await res.json().catch(() => ({}));
       const total = job.tracks_total || 0;
       const done  = job.tracks_done  || 0;
-      const pct   = total > 0 ? Math.round((done / total) * 100) : (job.status === 'complete' ? 100 : 0);
+      const isTerminal = ['complete', 'complete_with_errors', 'failed'].includes(job.status);
+      const pct   = total > 0 ? Math.round((done / total) * 100) : ((job.status === 'complete' || job.status === 'complete_with_errors') ? 100 : 0);
       document.getElementById('le-export-progress-bar').style.width = pct + '%';
       const track = job.current_track ? ` — ${job.current_track}` : '';
       document.getElementById('le-export-progress-label').textContent =
         job.status === 'complete' ? `Done — ${done} track${done === 1 ? '' : 's'} exported.` :
+        job.status === 'complete_with_errors' ? `Done with warnings — ${done} track${done === 1 ? '' : 's'} exported.` :
         job.status === 'failed'   ? 'Export failed.' :
         `${done} / ${total}${track}`;
 
-      if (job.status === 'complete' || job.status === 'failed') {
+      if (isTerminal) {
         clearInterval(_leExportPollTimer);
         _leExportPollTimer = null;
         if (job.errors && job.errors.length) _leExportShowErrors(job.errors);
         if (job.status === 'complete') showToast(`Export complete — ${done} track${done === 1 ? '' : 's'} on drive.`, 'success');
+        if (job.status === 'complete_with_errors') showToast(`Export finished with warnings — ${done} track${done === 1 ? '' : 's'} processed.`, 'warning');
         document.getElementById('le-export-submit').disabled = false;
       }
     } catch (_) { /* keep polling */ }

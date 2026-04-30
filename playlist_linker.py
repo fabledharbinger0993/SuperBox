@@ -164,22 +164,21 @@ class LinkReport:
 
 # ─── Playlist index ───────────────────────────────────────────────────────────
 
-def build_playlist_index(db: Rekordbox6Database) -> dict[str, object]:
+def build_playlist_index(db: Rekordbox6Database) -> dict[str, list[object]]:
     """
-    Build a dict mapping lowercase playlist name → DjmdPlaylist object.
+    Build a dict mapping lowercase playlist name → DjmdPlaylist objects.
     Called once per session — avoids repeated DB queries during linking.
 
     Returns
     -------
-    dict[str, DjmdPlaylist]
+    dict[str, list[DjmdPlaylist]]
         Keys are lowercased for case-insensitive matching.
-        If two playlists share a name (case-insensitively), the last one wins.
-        In practice Rekordbox names are unique.
+        Duplicate names retain all matching playlists instead of collapsing.
     """
-    index: dict[str, object] = {}
+    index: dict[str, list[object]] = {}
     for playlist in db.get_playlist().all():
         if playlist.Name:
-            index[playlist.Name.lower()] = playlist
+            index.setdefault(playlist.Name.lower(), []).append(playlist)
     log.info("Playlist index built: %d playlists", len(index))
     return index
 
@@ -188,7 +187,7 @@ def build_playlist_index(db: Rekordbox6Database) -> dict[str, object]:
 
 def _match_folder(
     folder_name: str,
-    index: dict[str, object],
+    index: dict[str, list[object]],
     playlist_names_lower: list[str],
 ) -> list[tuple[object, float]]:
     """
@@ -205,7 +204,7 @@ def _match_folder(
 
     # Exact match (case-insensitive) — score 1.0
     if key in index:
-        return [(index[key], 1.0)]
+        return [(playlist, 1.0) for playlist in index[key]]
 
     # Fuzzy match — only for names long enough to be unambiguous
     if len(folder_name) >= _FUZZY_MIN_LEN:
@@ -220,7 +219,8 @@ def _match_folder(
             for name in close:
                 if name in index:
                     score = difflib.SequenceMatcher(None, key, name).ratio()
-                    results.append((index[name], score))
+                    for playlist in index[name]:
+                        results.append((playlist, score))
             if results:
                 log.debug(
                     "Fuzzy matched %r → %s",
@@ -375,7 +375,7 @@ def link_directory(
     LinkReport
     """
     report = LinkReport(dry_run=dry_run)
-    root_str = str(root)
+    root = root.resolve()
 
     if dry_run:
         log.info("DRY RUN — no playlist rows will be written")
@@ -387,10 +387,16 @@ def link_directory(
     # Find all content rows under root — these are guaranteed to have IDs
     try:
         all_content = db.get_content().all()
-        under_root = [
-            c for c in all_content
-            if c.FolderPath and c.FolderPath.startswith(root_str)
-        ]
+        under_root = []
+        for content_row in all_content:
+            folder_path = str(getattr(content_row, "FolderPath", "") or "").strip()
+            if not folder_path:
+                continue
+            try:
+                Path(folder_path).resolve().relative_to(root)
+            except Exception:
+                continue
+            under_root.append(content_row)
     except Exception as e:
         log.error("Failed to fetch content rows: %s", e)
         return report
@@ -476,8 +482,9 @@ if __name__ == "__main__":
         index = build_playlist_index(db)
         names_lower = list(index.keys())
         print(f"  Total playlists indexed: {len(index)}")
-        for name, pl in list(index.items())[:10]:
-            print(f"    {pl.Name!r:40} ID={pl.ID}")
+        for name, playlists in list(index.items())[:10]:
+            first = playlists[0]
+            print(f"    {name!r:40} matches={len(playlists):2d} first_id={first.ID}")
 
         # ── Part 2: matching dry run against known folder names ──
         print("\n=== Matching test (no writes) ===")

@@ -159,61 +159,12 @@ def api_status():
 
 @app.route("/api/export/rekordbox", methods=["POST"])
 def api_export_rekordbox():
-    """Export playlists and tracks to a Rekordbox One Library structure."""
-    data = request.get_json(silent=True) or {}
-    target = data.get("target", "").strip()
-    if not target or not os.path.isdir(target):
-        return jsonify({"error": "Valid target folder required"}), 400
-
-    try:
-        import shutil
-        import xml.etree.ElementTree as ET
-
-        from config import LOCAL_DB                  # noqa: PLC0415
-        from pyrekordbox import Rekordbox6Database  # noqa: PLC0415
-
-        db_src = str(LOCAL_DB)
-        db_dst = os.path.join(target, "PIONEER", "Master", "master.db")
-        xml_path = os.path.join(target, "PIONEER", "playlists.xml")
-        contents_dir = os.path.join(target, "PIONEER", "Contents")
-
-        os.makedirs(os.path.dirname(db_dst), exist_ok=True)
-        os.makedirs(contents_dir, exist_ok=True)
-        shutil.copy2(db_src, db_dst)
-
-        root = ET.Element("DJ_PLAYLISTS")
-        file_paths = set()
-        with Rekordbox6Database(db_src) as db:
-            playlists = db.get_playlist().all()
-            for pl in playlists:
-                pl_el = ET.SubElement(root, "PLAYLIST", Name=pl.Name or "", Id=str(pl.ID))
-                songs = db.get_playlist_songs(PlaylistID=pl.ID).order_by("TrackNo").all()
-                for song in songs:
-                    track = song.Content
-                    if track is None:
-                        continue
-                    file_path = track.FolderPath or ""
-                    if file_path and os.path.isfile(file_path):
-                        file_paths.add(file_path)
-                    ET.SubElement(
-                        pl_el,
-                        "TRACK",
-                        Id=str(track.ID),
-                        Title=track.Title or "",
-                        FilePath=file_path,
-                    )
-
-        tree = ET.ElementTree(root)
-        tree.write(xml_path, encoding="utf-8", xml_declaration=True)
-
-        for file_path in sorted(file_paths):
-            dest = os.path.join(contents_dir, os.path.basename(file_path))
-            if not os.path.exists(dest):
-                shutil.copy2(file_path, dest)
-
-        return jsonify({"ok": True, "db": db_dst, "xml": xml_path, "contents": contents_dir})
-    except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
+    return jsonify({
+        "error": (
+            "Legacy Rekordbox XML export is disabled. The previous implementation "
+            "did not produce a self-consistent Pioneer-compatible export."
+        )
+    }), 501
 
 
 @app.route("/api/config")

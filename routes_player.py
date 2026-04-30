@@ -20,6 +20,7 @@ from helpers import (
     _EXPORT_JOBS,
     _EXPORT_LOCK,
     _MAX_EXPORT_JOBS,
+    _detect_pioneer_drive_layout,
     _PLAYBACK_AVAILABLE,
     _PLAYBACK_IMPORT_ERROR,
     _evict_old_jobs,
@@ -610,13 +611,13 @@ def api_library_export_drives():
                 continue
             try:
                 usage = psutil.disk_usage(mountpoint)
-                pioneer_db = Path(mountpoint) / "PIONEER" / "Master" / "master.db"
+                drive_info = _detect_pioneer_drive_layout(mountpoint)
                 drives.append({
                     "path": mountpoint,
                     "name": Path(mountpoint).name,
                     "free_bytes": usage.free,
                     "total_bytes": usage.total,
-                    "pioneer": pioneer_db.exists(),
+                    **drive_info,
                 })
             except (PermissionError, OSError):
                 continue
@@ -636,9 +637,11 @@ def api_library_export_start():
     if not drive_path:
         return jsonify({"error": "drive_path required"}), 400
 
-    usb_db = Path(drive_path) / "PIONEER" / "Master" / "master.db"
-    if not usb_db.exists():
-        return jsonify({"error": f"No PIONEER/Master/master.db on {drive_path}"}), 400
+    drive_info = _detect_pioneer_drive_layout(drive_path)
+    if not drive_info.get("pioneer"):
+        return jsonify({"error": f"No Pioneer export structure detected on {drive_path}"}), 400
+    if not drive_info.get("export_supported"):
+        return jsonify({"error": drive_info.get("export_error")}), 400
 
     job_id = str(uuid.uuid4())
     with _EXPORT_LOCK:

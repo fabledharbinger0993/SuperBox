@@ -127,7 +127,28 @@ struct Drive: Identifiable, Codable {
     let name: String
     let path: String
     let pioneer: Bool
+    let layout: String?
+    let exportSupported: Bool?
+    let exportError: String?
     var id: String { path }
+
+    enum CodingKeys: String, CodingKey {
+        case name, path, pioneer, layout
+        case exportSupported = "export_supported"
+        case exportError = "export_error"
+    }
+}
+
+struct Folder: Identifiable, Codable {
+    let name: String
+    let path: String
+    let fileCount: Int?
+    var id: String { path }
+
+    enum CodingKeys: String, CodingKey {
+        case name, path
+        case fileCount = "file_count"
+    }
 }
 
 // MARK: - Export job
@@ -151,8 +172,14 @@ struct ExportJob: Codable {
 
     /// 0–100 progress derived from track counts.
     var progress: Int {
-        guard tracksTotal > 0 else { return status == "complete" ? 100 : 0 }
+        guard tracksTotal > 0 else { return (status == "complete" || status == "complete_with_errors") ? 100 : 0 }
         return min(100, Int(Double(tracksDone) / Double(tracksTotal) * 100))
+    }
+
+    var message: String? {
+        if let currentTrack, !currentTrack.isEmpty { return currentTrack }
+        if let errors, let first = errors.first, !first.isEmpty { return first }
+        return nil
     }
 }
 

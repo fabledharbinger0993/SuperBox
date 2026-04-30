@@ -23,12 +23,21 @@ struct ExportView: View {
                     } else {
                         ForEach(store.drives) { drive in
                             Button {
-                                selectedDrive = drive
+                                if drive.exportSupported ?? drive.pioneer {
+                                    selectedDrive = drive
+                                } else {
+                                    store.error = drive.exportError ?? "This Pioneer drive layout is detected but not yet supported for export."
+                                }
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text(drive.name).foregroundStyle(.primary)
                                         Text(drive.path).font(.caption).foregroundStyle(.secondary)
+                                        if let exportSupported = drive.exportSupported, !exportSupported {
+                                            Text(drive.exportError ?? "Unsupported export target")
+                                                .font(.caption2)
+                                                .foregroundStyle(.orange)
+                                        }
                                     }
                                     Spacer()
                                     if selectedDrive?.id == drive.id {
@@ -36,6 +45,7 @@ struct ExportView: View {
                                     }
                                 }
                             }
+                            .disabled(!(drive.exportSupported ?? drive.pioneer))
                         }
                     }
                 }
@@ -123,7 +133,7 @@ struct ExportView: View {
                 try? await Task.sleep(for: .seconds(2))
                 if let job = try? await store.api.fetchExportJob(jobId) {
                     exportJob = job
-                    if job.status == "done" || job.status == "failed" {
+                    if job.status == "done" || job.status == "failed" || job.status == "complete" || job.status == "complete_with_errors" {
                         exporting = false
                         pollTask = nil
                         return
