@@ -15,6 +15,7 @@ RELEASE_REMOTE="${RELEASE_REMOTE:-origin}"
 RELEASE_WAIT_SECONDS="${RELEASE_WAIT_SECONDS:-300}"
 RELEASE_WAIT_INTERVAL="${RELEASE_WAIT_INTERVAL:-5}"
 ZIP_ASSET_NAME="${RELEASE_ZIP_ASSET:-FableGear.zip}"
+LAUNCHER_ZIP_ASSET_NAME="${RELEASE_LAUNCHER_ZIP_ASSET:-FableGearLauncher.zip}"
 
 # VS Code tasks or non-interactive shells may not export SHELL, which causes
 # noisy GitHub CLI tip messages about unknown shell targets.
@@ -98,6 +99,24 @@ while true; do
   elapsed="$((now_ts - start_ts))"
   if [[ "$elapsed" -ge "$RELEASE_WAIT_SECONDS" ]]; then
     fail "Timed out waiting for $ZIP_ASSET_NAME. Check workflow: .github/workflows/release-zip.yml"
+  fi
+
+  sleep "$RELEASE_WAIT_INTERVAL"
+done
+
+log "Waiting for $LAUNCHER_ZIP_ASSET_NAME attachment from workflow (timeout ${RELEASE_WAIT_SECONDS}s)..."
+
+start_ts="$(date +%s)"
+while true; do
+  if gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fxq "$LAUNCHER_ZIP_ASSET_NAME"; then
+    log "$LAUNCHER_ZIP_ASSET_NAME is attached."
+    break
+  fi
+
+  now_ts="$(date +%s)"
+  elapsed="$((now_ts - start_ts))"
+  if [[ "$elapsed" -ge "$RELEASE_WAIT_SECONDS" ]]; then
+    fail "Timed out waiting for $LAUNCHER_ZIP_ASSET_NAME. Check workflow: .github/workflows/release-launcher-zip.yml"
   fi
 
   sleep "$RELEASE_WAIT_INTERVAL"

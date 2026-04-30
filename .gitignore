@@ -41,6 +41,9 @@ settings.json
 SuperBox.zip
 FableGear.zip
 
+# Local portable launcher (drive-resident, built by packaging/make_local_launcher.sh)
+FableGear.command
+
 # The static folder holds CSS/JS/images only.
 # index.html lives ONLY in templates/ and is served by render_template().
 # Never commit a copy here — it causes confusion about which file is current.
