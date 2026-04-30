@@ -109,6 +109,21 @@
     <div id="drive-detect-results" class="drive-detect-results" style="display:none"></div>
   </div>
 
+  <!-- Health hazard panel — shown when background checks find configuration hazards -->
+  <div id="health-panel" class="health-panel" style="display:none">
+    <div class="health-panel-header">
+      <span id="health-panel-badge" class="health-badge"></span>
+      <strong>Health Issues</strong>
+      <div class="health-panel-controls">
+        <button type="button" class="btn btn-secondary btn-xs" onclick="runHealthCheck(true)" id="health-recheck-btn">Re-check</button>
+        <button type="button" class="drive-offline-close" onclick="dismissHealthPanel()" title="Dismiss">
+          <img src="/static/close.png" alt="Close" class="drive-offline-close-img">
+        </button>
+      </div>
+    </div>
+    <div id="health-findings-list"></div>
+  </div>
+
   <!-- Library/Playlist Workspace -->
   <div id="library-workspace">
     <h2>

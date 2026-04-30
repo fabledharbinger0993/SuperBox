@@ -4749,6 +4749,52 @@ body.has-drag .drop-wrap:not(.drop-active)::after {
 }
 .drive-fix-steps li { list-style: disc; }
 
+/* ── Health hazard panel ─────────────────────────────────────────────────── */
+.health-panel {
+  background: rgba(30, 24, 48, .6);
+  border: 1px solid rgba(180,130,255,.18);
+  border-radius: 7px;
+  padding: 9px 14px;
+  font-size: .77rem;
+  color: var(--text-muted);
+  margin: 4px 0 4px;
+}
+.health-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.health-panel-header strong { color: var(--text); }
+.health-panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.health-badge {
+  font-size: .68rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 20px;
+  letter-spacing: .02em;
+}
+.health-badge-critical { background: rgba(220,50,50,.25); color: #f08080; border: 1px solid rgba(220,50,50,.4); }
+.health-badge-warn     { background: rgba(240,180,75,.18); color: var(--warn);  border: 1px solid rgba(240,180,75,.35); }
+
+.health-finding {
+  padding: 6px 8px;
+  border-radius: 5px;
+  margin: 4px 0;
+  line-height: 1.5;
+}
+.health-finding-critical { background: rgba(220,50,50,.08);  border-left: 3px solid rgba(220,50,50,.5); }
+.health-finding-warn     { background: rgba(240,180,75,.07); border-left: 3px solid rgba(240,180,75,.4); }
+.health-finding-info     { background: rgba(100,100,140,.08); border-left: 3px solid rgba(130,130,180,.3); }
+.health-finding-title    { font-size: .76rem; margin-bottom: 2px; }
+.health-finding-detail   { font-size: .71rem; color: var(--text-muted); }
+.health-finding-hint     { font-size: .70rem; color: var(--accent); margin-top: 3px; opacity: .85; }
+
 /* ── Inline icon buttons ────────────────────────────────────────────────── */
 .icon-btn-sm-invert { width: 16px; height: 16px; filter: brightness(0) invert(1); }
 

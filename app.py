@@ -87,6 +87,61 @@ except Exception:
     pass  # Drive not mounted yet — non-fatal
 
 
+# ── Health check cache ────────────────────────────────────────────────────────
+# Findings are refreshed at startup and whenever /api/health is called.
+# /api/status includes only the severity summary (counts) to keep polling cheap.
+
+_health_lock = threading.Lock()
+_health_cache: list[dict] = []   # list of HealthFinding.as_dict()
+_health_refreshed_at: float = 0.0
+
+_HEALTH_TTL = 60.0  # seconds before cache is considered stale
+
+
+def _refresh_health_cache(force: bool = False) -> list[dict]:
+    """
+    Re-run all health checks, apply safe auto-heals, and update the cache.
+    Throttled to _HEALTH_TTL unless force=True.
+    Thread-safe.
+    """
+    import time as _time  # noqa: PLC0415
+    global _health_cache, _health_refreshed_at
+
+    with _health_lock:
+        if not force and (_time.time() - _health_refreshed_at) < _HEALTH_TTL:
+            return _health_cache
+
+        try:
+            from health import run_health_checks, auto_heal_safe  # noqa: PLC0415
+            findings = run_health_checks()
+            healed = auto_heal_safe(findings)
+            if healed:
+                # Re-run after healing to remove resolved findings
+                findings = run_health_checks()
+            _health_cache = [f.as_dict() for f in findings]
+        except Exception as exc:
+            import logging as _logging  # noqa: PLC0415
+            _logging.getLogger(__name__).warning("Health check failed: %s", exc)
+            _health_cache = []
+
+        _health_refreshed_at = _time.time()
+        return _health_cache
+
+
+def _health_summary(findings: list[dict]) -> dict:
+    counts = {"critical": 0, "warn": 0, "info": 0}
+    for f in findings:
+        s = f.get("severity", "info")
+        counts[s] = counts.get(s, 0) + 1
+    counts["total"] = sum(counts.values())
+    return counts
+
+
+# Run once at startup in a background thread (non-blocking)
+threading.Thread(target=_refresh_health_cache, kwargs={"force": True},
+                 daemon=True, name="health-startup").start()
+
+
 # ── Splash route ──────────────────────────────────────────────────────────────
 
 _SPLASH_HTML = """\
@@ -151,12 +206,55 @@ def splash():
 @app.route("/api/status")
 def api_status():
     from user_config import get_drive_status  # noqa: PLC0415
+    findings = _refresh_health_cache()        # returns cached unless stale
     return jsonify({
         "rb_running": _rb_is_running(),
         "backup":     _backup_info(),
         "release":    _release_info(),
         "drives":     get_drive_status(),
+        "health":     _health_summary(findings),
     })
+
+
+@app.route("/api/health")
+def api_health():
+    """
+    Return the full list of health findings, refreshed on every call
+    (up to once per _HEALTH_TTL seconds).  The frontend calls this once
+    at startup and on-demand when the user opens the health panel.
+    """
+    force = request.args.get("force", "").lower() in ("1", "true", "yes")
+    findings = _refresh_health_cache(force=force)
+    return jsonify({
+        "findings": findings,
+        "summary":  _health_summary(findings),
+    })
+
+
+@app.route("/api/health/autofix", methods=["POST"])
+def api_health_autofix():
+    """
+    Re-run health checks and apply all safe auto-heals.
+    Returns what was fixed and the updated findings list.
+    """
+    try:
+        from health import run_health_checks, auto_heal_safe  # noqa: PLC0415
+        findings = run_health_checks()
+        healed = auto_heal_safe(findings)
+        # Re-run to get the post-fix state
+        findings = run_health_checks()
+        with _health_lock:
+            import time as _t  # noqa: PLC0415
+            globals()["_health_cache"] = [f.as_dict() for f in findings]
+            globals()["_health_refreshed_at"] = _t.time()
+        return jsonify({
+            "ok":      True,
+            "healed":  healed,
+            "findings": [f.as_dict() for f in findings],
+            "summary":  _health_summary([f.as_dict() for f in findings]),
+        })
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @app.route("/api/export/rekordbox", methods=["POST"])

@@ -1002,6 +1002,8 @@ async function refreshStatus() {
 
     // ── Drive-offline banner ──────────────────────────────────────────────
     _updateDriveBanner(data.drives);
+    // ── Health hazard panel (summary-driven; full fetch only when count changes) ──
+    _updateHealthFromStatus(data.health);
   } catch (_) {}
 }
 
@@ -1167,8 +1169,92 @@ async function applyDriveFix(key, path, btn) {
     if (btn) { btn.disabled = false; btn.textContent = 'Apply'; }
   }
 }
-refreshStatus();
+
+// ── Health hazard panel ───────────────────────────────────────────────────────
+
+let _healthPanelDismissed = false;
+
+function dismissHealthPanel() {
+  _healthPanelDismissed = true;
+  document.getElementById('health-panel').style.display = 'none';
+}
+
+function _severityIcon(s) {
+  return s === 'critical' ? '🔴' : s === 'warn' ? '🟡' : 'ℹ️';
+}
+
+function _renderHealthFindings(findings) {
+  const panel   = document.getElementById('health-panel');
+  const list    = document.getElementById('health-findings-list');
+  const badge   = document.getElementById('health-panel-badge');
+  if (!panel || !list) return;
+
+  const critical = findings.filter(f => f.severity === 'critical').length;
+  const warn     = findings.filter(f => f.severity === 'warn').length;
+
+  if (!findings.length) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  badge.textContent = critical ? `${critical} critical` : `${warn} warning${warn !== 1 ? 's' : ''}`;
+  badge.className   = `health-badge ${critical ? 'health-badge-critical' : 'health-badge-warn'}`;
+
+  list.innerHTML = findings.map(f => `
+    <div class="health-finding health-finding-${f.severity}">
+      <div class="health-finding-title">${_severityIcon(f.severity)} <strong>${f.title}</strong></div>
+      <div class="health-finding-detail">${f.detail}</div>
+      ${f.fix_hint ? `<div class="health-finding-hint">↳ ${f.fix_hint}</div>` : ''}
+    </div>
+  `).join('');
+
+  if (!_healthPanelDismissed) {
+    panel.style.display = 'block';
+  }
+}
+
+// Called once at startup and when Re-check is clicked.
+// refreshStatus() picks up the summary from /api/status every 6s —
+// that triggers a full /api/health fetch only when the count changes.
+let _lastHealthTotal = -1;
+
+async function runHealthCheck(force = false) {
+  const btn = document.getElementById('health-recheck-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking…'; }
+  try {
+    const url  = force ? '/api/health?force=1' : '/api/health';
+    const data = await fetch(url).then(r => r.json());
+    _renderHealthFindings(data.findings || []);
+    _lastHealthTotal = (data.summary || {}).total || 0;
+  } catch (_) { /* non-fatal */ }
+  finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Re-check'; }
+  }
+}
+
+// Integrated into refreshStatus — pulls full findings only when count changes
+function _updateHealthFromStatus(healthSummary) {
+  if (!healthSummary) return;
+  const total = healthSummary.total || 0;
+  if (total !== _lastHealthTotal) {
+    _lastHealthTotal = total;
+    // Re-dismissed state resets when findings change
+    if (total === 0) {
+      _healthPanelDismissed = false;
+      const p = document.getElementById('health-panel');
+      if (p) p.style.display = 'none';
+    } else {
+      runHealthCheck(false);
+    }
+  }
+}
+
+
 setInterval(refreshStatus, 6000);
+// Initial status + health check (staggered so health runs after status settles)
+refreshStatus();
+setTimeout(() => runHealthCheck(false), 1200);
+
 // First launch: show permission wizard (mandatory, can't skip).
 // Returning users: restore permissions from server-side state file, resume silently.
 // Server-side state (/api/setup-status → fablegear-state.json) is the source of
