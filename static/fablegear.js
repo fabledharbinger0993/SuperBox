@@ -508,9 +508,9 @@ async function completeSetup() {
 function applyPermissions() {
   const readOk  = localStorage.getItem('fablegear-db-read')  === 'granted';
   const writeOk = localStorage.getItem('fablegear-db-write') === 'granted';
-  // Main cards that require write permission.
-  ['step-duplicates'].forEach(id =>
-    document.getElementById(id)?.classList.toggle('permission-locked', !writeOk));
+  // step-duplicates contains both a read-only scan phase and a write prune phase.
+  // Don't lock the whole card — the scan should always be accessible.
+  // The prune button is already guarded by the 2-step confirm + RB-running check.
   // Rail buttons that require write permission.
   ['rail-btn-relocate','rail-btn-import','rail-btn-link'].forEach(id => {
     const btn = document.getElementById(id);
