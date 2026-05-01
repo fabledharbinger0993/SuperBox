@@ -4091,13 +4091,7 @@ async function previewFile(path) {
 
 function pruneStep1() {
   if (pruneSelected.size === 0) return;
-  const n = pruneSelected.size;
   const perm = document.getElementById('prune-permanent-cb').checked;
-  document.getElementById('c1-count').textContent = `${n} file${n > 1 ? 's' : ''}`;
-  document.getElementById('c1-mode-note').textContent = perm
-    ? '⚠ Permanent delete mode — files will be unlinked directly. This cannot be undone.'
-    : 'Files will be moved to a recovery folder in Trash. Nothing is permanently deleted.';
-  document.getElementById('c1-mode-note').style.color = perm ? 'var(--danger)' : '';
   document.getElementById('btn-execute-prune').textContent = perm
     ? 'Execute — Delete Permanently'
     : 'Execute — Move to Trash';
@@ -4108,7 +4102,8 @@ function pruneStep1() {
       : 'These files will be moved to Trash. Their database entries will be removed. A timestamped backup of <code>master.db</code> is created automatically. RekordBox must be closed.';
     c2note.style.color = perm ? 'var(--danger)' : '';
   }
-  _openConfirm('confirm-step1');
+  // Skip step 1 panel — go straight to the file list + execute
+  pruneStep2();
 }
 
 function pruneStep2() {
