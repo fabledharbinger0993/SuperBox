@@ -4101,6 +4101,13 @@ function pruneStep1() {
   document.getElementById('btn-execute-prune').textContent = perm
     ? 'Execute — Delete Permanently'
     : 'Execute — Move to Trash';
+  const c2note = document.getElementById('c2-mode-note');
+  if (c2note) {
+    c2note.innerHTML = perm
+      ? '⚠ These files will be <strong>permanently deleted</strong> from disk and removed from the RekordBox database. <strong>This cannot be undone.</strong> RekordBox must be closed.'
+      : 'These files will be moved to Trash. Their database entries will be removed. A timestamped backup of <code>master.db</code> is created automatically. RekordBox must be closed.';
+    c2note.style.color = perm ? 'var(--danger)' : '';
+  }
   _openConfirm('confirm-step1');
 }
 
@@ -6638,4 +6645,12 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   // Floating tool modal drag
   _initToolFloatModalDrag();
+
+  // Prevent WKWebView frameless-window drag from swallowing range inputs.
+  // -webkit-app-region: no-drag is set in CSS but WKWebView doesn't reliably
+  // honour it on <input type="range"> thumb/track hits. Stopping mousedown
+  // propagation in capture phase blocks the drag hittest before it fires.
+  document.addEventListener('mousedown', e => {
+    if (e.target.closest('input[type="range"]')) e.stopPropagation();
+  }, true);
 });

@@ -1001,10 +1001,9 @@ def api_run_prune():
 
             from pruner import prune_files  # noqa: PLC0415
             from db_connection import write_db  # noqa: PLC0415
-            from config import DJMT_DB as _DB  # noqa: PLC0415
 
             summary = {}
-            with write_db(_DB) as db:
+            with write_db() as db:  # defaults to LOCAL_DB — the user's live library
                 summary = prune_files(
                     paths,
                     db,
@@ -1019,6 +1018,11 @@ def api_run_prune():
                 log_q.put(("done", 130))
                 return
 
+            # Treat as failure when nothing was moved/deleted but errors were recorded
+            hard_errors = summary.get("errors", [])
+            files_moved = summary.get("files_moved", 0)
+            exit_code = 1 if (hard_errors and files_moved == 0) else 0
+
             _prune_root = staged.get("library_root", "")
             if not _prune_root:
                 try:
@@ -1026,10 +1030,10 @@ def api_run_prune():
                     _prune_root = str(_MR)
                 except Exception:
                     pass
-            if _prune_root:
+            if _prune_root and exit_code == 0:
                 mark_step_complete(_prune_root, "prune", 0)
 
-            log_q.put(("done", 0))
+            log_q.put(("done", exit_code))
         except Exception as exc:
             log_q.put(("line", f"[ERROR] {exc}"))
             log_q.put(("done", 1))
