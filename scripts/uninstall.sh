@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/bash
+# shellcheck shell=bash
 # uninstall.sh
 #
 # Removes the FableGear native Dock launcher and optionally the full repo.
@@ -9,7 +10,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_PATH="$HOME/Applications/FableGear.app"
 UNINSTALL_APP_PATH="$HOME/Applications/FableGear Uninstall.app"
@@ -24,7 +25,7 @@ Dock Icon Only
   Your music library and the FableGear repo folder are untouched.
 
 Full Uninstall
-  Removes everything above AND deletes the FableGear repo folder (~'$HOME/FableGear/FableGear'$).
+  Removes everything above AND deletes the FableGear repo folder (~'$HOME/FableGear/FableGear').
   Your Rekordbox library is never touched." buttons {"Cancel", "Dock Icon Only", "Full Uninstall"} default button "Dock Icon Only" with icon caution with title "FableGear Uninstall")' \
     2>/dev/null || echo "Cancel")
 

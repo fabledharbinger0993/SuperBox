@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/bin/bash
+# shellcheck shell=bash
 # setup_dock_launcher.sh
 #
 # Builds a native FableGear.app in ~/Applications/ from source (local osacompile),
@@ -12,7 +13,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 APP_NAME="FableGear"
