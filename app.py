@@ -172,7 +172,7 @@ _SPLASH_HTML = """\
 </head>
 <body>
   <video id="splash" autoplay playsinline>
-    <source src="/static/fablegear-splash.mp4" type="video/mp4">
+    <source src="{{ video_src }}" type="video/mp4">
   </video>
   <script>
     var v = document.getElementById('splash');
@@ -201,7 +201,15 @@ def index():
 
 @app.route("/splash")
 def splash():
-    return render_template_string(_SPLASH_HTML)
+    # Load the video via file:// so WKWebView reads it directly from disk —
+    # this keeps the Waitress thread pool free during the entire splash
+    # duration instead of tying up a thread for every range request.
+    splash_path = Path(os.environ.get('FABLEGEAR_ROOT', Path(__file__).parent)) / 'static' / 'fablegear-splash.mp4'
+    if splash_path.exists():
+        video_src = splash_path.as_uri()   # file:///absolute/path/to/splash.mp4
+    else:
+        video_src = '/static/fablegear-splash.mp4'  # fallback
+    return render_template_string(_SPLASH_HTML, video_src=video_src)
 
 
 @app.route("/api/status")
