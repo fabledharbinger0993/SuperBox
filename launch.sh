@@ -6,6 +6,7 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VENV="$SCRIPT_DIR/venv"
 SENTINEL="$SCRIPT_DIR/.fablegear_ready"
+DOCK_SENTINEL="$SCRIPT_DIR/.dock_launcher_offered"
 LOG="$SCRIPT_DIR/fablegear.log"
 
 # ── Locate Homebrew (works on both Apple Silicon and Intel) ───────────────
@@ -42,6 +43,14 @@ if _setup_needed; then
   osascript -e "tell application \"Terminal\" to activate"
   # Wait for setup.sh to touch the sentinel (polls every 2 s)
   until [ -f "$SENTINEL" ]; do sleep 2; done
+fi
+
+# ── Offer native Dock launcher on first boot (one-time, before silence) ──
+# Skipped automatically if: already offered, already installed, or launched
+# from Automator/non-TTY (no point showing a dialog with no screen context).
+if [ ! -f "$DOCK_SENTINEL" ] && [ ! -d "$HOME/Applications/FableGear.app" ]; then
+  touch "$DOCK_SENTINEL"
+  bash "$SCRIPT_DIR/scripts/setup_dock_launcher.sh" || true
 fi
 
 # ── Silence all output — Automator treats any stdout as an error ──────────
