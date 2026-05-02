@@ -23,7 +23,7 @@ import sys
 import threading
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, render_template, render_template_string, request
+from flask import Flask, Response, jsonify, render_template, render_template_string, request, send_file
 
 # ── Shared helpers (base layer — no circular imports) ─────────────────────────
 from helpers import (

@@ -1,0 +1,8 @@
+# Build-only dependencies — NOT installed by setup.sh or launch.sh
+# Only needed when packaging a release .app via build.sh
+#
+# Usage: pip install -r requirements_build.txt
+
+pyinstaller>=6.0
+# Bundles Python + all deps into a standalone .app.
+# Run build.sh to produce dist/FableGear.app.

@@ -143,7 +143,6 @@ pip install -r "$SCRIPT_DIR/requirements.txt" --quiet
 
 ok "All Python packages installed"
 
-pip install "mcp[cli]"
 # ── Create launcher .app ─────────────────────────────────────────────────
 step "Creating FableGear.app launcher"
 

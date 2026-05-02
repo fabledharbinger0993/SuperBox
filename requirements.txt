@@ -38,6 +38,9 @@ soundfile>=0.12.1
 sounddevice>=0.4.6
 # Audio playback used by the preview/monitoring feature in app.py
 
+psutil>=5.9
+# System info: disk partitions and usage for the drives panel in app.py
+
 pyacoustid==1.3
 # Acoustic fingerprinting wrapper; requires fpcalc binary (see above)
 
@@ -52,10 +55,5 @@ pywebview>=5.0
 # Native OS window (WKWebView on macOS) — replaces the browser launch step.
 # Enables real drag-and-drop path delivery and a proper .app experience.
 
-PyQt5>=5.15
-# Multimedia widgets for splash video playback on launch.
-# Falls back gracefully if not available (skips splash and launches directly).
-
-pyinstaller>=6.0
-# Bundles Python + all deps into a standalone .app.  Run build.sh to produce
-# dist/FableGear.app.  Not needed at runtime — dev/build tool only.
+# PyQt5 removed — splash_player.py was dead code, never invoked by launch.sh
+# pyinstaller removed — build-only tool, see requirements_build.txt
