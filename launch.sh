@@ -41,8 +41,17 @@ if _setup_needed; then
   rm -f "$SENTINEL"   # clear any stale sentinel
   osascript -e "tell application \"Terminal\" to do script \"bash '${SCRIPT_DIR}/setup.sh'; exit\""
   osascript -e "tell application \"Terminal\" to activate"
-  # Wait for setup.sh to touch the sentinel (polls every 2 s)
-  until [ -f "$SENTINEL" ]; do sleep 2; done
+  # Wait for setup.sh to touch the sentinel (max 40 min, polls every 2 s)
+  _waited=0
+  until [ -f "$SENTINEL" ]; do
+    sleep 2
+    _waited=$((_waited + 2))
+    if [ $_waited -ge 2400 ]; then
+      echo "FableGear: setup timed out — check the setup window for errors" >&2
+      exit 1
+    fi
+  done
+  unset _waited
 fi
 
 # ── Offer native Dock launcher on first boot (one-time, before silence) ──

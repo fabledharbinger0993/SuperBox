@@ -43,8 +43,19 @@ else
     git clone "$REPO_URL" "$INSTALL_DIR"
 fi
 
+# ── First-run setup (run inline here so the user sees progress) ──────────
+# launch.sh normally opens setup.sh in a new Terminal window, but that
+# requires macOS Automation permission for Terminal — which silently fails
+# on a fresh machine, hanging the poll loop forever.  When installing via
+# this script we already have a visible Terminal, so run it here directly.
+if [ ! -f "$INSTALL_DIR/.fablegear_ready" ]; then
+    _blue "Running first-time setup (installs Homebrew, ffmpeg, Python packages)..."
+    _blue "You may be prompted for your Mac password."
+    echo ""
+    bash "$INSTALL_DIR/setup.sh"
+fi
+
 # ── Launch ────────────────────────────────────────────────────────────────
 _green "Starting FableGear..."
-_green "(A setup window will open if this is your first time — it only runs once.)"
 echo ""
 bash "$INSTALL_DIR/launch.sh"
