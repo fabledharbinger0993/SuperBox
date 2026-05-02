@@ -5129,7 +5129,10 @@ let _leTracksLoaded = false;
 /* Library editor is always the primary view — openLibraryEditor just reloads if needed */
 function openLibraryEditor() {
   _leOpen = true;
-  if (!document.getElementById('le-playlist-tree')?.children.length) leLoadPlaylistsOnly();
+  // setLibraryMode('db') is idempotent: leLoadLibrary() checks _leTracksLoaded
+  // before fetching, so this is safe to call on every open. It also activates
+  // the flat "All Tracks" view by default rather than an empty-state prompt.
+  if (!_leTracksLoaded) setLibraryMode('db');
 }
 
 function closeLibraryEditor() { /* no-op — editor is always visible */ }
@@ -5565,14 +5568,22 @@ function leUpdateActionState() {
 
 function leEnsurePlayer() {
   if (_lePlayer) return _lePlayer;
-  _lePlayer = new Audio();
+  // Prefer the DOM-attached element — WKWebView (pywebview/macOS) requires the
+  // audio element to be part of the document for media playback to work.
+  _lePlayer = document.getElementById('le-player-audio') || new Audio();
   _lePlayer.addEventListener('play', () => leRefreshPlaybackButtons());
   _lePlayer.addEventListener('pause', () => leRefreshPlaybackButtons());
   _lePlayer.addEventListener('ended', () => {
     _lePlayingTrackId = null;
     leRefreshPlaybackButtons();
   });
-  _lePlayer.addEventListener('error', () => {
+  _lePlayer.addEventListener('error', (e) => {
+    const code = _lePlayer.error?.code;
+    // code 4 = MEDIA_ERR_SRC_NOT_SUPPORTED (file not found / bad MIME)
+    const msg = code === 4 ? 'Track file not found or format unsupported.'
+              : code === 2 ? 'Network error loading track.'
+              : 'Could not play track.';
+    showToast(msg, 'error');
     _lePlayingTrackId = null;
     leRefreshPlaybackButtons();
   });

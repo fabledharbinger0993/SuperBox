@@ -479,13 +479,13 @@ def api_library_track_stream(track_id):
         with read_db(_DB) as db:
             track = db.get_content(ID=track_id).one_or_none()
             if track is None:
-                return jsonify({"error": "Track not found"}), 404
-            file_path = str(getattr(track, "FolderPath", "") or "").strip()
+                return jsonify({"error": f"Track {track_id!r} not found in DB"}), 404
+            file_path = str(track.FolderPath or "").strip()
 
         if not file_path:
-            return jsonify({"error": "Track file path missing"}), 404
+            return jsonify({"error": f"Track {track_id!r} has no file path in DB"}), 404
         if not os.path.isfile(file_path):
-            return jsonify({"error": "Track file not found"}), 404
+            return jsonify({"error": f"Audio file not found on disk: {file_path}"}), 404
 
         mime, _ = mimetypes.guess_type(file_path)
         return send_file(file_path, mimetype=mime or "audio/mpeg", conditional=True)
