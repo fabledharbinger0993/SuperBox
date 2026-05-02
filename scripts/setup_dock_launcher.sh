@@ -113,6 +113,35 @@ subprocess.run(["killall", "Dock"], capture_output=True)
 print("FableGear pinned to Dock.")
 PYPIN
 
+# ── Build companion Uninstall app ─────────────────────────────────────────
+UNINSTALL_SH="$REPO_ROOT/scripts/uninstall.sh"
+UNINSTALL_APP="$INSTALL_DIR/FableGear Uninstall.app"
+
+UNINSTALL_SCRIPT=$(cat <<ASCRIPT
+-- FableGear Uninstall companion (built locally by setup_dock_launcher.sh)
+do shell script "bash '${UNINSTALL_SH}' > /dev/null 2>&1"
+ASCRIPT
+)
+echo "$UNINSTALL_SCRIPT" > /tmp/FableGearUninstall.applescript
+osacompile -o "$UNINSTALL_APP" /tmp/FableGearUninstall.applescript
+rm -f /tmp/FableGearUninstall.applescript
+
+# Apply a tinted icon to the uninstaller so it's visually distinct
+if [[ -f "$ICON_SRC" ]]; then
+    ICONSET2="$(mktemp -d)/fgu.iconset"
+    mkdir -p "$ICONSET2"
+    for size in 16 32 64 128 256 512; do
+        sips -z "$size" "$size" "$ICON_SRC" \
+            --out "$ICONSET2/icon_${size}x${size}.png" >/dev/null 2>&1
+        double=$((size * 2))
+        sips -z "$double" "$double" "$ICON_SRC" \
+            --out "$ICONSET2/icon_${size}x${size}@2x.png" >/dev/null 2>&1
+    done
+    iconutil -c icns "$ICONSET2" \
+        -o "$UNINSTALL_APP/Contents/Resources/applet.icns" 2>/dev/null || true
+fi
+
 # ── Done ──────────────────────────────────────────────────────────────────
-osascript -e 'display notification "FableGear has been added to your Dock." with title "FableGear Setup"' 2>/dev/null || true
-echo "Launcher built: $APP_PATH"
+osascript -e 'display notification "FableGear added to Dock. Find '\''FableGear Uninstall'\'' in ~/Applications to remove it later." with title "FableGear Setup"' 2>/dev/null || true
+echo "Launcher:   $APP_PATH"
+echo "Uninstall:  $UNINSTALL_APP"
