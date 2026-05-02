@@ -19,7 +19,6 @@ import os
 import psutil
 import signal
 import subprocess
-import sys
 import threading
 from pathlib import Path
 

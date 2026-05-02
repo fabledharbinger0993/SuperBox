@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 
 from pyrekordbox import Rekordbox6Database
 
-from config import BATCH_SIZE, MUSIC_ROOT, SKIP_DIRS, SKIP_PREFIXES, AUDIO_EXTENSIONS
+from config import BATCH_SIZE, MUSIC_ROOT
 
 if TYPE_CHECKING:
     # DjmdPlaylist and DjmdContent are ORM row types from pyrekordbox's SQLAlchemy

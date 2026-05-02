@@ -10,7 +10,6 @@ reconnect on any Mac (or create the same symlink), and Rekordbox works.
 """
 
 import json
-import os
 import shutil
 import subprocess
 from pathlib import Path

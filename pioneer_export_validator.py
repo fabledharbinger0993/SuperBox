@@ -12,7 +12,6 @@ to the database. This ensures fail-fast behavior and clear error reporting.
 """
 from __future__ import annotations
 
-import hashlib
 from pathlib import Path
 from typing import Any, Dict, List
 

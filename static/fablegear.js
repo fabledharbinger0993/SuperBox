@@ -115,12 +115,6 @@ function loadFileBrowserFolders(dropdown) {
   `;
 }
 
-function navigateToLibrarySection(section) {
-  closeRightNavDropdown();
-  // Integrate with existing library navigation
-  console.log('Navigate to:', section);
-}
-
 function toggleFileBrowser() {
   const panel = document.getElementById('fb-panel');
   const btn   = document.getElementById('fb-toggle-btn');
@@ -1619,26 +1613,6 @@ function _leSplitTrackRow(t, col) {
  * Call before any write tool runs. Returns {ok: true} or {ok: false, message}.
  * Non-fatal: if the fetch fails we allow through (don't block on network error).
  */
-async function driveCheckBeforeRun(toolName = '') {
-  try {
-    const res  = await fetch('/api/status');
-    const data = await res.json();
-    const d = data.drives || {};
-    if (!d.configured) {
-      return { ok: false, message: 'FableGear is not configured. Set up drive paths before running tools.' };
-    }
-    const missing = [];
-    if (!d.local_db_ok)   missing.push('local rekordbox DB (' + (d.local_db_path || 'unset') + ')');
-    if (!d.music_root_ok) missing.push('music root (' + (d.music_root_path || 'unset') + ')');
-    if (missing.length > 0) {
-      return { ok: false, message: `${toolName ? toolName + ': ' : ''}Paths not reachable: ${missing.join(', ')}. Check that all drives are mounted.` };
-    }
-    return { ok: true };
-  } catch (_) {
-    return { ok: true }; // non-fatal; don't block if status endpoint is unreachable
-  }
-}
-
 /* ── Utility helpers ─────────────────────────────────────────────────────── */
 
 function _esc(s)     { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -3091,17 +3065,6 @@ function pipelineRender() {
   });
 }
 
-function _pipelineReadConfig(step, extraCsv) {
-  /* Step configs are now managed via _draftConfig → _config in the wizard.
-     This function is the fallback for the auto-mode runner — it returns
-     whatever is already stored on the step object, with prune CSV injection. */
-  const cfg = step._config || _loadPipeCfg(step.type) || {};
-  if (step.type === 'prune' && extraCsv && !cfg.csv) {
-    return { ...cfg, csv: extraCsv };
-  }
-  return cfg;
-}
-
 /* ── Pipeline confirm-gate state ──────────────────────────────────────────── */
 let _pipeGateResolve = null;   // resolves with action string: 'finish' | 'redo' | 'skip' | 'stop'
 
@@ -3110,9 +3073,6 @@ function pipeGateAction(action) {
   if (_pipeGateResolve) { _pipeGateResolve(action); _pipeGateResolve = null; }
 }
 // Legacy aliases for any lingering calls
-function pipeConfirmContinue() { pipeGateAction('finish'); }
-function pipeConfirmStop()     { pipeGateAction('stop');   }
-
 function _showPipeGate(succeeded, completedName, nextName, summaryLines) {
   /* Returns a Promise that resolves with an action string. */
   const gate     = document.getElementById('pipe-confirm-gate');
@@ -4426,17 +4386,6 @@ function owlHoverOut() {
     document.getElementById('owl-hover-panel').classList.remove('visible'), 220);
 }
 
-function owlClick() {
-  document.getElementById('owl-hover-panel').classList.remove('visible');
-  if (pinnedCards.size > 0) {
-    // dismiss all cards
-    pinnedCards.forEach(c => c.remove());
-    pinnedCards.clear();
-    document.querySelectorAll('.owl-item').forEach(i => i.classList.remove('pinned'));
-    owlCardsActive = false;
-  }
-}
-
 function toggleCard(id) {
   pinnedCards.has(id) ? closeCard(id) : openCard(id);
 }
@@ -4888,18 +4837,6 @@ async function _recoverDroppedPath() {
   return await _nativePick();
 }
 
-async function dropFolderFor(pillsId) {
-  const path = await _recoverDroppedPath();
-  if (path) addFolderPill(pillsId, path);
-}
-async function dropPathFor(inputId) {
-  const path = await _recoverDroppedPath();
-  if (path) {
-    const el = document.getElementById(inputId);
-    if (el) { el.value = path; el.dispatchEvent(new Event('input', { bubbles: true })); }
-  }
-}
-
 function runAudit() {
   const paths = getFolderPaths('audit-pills');
   if (!paths.length) { showToast('Add at least one folder path to scan.', 'warning'); return; }
@@ -5142,12 +5079,6 @@ function openLibraryEditor() {
   if (!_leTracksLoaded) setLibraryMode('db');
 }
 
-function closeLibraryEditor() { /* no-op — editor is always visible */ }
-
-function leScrollTop() {
-  document.getElementById('le-track-list')?.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
 /* ── Filter state ─────────────────────────────────────────────────────── */
 const _leFilters = { rating: 0, color: -1 };
 
@@ -5307,18 +5238,6 @@ function _returnFloatCard() {
 
 /* ── Tool Panel Expand/Collapse ──────────────────────────────────────────── */
 let _expandedTool = null;
-
-function expandToolPanel(toolId) {
-  if (_expandedTool === toolId) {
-    closeToolFloatModal();
-    return;
-  }
-  openToolFloatModal(toolId);
-}
-
-function collapseToolPanel() {
-  closeToolFloatModal();
-}
 
 /* ── Floating modal drag ─────────────────────────────────────────────────── */
 function _initToolFloatModalDrag() {
@@ -6510,13 +6429,6 @@ _initStateOverlay();
 // ── FableGo walkthrough ──────────────────────────────────────────────────────
 let _rkgStep = 1;
 const _rkgTotal = 4;
-
-function openFableGo() {
-  document.getElementById('fablego-panel').classList.add('open');
-  document.getElementById('fablego-backdrop').classList.add('open');
-  rkgGoTo(1);        // always start at overview
-  _loadConnectivity(); // pre-fetch data so step 4 is ready
-}
 
 function closeFableGo() {
   document.getElementById('fablego-panel').classList.remove('open');

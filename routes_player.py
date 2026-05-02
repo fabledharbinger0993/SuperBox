@@ -12,7 +12,7 @@ import threading
 import uuid
 from pathlib import Path
 
-from flask import Blueprint, Response, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file
 
 from helpers import (
     REPO_ROOT,

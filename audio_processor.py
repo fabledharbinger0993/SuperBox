@@ -994,7 +994,6 @@ def process_directory(
 # ─── Smoke test ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    import sys
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
     test_files = [

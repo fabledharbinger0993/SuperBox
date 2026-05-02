@@ -27,9 +27,6 @@ SEVERITY levels (stored as string)
 from __future__ import annotations
 
 import logging
-import os
-import sqlite3
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable

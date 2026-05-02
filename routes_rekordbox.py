@@ -9,7 +9,6 @@ the Rekordbox-must-be-closed guard.
 import json
 import sys
 import uuid
-from pathlib import Path
 
 from flask import Blueprint, Response, jsonify, request
 

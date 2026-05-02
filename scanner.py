@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Iterator
 
 from mutagen import File as MutagenFile
-from mutagen.id3 import ID3, ID3NoHeaderError
+from mutagen.id3 import ID3
 
 from config import AUDIO_EXTENSIONS, BPM_MAX, BPM_MIN, MIN_FILE_BYTES, SKIP_DIRS, SKIP_PREFIXES
 

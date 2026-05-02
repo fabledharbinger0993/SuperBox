@@ -25,7 +25,7 @@ from flask_limiter.util import get_remote_address
 from flask_sock import Sock
 from mutagen import File as MutagenFile
 
-from pioneer_export_validator import validate_export_paths, build_export_metadata, validate_copied_file_exists
+from pioneer_export_validator import validate_export_paths, validate_copied_file_exists
 
 
 # ── Playback backend (optional) ───────────────────────────────────────────────

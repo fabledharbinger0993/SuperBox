@@ -48,10 +48,10 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from mutagen import File as MutagenFile
-from mutagen.id3 import ID3, ID3NoHeaderError
+from mutagen.id3 import ID3
 
 from config import AUDIO_EXTENSIONS, BATCH_SIZE, SKIP_DIRS, SKIP_PREFIXES
 import renamer_learned as _learned

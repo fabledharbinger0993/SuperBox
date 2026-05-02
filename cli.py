@@ -428,7 +428,6 @@ def _run_shared_report(args, all_results, root_sections, _quarantine_dir) -> Non
     Build and emit the Tag Tracks / Normalize completion report.
     Called from both the directory-scan and --paths-file retry branches of cmd_process.
     """
-    from audio_processor import ProcessResult  # noqa: PLC0415
 
     detect_bpm = not args.no_bpm
     detect_key = not args.no_key
@@ -1003,7 +1002,7 @@ def cmd_organize(args: argparse.Namespace) -> None:
     """Consolidate audio files into Artist / Album / Track hierarchy."""
     import json as _json
     from pathlib import Path
-    from library_organizer import organize_library, MIX_FOLDER, ORPHAN_FOLDER
+    from library_organizer import organize_library
 
     primary = Path(args.source)
     extra   = [Path(p) for p in (getattr(args, "also_scan", None) or [])]
