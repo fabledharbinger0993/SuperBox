@@ -2,7 +2,9 @@
 
 **A free, open-source rekordbox library toolkit for DJs.**
 
-[![Download](https://img.shields.io/github/v/release/fabledharbinger0993/FableGear?label=Download%20FableGear&style=for-the-badge&color=6d28d9&logo=apple&logoColor=white)](https://github.com/fabledharbinger0993/FableGear/releases/latest/download/FableGear.zip)
+<a href="https://github.com/fabledharbinger0993/FableGear/releases/latest/download/FableGear.zip">
+  <img src="https://raw.githubusercontent.com/fabledharbinger0993/FableGear/main/static/installer-icon.png" width="200" alt="Download FableGear">
+</a>
 
 macOS · Free · No account required · Local-first — no cloud, no subscription
 
