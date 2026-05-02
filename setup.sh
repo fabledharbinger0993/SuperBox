@@ -79,18 +79,35 @@ done
 # ── Python 3 ─────────────────────────────────────────────────────────────
 step "Python 3"
 
-if ! command -v python3 &>/dev/null; then
-  info "python3 not found — installing via Homebrew..."
-  "$BREW" install python
+# Prefer Python 3.13 — 3.14 ships without ensurepip on some macOS setups,
+# which produces a broken venv (no pip, no activate). Fall back through
+# known-good versions before using whatever python3 resolves to.
+PYTHON3=""
+for candidate in python3.13 python3.12 python3.11 python3; do
+  if command -v "$candidate" &>/dev/null; then
+    ver=$("$candidate" -c 'import sys; print(sys.version_info[:2])' 2>/dev/null)
+    # Skip 3.14+ (ensurepip issues on macOS)
+    major=$("$candidate" -c 'import sys; print(sys.version_info[1])' 2>/dev/null)
+    if [ "${major:-99}" -le 13 ]; then
+      PYTHON3="$candidate"
+      break
+    fi
+  fi
+done
+
+if [ -z "$PYTHON3" ]; then
+  info "No suitable Python found — installing python@3.13 via Homebrew..."
+  "$BREW" install python@3.13
+  PYTHON3="python3.13"
 fi
-ok "Python $(python3 --version 2>&1 | awk '{print $2}')"
+ok "Python $("$PYTHON3" --version 2>&1 | awk '{print $2}')"
 
 # ── Python virtual environment ────────────────────────────────────────────
 step "Python virtual environment"
 
 if [ ! -d "$VENV" ]; then
   info "Creating venv at $VENV ..."
-  python3 -m venv "$VENV"
+  "$PYTHON3" -m venv "$VENV"
   ok "Virtual environment created"
 else
   ok "Virtual environment already exists"
