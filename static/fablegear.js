@@ -125,7 +125,7 @@ function toggleFileBrowser() {
   const panel = document.getElementById('fb-panel');
   const btn   = document.getElementById('fb-toggle-btn');
   const isOpen = panel.classList.toggle('fb-open');
-  btn.classList.toggle('active', isOpen);
+  if (btn) btn.classList.toggle('active', isOpen);
   document.body.classList.toggle('sidebar-open', isOpen);
   if (isOpen) fbNavigateTo(_fbCurrentPath);
 }
@@ -4433,7 +4433,6 @@ function owlClick() {
     pinnedCards.forEach(c => c.remove());
     pinnedCards.clear();
     document.querySelectorAll('.owl-item').forEach(i => i.classList.remove('pinned'));
-    document.getElementById('owl-btn').classList.remove('active');
     owlCardsActive = false;
   }
 }
@@ -4468,7 +4467,6 @@ function openCard(id) {
 
   const item = document.getElementById(`owl-item-${id}`);
   if (item) item.classList.add('pinned');
-  document.getElementById('owl-btn').classList.add('active');
   owlCardsActive = true;
 }
 
@@ -4478,7 +4476,6 @@ function closeCard(id) {
   const item = document.getElementById(`owl-item-${id}`);
   if (item) item.classList.remove('pinned');
   if (pinnedCards.size === 0) {
-    document.getElementById('owl-btn').classList.remove('active');
     owlCardsActive = false;
   }
 }
