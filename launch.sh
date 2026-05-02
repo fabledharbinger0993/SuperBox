@@ -39,8 +39,9 @@ _setup_needed() {
 # for the sentinel file before proceeding.
 if _setup_needed; then
   rm -f "$SENTINEL"   # clear any stale sentinel
-  osascript -e "tell application \"Terminal\" to do script \"bash '${SCRIPT_DIR}/setup.sh'; exit\""
-  osascript -e "tell application \"Terminal\" to activate"
+  # open -a Terminal runs the script via Launch Services — no Automation
+  # permission required (unlike osascript "tell application Terminal do script")
+  open -a Terminal "$SCRIPT_DIR/setup.sh"
   # Wait for setup.sh to touch the sentinel (max 40 min, polls every 2 s)
   _waited=0
   until [ -f "$SENTINEL" ]; do
