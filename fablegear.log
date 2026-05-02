@@ -342,3 +342,29 @@ WARNING:pyrekordbox.db6.database:Rekordbox is running!
 WARNING:pyrekordbox.db6.database:Rekordbox is running!
 [02:13:20] pyrekordbox.db6.database:WARNING  - Rekordbox is running!
 WARNING:pyrekordbox.db6.database:Rekordbox is running!
+/Volumes/DJMT/FABLEDHARBINGER/GIT_REPOS/FableGear/launch_local.sh: line 62: /Volumes/DJMT/FABLEDHARBINGER/GIT_REPOS/FableGear/.venv/bin/pip: No such file or directory
+/Volumes/DJMT/FABLEDHARBINGER/GIT_REPOS/FableGear/launch_local.sh: line 63: /Volumes/DJMT/FABLEDHARBINGER/GIT_REPOS/FableGear/.venv/bin/pip: No such file or directory
+[03:13:25] pyrekordbox.db6.database:WARNING  - Rekordbox is running!
+WARNING:pyrekordbox.db6.database:Rekordbox is running!
+[03:13:25] pyrekordbox.db6.database:WARNING  - Rekordbox is running!
+WARNING:pyrekordbox.db6.database:Rekordbox is running!
+[03:14:46] pyrekordbox.db6.database:WARNING  - Rekordbox is running!
+WARNING:pyrekordbox.db6.database:Rekordbox is running!
+2026-05-01 03:15:11.981 python[70840:42200790] Warning: Window move completed without beginning
+/Volumes/DJMT/FABLEDHARBINGER/GIT_REPOS/FableGear/launch_local.sh: line 62: /Volumes/DJMT/FABLEDHARBINGER/GIT_REPOS/FableGear/.venv/bin/pip: No such file or directory
+/Volumes/DJMT/FABLEDHARBINGER/GIT_REPOS/FableGear/launch_local.sh: line 63: /Volumes/DJMT/FABLEDHARBINGER/GIT_REPOS/FableGear/.venv/bin/pip: No such file or directory
+ensure_archive_structure: could not create archive directories — [Errno 13] Permission denied: '/Volumes/Passport'
+WARNING:health:health auto-heal failed for backup_dir_missing: [Errno 13] Permission denied: '/Volumes/Passport'
+[13:19:14] pyrekordbox.db6.database:WARNING  - Rekordbox is running!
+WARNING:pyrekordbox.db6.database:Rekordbox is running!
+WARNING:config:ensure_archive_structure: could not create archive directories — [Errno 13] Permission denied: '/Volumes/Passport'
+[13:19:14] pyrekordbox.db6.database:WARNING  - Rekordbox is running!
+WARNING:pyrekordbox.db6.database:Rekordbox is running!
+WARNING:state_tracker:state_tracker: /Volumes/Passport/DJMT_Library is not writable — skipping state save
+WARNING:health:health auto-heal failed for backup_dir_missing: [Errno 13] Permission denied: '/Volumes/Passport'
+WARNING:health:health auto-heal failed for backup_dir_missing: [Errno 13] Permission denied: '/Volumes/Passport'
+WARNING:health:health auto-heal failed for backup_dir_missing: [Errno 13] Permission denied: '/Volumes/Passport'
+WARNING:health:health auto-heal failed for backup_dir_missing: [Errno 13] Permission denied: '/Volumes/Passport'
+[13:25:06] pyrekordbox.db6.database:WARNING  - Rekordbox is running!
+WARNING:pyrekordbox.db6.database:Rekordbox is running!
+2026-05-01 13:42:31.319 python[1481:42616043] Warning: Window move completed without beginning
