@@ -1,10 +1,20 @@
 # FableGear
 
-**A free, open-source rekordbox library toolkit for DJs with large, mature libraries.**
+**A free, open-source rekordbox library toolkit for DJs.**
 
 [![Download](https://img.shields.io/github/v/release/fabledharbinger0993/FableGear?label=Download%20FableGear&style=for-the-badge&color=6d28d9&logo=apple&logoColor=white)](https://github.com/fabledharbinger0993/FableGear/releases/latest/download/FableGear.zip)
 
-macOS · Free · No account required · Rekordbox must be closed for write operations
+macOS · Free · No account required · Local-first — no cloud, no subscription
+
+---
+
+## What is FableGear?
+
+FableGear is a local library management suite that runs alongside Rekordbox. It reads and writes the Rekordbox SQLite database directly via [pyrekordbox](https://github.com/dylanljones/pyrekordbox) and runs entirely on your Mac — nothing leaves your machine.
+
+It was built for DJs with large, mature libraries where Rekordbox's own tools run out of road: broken paths after drive remounts, duplicates that slipped through filename-based checks, untagged tracks, libraries spread across multiple drives, and thousands of files that need BPM and key analysis done properly.
+
+FableGear opens as a native window (no browser required) and keeps Rekordbox as the source of truth. Every write operation requires explicit confirmation and Rekordbox must be closed first.
 
 ---
 
@@ -18,206 +28,134 @@ Open Terminal (`⌘ Space` → type `Terminal`) and paste:
 curl -fsSL https://raw.githubusercontent.com/fabledharbinger0993/FableGear/main/install.sh | bash
 ```
 
-This clones FableGear, installs dependencies, and launches it. On first run a setup window opens — it only runs once. After that FableGear starts silently and you'll be offered a native Dock icon.
+Clones the repo, installs all dependencies, and starts FableGear. The first run opens a setup window — it only runs once. After that, FableGear starts silently and offers to add itself to your Dock as a native app.
 
 ### Option 2 — Manual download
 
 1. Click **Download FableGear** above → unzip → double-click **FableGear.app**
-2. If macOS blocks it: right-click → **Open** → **Open Anyway**
-3. A Terminal setup window opens once, then FableGear launches as a native window
+2. macOS may block it on first open: right-click → **Open** → **Open Anyway**
+3. A setup window runs once, then FableGear launches as a native window
 
-> After first launch, FableGear will ask if you want a **Dock icon** — this builds a native launcher on your Mac (no Gatekeeper friction). To uninstall later, open **FableGear Uninstall** from `~/Applications/`.
+> **Dock icon:** On first launch FableGear will ask if you want a native Dock icon — it compiles one locally on your Mac, which avoids Gatekeeper friction entirely. To remove it later, open **FableGear Uninstall** from `~/Applications/`.
+
+### Requirements
+
+- macOS Monterey 12.0 or later (Apple Silicon or Intel)
+- Internet connection on first launch only (to clone the repo and install dependencies)
+- Rekordbox must be **closed** for any write operation
 
 ---
 
-## What it does
+## Tools
 
-FableGear fills the gaps Rekordbox leaves open. It reads and writes the Rekordbox database directly and runs entirely on your local machine — no cloud, no account, no subscription.
+FableGear is organised into two sections: **Rekordbox DB** tools that read or write the database, and **Physical Library** tools that operate on your files directly.
 
-### Core pipeline — run in order
+### Rekordbox DB
 
-| Icon | Tool | What it does |
-| --- | --- | --- |
-| ▣ | **Library Audit** | Two-pass audit: cross-checks the Rekordbox database against your drive (broken paths, orphaned entries, untagged tracks) and walks the filesystem for a full physical inventory. Feeds all downstream tools. |
-| 🏷 | **Tag Tracks** | Analyzes the actual audio waveform and writes BPM and musical key into the file tags permanently. Tags survive any database rebuild and work in any software. |
-| 🔎 | **Find Duplicates** | Acoustic fingerprinting via Chromaprint. Finds the same recording regardless of filename, bitrate, or format — not filename matching, actual audio content comparison. |
-| ✂ | **Prune Duplicates** | Loads the duplicate report and removes selected files. Multi-step confirmation with buttons at different screen corners to prevent accidental clicks. Files go to Trash, not permanent deletion. |
-| 📍 | **Fix Broken Paths** | When a drive mounts under a new name or files move, bulk-updates every broken path in the database in one operation. |
-| ＋ | **Import** | Adds new audio files to the Rekordbox database. Dry-run mode available. Full database backup created before any write. |
-| 🔗 | **Link Playlists** | Maps your folder structure to Rekordbox playlist names automatically after import. |
+| Tool | What it does |
+|---|---|
+| **Library Audit** | Two-pass audit: cross-checks the Rekordbox database against your drives (broken paths, orphaned entries, missing files, untagged tracks) and walks the filesystem for a full physical inventory. Output feeds all downstream tools. |
+| **Import** | Adds new audio files to the Rekordbox database. Dry-run mode shows what would happen before writing. Full database backup is created automatically before any write. |
+| **Fix Broken Paths** | When a drive remounts under a different name or files move, this bulk-updates every affected path in the database in one operation. |
+| **Link Playlists** | Maps your folder structure to Rekordbox playlist names automatically — useful after a bulk import or reorganise. |
 
-### Optional tools
+### Physical Library
 
-| Icon | Tool | What it does |
-| --- | --- | --- |
-| 📢 | **Normalize** | Measures integrated loudness (EBU R128) and re-encodes tracks outside your target. Originals preserved as `.bak` until verified. |
-| 🔄 | **Convert Format** | Re-encodes a folder of audio files to a target format before importing. |
-| 🗂 | **Organize** | De-fragments your library into `Artist / Album / Track` folder structure using embedded tags. |
-| ★ | **Novelty Scanner** | Scans a second drive for tracks not acoustically present in your main library — rescues files from old or backup drives. |
+| Tool | What it does |
+|---|---|
+| **Tag Tracks** | Analyses the actual audio waveform (not the filename) and writes BPM and musical key into the file tags. Tags survive any database rebuild and work in any software. Uses librosa beat tracking and Krumhansl-Schmuckler chroma analysis. |
+| **Find & Prune Duplicates** | Acoustic fingerprinting via Chromaprint — finds the same recording regardless of filename, bitrate, or format. Multi-step pruning UI with confirm buttons at different screen corners to prevent muscle-memory clicking through a destructive operation. Files go to Trash, not permanent deletion. |
+| **Rename Files** | Pattern-based batch renamer with a learn-from-examples mode — show it a few before/after pairs and it infers the rule. Preflight preview before any rename runs. |
+| **Organize Library** | De-fragments your library into `Artist / Album / Track` folder structure using embedded tags. Uses `TPE2` (album artist) over `TPE1` to prevent `Artist feat. Guest` folder explosion. Camelot key prefixes are stripped from artist tags before folder creation. |
+| **Normalize Loudness** | Measures integrated loudness (EBU R128) and re-encodes tracks outside your target. Preview mode lets you hear the result first. Originals preserved as `.bak` until verified. |
+| **Convert Format** | Re-encodes a folder of audio files to a target format before importing. |
+| **Novelty Scanner** | Scans a second drive for tracks not acoustically present in your main library — rescues files from old drives, backups, or USB sticks. |
 
 ### Pipeline Builder
 
-Chain any combination of tools into one automated run. Choose **auto mode** (runs straight through, each step feeding the next) or **confirm between steps** — pauses after each step with a context-aware gate:
+Chain any combination of tools into one automated run. Choose **auto mode** (runs straight through, each step feeding the next) or **confirm between steps** — pauses at each gate with four choices:
 
-- **↻ Re-do** — replay the same step again
-- **✓ Finish** — stop here, call it done
-- **⏭ Skip** — skip this step's result and continue to the next
-- **⏹ Stop** — abort the pipeline immediately
-
-### Quality of life
-
-- **Drag and drop** — every path field on every card accepts a folder dropped directly from Finder. A glowing purple zone appears on hover; the path populates instantly.
-- **Browse buttons** — every path field also has a Browse… button that opens the native macOS folder picker
-- **Library indicator pill** — each tool shows a pinned 📍 pill marking your current rekordbox library root so you always know what you're operating on
-- **Session pills** — completed operations tracked for the session, click to re-open output
-- **Glossary** — built-in glossary of every technical term used in FableGear
+- **↻ Re-do** — replay the same step
+- **✓ Finish** — stop here
+- **⏭ Skip** — skip this result and continue
+- **⏹ Stop** — abort immediately
 
 ---
 
-## Requirements
+## Library Health Monitor
 
-- macOS Monterey 12.0 or later (Apple Silicon or Intel)
-- Internet connection on first launch only
-- Rekordbox must be **closed** before any write operation
+FableGear runs a proactive hazard scanner at startup and on demand. It checks for:
 
----
+- Rekordbox running while a write is attempted
+- iCloud / Dropbox sync active on your library folder (can corrupt the database mid-write)
+- Database size regression (unexplained shrink — indicator of a bad write or accidental deletion)
+- Read-only volume mounts
+- Database backup pointing to the same physical volume as the database itself
+- Low free space on library drives
+- Database symlink instead of real file
 
-## FableGo + FableGear repo strategy
-
-FableGo is intentionally kept in this same repository (`ios/FableGo`) rather than split into a separate repo.
-
-Why this is the current default:
-
-- FableGo depends directly on FableGear's `/api/mobile/*` surface and auth flow
-- Backend/mobile changes are easier to ship safely when versioned together
-- One repo keeps release coordination and API compatibility checks in one place
-
-If FableGo eventually needs an independent release cadence, separate contributor model, or public SDK-style API contract, splitting it into its own repo would make sense.
+Findings are surfaced as a health banner with severity levels and one-click auto-fix where the fix is safe to automate.
 
 ---
 
-## Developer Auto-Sync (VS Code)
+## Library View + Built-in Player
 
-This repo now supports optional local auto-sync to GitHub when opened in VS Code:
+FableGear includes a split-panel library view backed directly by the Rekordbox database:
 
-- On folder open, VS Code starts a managed autosync daemon (`scripts/autosync.sh start`).
-- Autosync only runs on allowed branches (default: `main`) and skips while git is mid-merge/rebase/cherry-pick.
-- Before pushing, autosync fetches/rebases to avoid push-loop conflicts.
-- Releases remain manual. Nothing in auto-sync creates tags or releases.
-- Published releases always get `FableGear.zip` attached automatically via `.github/workflows/release-zip.yml`.
+- Browse all tracks with BPM, key, duration, and file path
+- Browse your filesystem alongside your database tracks in a split view
+- Hotplug detection — connected drives appear and disappear without restarting
+- Playlist management — create, rename, delete, add and remove tracks, reorder
+- Audio playback with waveform display via WaveSurfer
+- Export playlists to Pioneer USB drives in the correct PIONEER directory format
+- Canonical path integrity checker — compares stored database paths to what's actually on disk and generates a correction plan
 
-### One-time setup
+---
 
-```bash
-cd "/Users/cameronkelly/FabledHarbinger/Git Repos/FableGear"
-chmod +x scripts/autosync.sh scripts/release.sh
-```
+## FableGo — iOS Companion App
 
-### Manual controls
+FableGo is an iOS companion app (`ios/FableGo/`) that connects to FableGear over your local network or via Tailscale for remote access.
 
-Run a single autosync cycle immediately:
+**What FableGo can do:**
+- Browse your music folders remotely
+- Trigger server-side downloads with real-time progress over WebSocket
+- Browse, create, edit, and delete Rekordbox playlists
+- Add and remove tracks from playlists
+- Trigger BPM/key analysis jobs remotely
+- Browse connected drives and export playlists to Pioneer USB
 
-```bash
-./scripts/autosync.sh once
-```
+FableGo uses Bearer token auth (`mobile_token` in `~/.rekordbox-toolkit/config.json`). The FableGear server must be running — Tailscale is optional but enables remote access outside your home network.
 
-Start autosync daemon:
-
-```bash
-./scripts/autosync.sh start
-```
-
-Check autosync daemon status:
-
-```bash
-./scripts/autosync.sh status
-```
-
-Stop autosync daemon:
-
-```bash
-./scripts/autosync.sh stop
-```
-
-Run autosync in foreground (debug mode):
-
-```bash
-AUTOSYNC_INTERVAL=5 AUTOSYNC_BRANCHES=main ./scripts/autosync.sh watch
-```
-
-Autosync state/logs are stored in `.git/autosync/`.
-
-### Release command (manual only)
-
-Create a release with generated notes:
-
-```bash
-./scripts/release.sh v2.0.13
-```
-
-Create a release with a notes file:
-
-```bash
-./scripts/release.sh v2.0.13 .github/release-notes.md
-```
-
-`scripts/release.sh` now enforces safe release preconditions:
-
-- clean working tree
-- current branch matches release branch (default `main`)
-- local `main` matches `origin/main`
-- tag format validation (`vX.Y.Z`)
-- waits until `FableGear.zip` is confirmed attached (or fails on timeout)
-
-### Private AI workflow (optional)
-
-Private repository automation can run from inside the FableGear venv:
-
-```bash
-./scripts/agent_workflow.sh once
-./scripts/agent_workflow.sh start
-./scripts/agent_workflow.sh status
-./scripts/agent_workflow.sh stop
-```
-
-Mirror private changes into the public repo (AI files excluded):
-
-```bash
-./scripts/sync_public_repo.sh once
-```
-
-See `docs/agent-workflow.md` for full setup and safety switches.
-
-### Agent edition package (separate venv)
-
-FableGear can now be packaged in two tracks:
-
-- `FableGear.zip` -> regular runtime (`launch.sh`, `venv`)
-- `FableGear-Agent.zip` -> agent runtime (`launch_agent.sh`, `venv-agent`)
-
-Build the agent package locally:
-
-```bash
-./build_agent_release.sh
-```
-
-The agent installer launches `launch_agent.sh` and provisions an isolated
-`venv-agent`, so your standard FableGear environment remains untouched.
+FableGo lives in this repo alongside FableGear because it depends directly on FableGear's `/api/mobile/*` API surface — versioning them together keeps the API contract safe.
 
 ---
 
 ## Under the hood
 
 | Library | Purpose |
-| --- | --- |
+|---|---|
+| [pyrekordbox](https://github.com/dylanljones/pyrekordbox) | Direct read/write access to the Rekordbox SQLite database (`master.db`) |
 | [librosa](https://librosa.org) | BPM detection (beat tracking) and key detection (Krumhansl-Schmuckler on chroma features) |
 | [Chromaprint / fpcalc](https://acoustid.org/chromaprint) | Acoustic fingerprinting for duplicate detection |
-| [pyrekordbox](https://github.com/dylanljones/pyrekordbox) | Direct read/write access to the Rekordbox SQLite database |
-| [mutagen](https://mutagen.readthedocs.io) | Audio file tag reading and writing (ID3, Vorbis, etc.) |
-| [pyloudnorm](https://github.com/csteinmetz1/pyloudnorm) | EBU R128 loudness measurement |
-| [Flask](https://flask.palletsprojects.com) + [Waitress](https://docs.pylonsproject.org/projects/waitress) | Local web server — everything runs on localhost, no internet at runtime |
-| [pywebview](https://pywebview.flowrl.com) | Wraps WKWebView in a native macOS window — no browser required |
-| [PyInstaller](https://pyinstaller.org) | Bundles Python + all dependencies into a self-contained `FableGear.app` |
+| [mutagen](https://mutagen.readthedocs.io) | Audio file tag reading and writing (ID3, Vorbis, MP4, etc.) |
+| [pyloudnorm](https://github.com/csteinmetz1/pyloudnorm) | EBU R128 integrated loudness measurement |
+| [Flask](https://flask.palletsprojects.com) + [Waitress](https://docs.pylonsproject.org/projects/waitress) | Local web server — runs on `localhost:5001`, nothing on the network by default |
+| [pywebview](https://pywebview.flowrl.com) | Wraps the UI in a native macOS `WKWebView` window — no browser tab required |
+| [flask-sock](https://flask-sock.readthedocs.io) | WebSocket support for real-time progress streaming and FableGo events |
+
+---
+
+## Releasing
+
+```bash
+# Tag and publish a release
+./scripts/release.sh v2.x.x
+
+# Or with custom release notes
+./scripts/release.sh v2.x.x .github/release-notes.md
+```
+
+GitHub Actions attaches `FableGear.zip` and `install.sh` to every published release automatically. The release script enforces a clean working tree, branch sync, and tag format before creating anything.
 
 ---
 
