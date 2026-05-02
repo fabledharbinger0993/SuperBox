@@ -2,7 +2,7 @@
 
 **A free, open-source rekordbox library toolkit for DJs with large, mature libraries.**
 
-[![Download](https://img.shields.io/github/v/release/fabledharbinger0993/FableGear?label=Download%20FableGear&style=for-the-badge&color=6d28d9&logo=apple&logoColor=white)](https://github.com/fabledharbinger0993/FableGear/releases/latest)
+[![Download](https://img.shields.io/github/v/release/fabledharbinger0993/FableGear?label=Download%20FableGear&style=for-the-badge&color=6d28d9&logo=apple&logoColor=white)](https://github.com/fabledharbinger0993/FableGear/releases/latest/download/FableGear.zip)
 
 macOS · Free · No account required · Rekordbox must be closed for write operations
 
@@ -10,21 +10,23 @@ macOS · Free · No account required · Rekordbox must be closed for write opera
 
 ## Install
 
-1. Click **Download FableGear** above
-2. Unzip — you get **FableGear.app**
-3. Move it to your Desktop or Applications folder
-4. Right-click → **Open** → **Open** (required once — see Gatekeeper note below)
-5. A setup window installs any missing dependencies, then FableGear opens as a native app
+### Option 1 — One command (recommended)
 
-> **First launch** opens a Terminal window and automatically installs everything needed — Homebrew, `ffmpeg`, `chromaprint`, and all Python packages. This runs once and takes a few minutes. After that FableGear opens as a **standalone native window** — no browser required.
+Open Terminal (`⌘ Space` → type `Terminal`) and paste:
 
-**"FableGear is damaged" or "cannot be opened"?**
-This is macOS Gatekeeper — it blocks apps that aren't signed with an Apple Developer certificate.
+```bash
+curl -fsSL https://raw.githubusercontent.com/fabledharbinger0993/FableGear/main/install.sh | bash
+```
 
-To allow it, do one of these:
+This clones FableGear, installs dependencies, and launches it. On first run a setup window opens — it only runs once. After that FableGear starts silently and you'll be offered a native Dock icon.
 
-1. Right-click `FableGear.app` → **Open** → **Open Anyway** in the dialog that appears.
-2. Go to **System Settings → Privacy & Security**, scroll down until you see *"FableGear was blocked from use"*, then click **Open Anyway**.
+### Option 2 — Manual download
+
+1. Click **Download FableGear** above → unzip → double-click **FableGear.app**
+2. If macOS blocks it: right-click → **Open** → **Open Anyway**
+3. A Terminal setup window opens once, then FableGear launches as a native window
+
+> After first launch, FableGear will ask if you want a **Dock icon** — this builds a native launcher on your Mac (no Gatekeeper friction). To uninstall later, open **FableGear Uninstall** from `~/Applications/`.
 
 ---
 

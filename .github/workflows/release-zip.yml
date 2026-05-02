@@ -100,7 +100,12 @@ jobs:
           zip -r -y /tmp/FableGear.zip FableGear.app
           unzip -l /tmp/FableGear.zip
 
-      - name: Upload to release
+      - name: Upload FableGear.zip to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${{ github.event.release.tag_name }}" /tmp/FableGear.zip --clobber --repo "$GITHUB_REPOSITORY"
+
+      - name: Upload install.sh to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ github.event.release.tag_name }}" install.sh --clobber --repo "$GITHUB_REPOSITORY"
