@@ -93,8 +93,10 @@ if command -v tailscale &>/dev/null; then
 fi
 
 # ── Launch FableGear ──────────────────────────────────────────────────────
-# main.py handles splash internally (with OS-level watchdog timeout)
-nohup "$VENV/bin/python" "$SCRIPT_DIR/main.py" >> "$LOG" 2>&1 &
+# Force arm64 — the Python.framework binary is universal; if launched from
+# an x86_64 parent (e.g. Automator applet under Rosetta), Python would
+# default to x86_64 and fail to load arm64-only compiled extensions.
+nohup arch -arm64 "$VENV/bin/python" "$SCRIPT_DIR/main.py" >> "$LOG" 2>&1 &
 
 # ── Close Terminal window if launched interactively (not via Automator) ───
 # Automator runs via do shell script (no TTY), so this block is skipped there.

@@ -558,12 +558,28 @@ def fingerprint_file(path: Path) -> str | None:
     return result[1] if result is not None else None
 
 
+def _ensure_acoustid_fpcalc() -> bool:
+    """Point pyacoustid at fpcalc even when /opt/homebrew/bin is not in PATH.
+    Returns False if fpcalc cannot be found at all.
+    """
+    if getattr(acoustid, "FPCALC_PATH", None):
+        return True  # already set
+    found = _find_fpcalc()
+    if found:
+        acoustid.FPCALC_PATH = found  # type: ignore[attr-defined]
+        return True
+    return False
+
+
 def _fingerprint_with_duration(path: Path) -> tuple[float, str] | None:
     """
     Same as fingerprint_file() but also returns the track duration in seconds.
     Used internally by scan_duplicates() so the AcoustID lookup can reuse the
     duration without re-running fpcalc.
     """
+    if not _ensure_acoustid_fpcalc():
+        log.error("fpcalc not found — install chromaprint: brew install chromaprint")
+        return None
     try:
         duration, fingerprint = acoustid.fingerprint_file(str(path))
         if not fingerprint:

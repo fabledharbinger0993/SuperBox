@@ -28,6 +28,7 @@ _setup_needed() {
     _brew list --formula "$formula" &>/dev/null || return 0
   done
   [ ! -d "$VENV" ] && return 0
+  [ ! -f "$VENV/bin/activate" ] && return 0
   [ ! -f "$SENTINEL" ] && return 0
   return 1
 }
@@ -35,9 +36,19 @@ _setup_needed() {
 # ── First-run setup (opens visible Terminal window for password prompts) ──
 if _setup_needed; then
   rm -f "$SENTINEL"
-  osascript -e "tell application \"Terminal\" to do script \"bash '${SCRIPT_DIR}/setup.sh'; exit\""
-  osascript -e "tell application \"Terminal\" to activate"
-  until [ -f "$SENTINEL" ]; do sleep 2; done
+  # open -a Terminal requires no Automation permission (unlike osascript tell)
+  open -a Terminal "$SCRIPT_DIR/setup.sh"
+  # Wait for setup.sh to touch the sentinel (max 40 min, polls every 2 s)
+  _waited=0
+  until [ -f "$SENTINEL" ]; do
+    sleep 2
+    _waited=$((_waited + 2))
+    if [ $_waited -ge 2400 ]; then
+      echo "FableGear: setup timed out — check the setup window for errors" >&2
+      exit 1
+    fi
+  done
+  unset _waited
 fi
 
 # ── Silence all output — Automator treats any stdout as an error ──────────
@@ -58,9 +69,10 @@ PIP="$VENV/bin/pip"
 #       Commit and push when ready for an official release, then
 #       switch Automator back to launch.sh / the bootstrap script.
 
-# ── Update Python dependencies ────────────────────────────────────────────
-"$PIP" install --upgrade --quiet -r "$SCRIPT_DIR/requirements_ui.txt" >> "$LOG" 2>&1
-"$PIP" install --upgrade --quiet -r "$SCRIPT_DIR/requirements.txt"    >> "$LOG" 2>&1
+# ── Update Python dependencies (only if requirements files changed) ───────
+# Use pip hash-checking: skip silently if everything already satisfied.
+"$PIP" install --quiet -r "$SCRIPT_DIR/requirements_ui.txt" >> "$LOG" 2>&1
+"$PIP" install --quiet -r "$SCRIPT_DIR/requirements.txt"    >> "$LOG" 2>&1
 
 # ── Bring up Tailscale for FableGo remote access (best-effort) ───────────
 if command -v tailscale &>/dev/null; then
@@ -68,7 +80,10 @@ if command -v tailscale &>/dev/null; then
 fi
 
 # ── Launch FableGear ───────────────────────────────────────────────────────
-nohup "$PYTHON" "$SCRIPT_DIR/main.py" >> "$LOG" 2>&1 &
+# Force arm64 — the Python.framework binary is universal; if launched from
+# an x86_64 parent (e.g. Automator applet under Rosetta), Python would
+# default to x86_64 and fail to load arm64-only compiled extensions.
+nohup arch -arm64 "$PYTHON" "$SCRIPT_DIR/main.py" >> "$LOG" 2>&1 &
 
 # ── Close Terminal window if launched interactively ───────────────────────
 if [ -t 0 ]; then

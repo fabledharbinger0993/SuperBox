@@ -220,6 +220,7 @@ _FS_AUDIO_EXTS = frozenset({
     ".m4a", ".m4p", ".alac", ".ogg", ".opus",
 })
 _FS_TAG_LIMIT = 500   # stop reading mutagen beyond this many tracks in one folder
+_FS_RECURSIVE_LIMIT = 5000  # hard cap for recursive scans
 
 
 def _fs_track_payload(path: Path) -> dict:
@@ -247,6 +248,17 @@ def _fs_track_payload(path: Path) -> dict:
             payload["artist"] = (f.get("artist") or [""])[0]
             payload["album"]  = (f.get("album")  or [""])[0]
             payload["genre"]  = (f.get("genre")  or [""])[0]
+            # BPM: easy=True maps TBPM→"bpm" for MP3, and vorbis/flac use "bpm" directly
+            raw_bpm = (f.get("bpm") or [""])[0]
+            if raw_bpm:
+                try:
+                    payload["bpm"] = str(int(round(float(raw_bpm))))
+                except (ValueError, TypeError):
+                    payload["bpm"] = raw_bpm
+            # Key: easy=True maps TKEY→"initialkey"
+            raw_key = (f.get("initialkey") or [""])[0]
+            if raw_key:
+                payload["key"] = raw_key
             if hasattr(f, "info") and hasattr(f.info, "length"):
                 payload["duration_s"] = round(f.info.length)
     except Exception:
@@ -274,9 +286,16 @@ def api_library_fs_browse():
     """Browse a directory for audio files — filesystem-first, no rekordbox needed.
     Returns subdirectories + audio tracks in the requested folder.
     Falls back to MUSIC_ROOT when no path is given.
+
+    Query params:
+      path      – directory to browse (default: MUSIC_ROOT)
+      recursive – if "1" or "true", walk all subdirectories and return every
+                  audio file at any depth.  Subdirs list is omitted in this mode.
+                  Capped at _FS_RECURSIVE_LIMIT tracks; truncated=true when hit.
     """
     from config import MUSIC_ROOT as _MR  # noqa: PLC0415
     path_str = request.args.get("path", str(_MR))
+    recursive = request.args.get("recursive", "0").lower() in ("1", "true", "yes")
     try:
         p = Path(path_str).resolve()
     except Exception:
@@ -284,8 +303,55 @@ def api_library_fs_browse():
     if not p.exists() or not p.is_dir():
         return jsonify({"error": f"Not a directory: {path_str}"}), 400
 
+    music_root = str(_MR)
+    parent = str(p.parent) if str(p) != str(p.anchor) else None
+
+    if recursive:
+        # Walk the whole tree, collecting audio files up to the hard cap.
+        tracks: list[Path] = []
+        try:
+            for item in sorted(p.rglob("*"), key=lambda x: x.name.lower()):
+                if item.name.startswith("."):
+                    continue
+                if item.is_file() and item.suffix.lower() in _FS_AUDIO_EXTS:
+                    tracks.append(item)
+                    if len(tracks) >= _FS_RECURSIVE_LIMIT:
+                        break
+        except PermissionError:
+            return jsonify({"error": "Permission denied"}), 403
+
+        # Count remaining tracks for the truncation message (cheap: just keep
+        # scanning filenames without reading tags).
+        total_tracks = len(tracks)
+        truncated = total_tracks >= _FS_RECURSIVE_LIMIT
+        if truncated:
+            try:
+                total_tracks = sum(
+                    1 for item in p.rglob("*")
+                    if not item.name.startswith(".")
+                    and item.is_file()
+                    and item.suffix.lower() in _FS_AUDIO_EXTS
+                )
+            except Exception:
+                total_tracks = _FS_RECURSIVE_LIMIT  # best-effort
+
+        tag_limit = _FS_TAG_LIMIT if not truncated else min(_FS_TAG_LIMIT, len(tracks))
+        track_payloads = [_fs_track_payload(t) for t in tracks[:tag_limit]]
+        return jsonify({
+            "path":           str(p),
+            "music_root":     music_root,
+            "in_music_root":  str(p).startswith(music_root),
+            "parent":         parent,
+            "subdirs":        [],   # omitted in recursive mode — sidebar stays navigable
+            "tracks":         track_payloads,
+            "track_count":    total_tracks,
+            "truncated":      truncated,
+            "recursive":      True,
+        })
+
+    # ── Non-recursive (default) ───────────────────────────────────────────────
     subdirs = []
-    tracks = []
+    tracks_flat: list[Path] = []
     try:
         items = sorted(p.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
         for item in items:
@@ -299,17 +365,14 @@ def api_library_fs_browse():
                     audio_count = 0
                 subdirs.append({"name": item.name, "path": str(item), "audio_count": audio_count})
             elif item.suffix.lower() in _FS_AUDIO_EXTS:
-                tracks.append(item)
+                tracks_flat.append(item)
     except PermissionError:
         return jsonify({"error": "Permission denied"}), 403
 
-    total_tracks = len(tracks)
+    total_tracks = len(tracks_flat)
     truncated = total_tracks > _FS_TAG_LIMIT
-    # Read tags only for the first _FS_TAG_LIMIT tracks
-    track_payloads = [_fs_track_payload(t) for t in tracks[:_FS_TAG_LIMIT]]
+    track_payloads = [_fs_track_payload(t) for t in tracks_flat[:_FS_TAG_LIMIT]]
 
-    music_root = str(_MR)
-    parent = str(p.parent) if str(p) != str(p.anchor) else None
     return jsonify({
         "path":           str(p),
         "music_root":     music_root,
@@ -319,6 +382,7 @@ def api_library_fs_browse():
         "tracks":         track_payloads,
         "track_count":    total_tracks,
         "truncated":      truncated,
+        "recursive":      False,
     })
 
 

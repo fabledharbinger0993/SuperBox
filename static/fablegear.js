@@ -87,7 +87,7 @@ function loadLibraryFolders(dropdown) {
       }
       dropdown.innerHTML = '';
       roots.forEach(p => {
-        const icon = p.type === 'folder' ? '/static/icon-rb-folder.png' : '/static/icon-rb-file.png';
+        const icon = p.type === 'folder' ? '/static/icon-folder.png' : '/static/icon-fg-library.png';
         const div = document.createElement('div');
         div.className = 'folder-item';
         div.innerHTML = `<img src="${icon}" class="folder-item-icon" alt=""><span>${_esc(p.name)}</span>`;
@@ -109,7 +109,7 @@ function loadFileBrowserFolders(dropdown) {
   // Integrate with existing file browser
   dropdown.innerHTML = `
     <div class="folder-item" onclick="fbNavigateTo('/Volumes'); closeRightNavDropdown();">
-      <img src="/static/icon-rb-folder.png" class="folder-item-icon" alt="">
+      <img src="/static/icon-folder.png" class="folder-item-icon" alt="">
       <span>/Volumes</span>
     </div>
   `;
@@ -173,10 +173,10 @@ async function fbNavigateTo(path) {
 
     const img = document.createElement('img');
     img.alt = '';
-    img.src = entry.is_dir   ? '/static/icon-rb-folder.png'
+    img.src = entry.is_dir   ? '/static/icon-folder.png'
             : entry.is_audio ? '/static/icon-track.png'
-            :                  '/static/icon-rb-file.png';
-    img.onerror = () => { img.onerror = null; img.src = '/static/icon-rb-file.png'; };
+            :                  '/static/icon-fg-library.png';
+    img.onerror = () => { img.onerror = null; img.src = '/static/icon-fg-library.png'; };
 
     const nameEl = document.createElement('span');
     nameEl.className = 'fb-item-name';
@@ -1424,13 +1424,14 @@ async function leFsBrowse(path) {
   trackList.innerHTML = '<div class="le-empty-state"><div class="le-empty-music-icon">⏳</div><div>Loading…</div></div>';
   if (folderList) folderList.innerHTML = '';
 
-  const url = path
-    ? `/api/library/fs-browse?path=${encodeURIComponent(path)}`
-    : '/api/library/fs-browse';
+  // Always request recursive=1 so clicking any folder surfaces all nested tracks.
+  const base = path
+    ? `/api/library/fs-browse?path=${encodeURIComponent(path)}&recursive=1`
+    : '/api/library/fs-browse?recursive=1';
 
   let data;
   try {
-    const res = await fetch(url);
+    const res = await fetch(base);
     if (!res.ok) throw new Error(await res.text());
     data = await res.json();
   } catch (e) {
@@ -1440,39 +1441,43 @@ async function leFsBrowse(path) {
 
   _leFsCurrentPath = data.path;
 
-  // Update sidebar folder list
+  // Update sidebar folder list — subdirs are still returned for non-recursive
+  // shallow browsing, so navigation is always preserved.
   if (folderList) {
-    // Breadcrumb / up button at top
     let crumbHtml = '';
     if (data.parent) {
       crumbHtml += `<div class="le-fs-up" onclick="leFsBrowse('${_escPath(data.parent)}')">↑ Up</div>`;
     }
     crumbHtml += `<div class="le-fs-crumb-path" title="${data.path}">${data.path.replace(data.music_root, '⌂')}</div>`;
 
-    const dirsHtml = (data.subdirs || []).map(d => `
-      <div class="le-tree-item le-fs-dir" onclick="leFsBrowse('${_escPath(d.path)}')">
-        <span class="le-tree-icon">📁</span>
-        <span class="le-tree-label">${_esc(d.name)}</span>
-        <span class="le-tree-count">${d.audio_count || ''}</span>
-      </div>
-    `).join('');
+    // Fetch immediate subdirs separately so sidebar stays navigable.
+    let dirsHtml = '';
+    try {
+      const dirRes = await fetch(`/api/library/fs-browse?path=${encodeURIComponent(data.path)}`);
+      if (dirRes.ok) {
+        const dirData = await dirRes.json();
+        dirsHtml = (dirData.subdirs || []).map(d => `
+          <div class="le-tree-item le-fs-dir" onclick="leFsBrowse('${_escPath(d.path)}')">
+            <span class="le-tree-icon">📁</span>
+            <span class="le-tree-label">${_esc(d.name)}</span>
+            <span class="le-tree-count">${d.audio_count || ''}</span>
+          </div>
+        `).join('');
+      }
+    } catch (_) { /* sidebar is a nice-to-have */ }
 
     folderList.innerHTML = crumbHtml + dirsHtml;
   }
 
   // Update track list
   const tracks = data.tracks || [];
-  if (tracks.length === 0 && (data.subdirs || []).length === 0) {
-    trackList.innerHTML = '<div class="le-empty-state"><div class="le-empty-music-icon">📂</div><div>Empty folder</div></div>';
-    return;
-  }
   if (tracks.length === 0) {
-    trackList.innerHTML = '<div class="le-empty-state"><div class="le-empty-music-icon">📂</div><div>Select a subfolder to see tracks</div></div>';
+    trackList.innerHTML = '<div class="le-empty-state"><div class="le-empty-music-icon">📂</div><div>No audio files found in this folder</div></div>';
     return;
   }
 
   const truncMsg = data.truncated
-    ? `<div class="le-fs-truncated">Showing first ${tracks.length} of ${data.track_count} tracks</div>`
+    ? `<div class="le-fs-truncated">Showing first ${tracks.length} of ${data.track_count.toLocaleString()} tracks — navigate into a subfolder for a focused view</div>`
     : '';
 
   const rows = tracks.map((t, i) => _leFsTrackRow(t, i)).join('');
@@ -1482,6 +1487,8 @@ async function leFsBrowse(path) {
 
 function _leFsTrackRow(t, idx) {
   const dur = t.duration_s ? _fmtDur(t.duration_s) : '—';
+  // Show the parent folder name as a breadcrumb hint in recursive views.
+  const folder = t.path ? t.path.split('/').slice(-2, -1)[0] || '' : '';
   return `
     <div class="le-track-row le-fs-track-row" data-path="${_escAttr(t.path)}">
       <div class="le-col le-col-play">
@@ -1490,7 +1497,7 @@ function _leFsTrackRow(t, idx) {
       <div class="le-col le-col-num">${idx + 1}</div>
       <div class="le-col le-col-title" title="${_escAttr(t.path)}">${_esc(t.title)}</div>
       <div class="le-col le-col-artist">${_esc(t.artist)}</div>
-      <div class="le-col le-col-album">${_esc(t.album)}</div>
+      <div class="le-col le-col-album">${_esc(t.album) || _esc(folder)}</div>
       <div class="le-col le-col-bpm">${t.bpm || '—'}</div>
       <div class="le-col le-col-key">${t.key || '—'}</div>
       <div class="le-col le-col-dur">${dur}</div>
@@ -1511,18 +1518,21 @@ function _bindFsTrackPlay() {
 }
 
 function _playFsTrack(streamUrl, triggerBtn) {
-  // Re-use the existing wavesurfer / audio player if it's wired up,
-  // otherwise fall back to an inline <audio> element.
-  const playerEl = document.getElementById('waveform') ||
-                   document.getElementById('audio-player') ||
-                   document.getElementById('le-preview-audio');
+  // Use the Library Editor player element (added to index.html)
+  const playerEl = document.getElementById('le-player-audio') ||
+                   document.getElementById('le-preview-audio') ||
+                   document.getElementById('audio-player');
 
   if (playerEl && playerEl.tagName === 'AUDIO') {
+    // Stop other play buttons
+    document.querySelectorAll('.fs-play-btn').forEach(b => b.textContent = '▶');
+    if (triggerBtn) triggerBtn.textContent = '⏸';
     playerEl.src = streamUrl;
-    playerEl.play();
+    playerEl.play().catch(() => {});
+    playerEl.onended = () => { if (triggerBtn) triggerBtn.textContent = '▶'; };
     return;
   }
-  // Last resort: open the stream in a new tab so the browser handles playback
+  // Fallback: open in new tab
   window.open(streamUrl, '_blank');
 }
 
@@ -6265,6 +6275,26 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAllDropZones();
   normPreviewSetupObserver();
   _initToolCheckpoints();
+
+  // Pre-populate all music-folder tool zones with the configured music_root.
+  // This means every tool (Audit, Duplicates, Normalize, etc.) opens pre-filled
+  // so the user doesn't have to re-enter the library path every time.
+  fetch('/api/config')
+    .then(r => r.ok ? r.json() : null)
+    .then(cfg => {
+      if (!cfg || !cfg.music_root) return;
+      const root = cfg.music_root;
+      // Only pre-fill zones that are currently empty (don't overwrite user changes)
+      const zones = [
+        'audit-pills', 'process-pills', 'dupes-pills', 'normalize-pills',
+        'convert-pills', 'rename-pills', 'organize-source-pills',
+      ];
+      zones.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.querySelector('.folder-pill')) addFolderPill(id, root);
+      });
+    })
+    .catch(() => {});
 });
 
 /* ── Normalize loudness preview player ──────────────────────────────────────
