@@ -138,6 +138,25 @@ fi
 
 if [ -d "$APP_DEST" ]; then
   ok "FableGear.app created at ~/Applications/FableGear.app"
+
+  # ── Apply icon (sips + iconutil) ────────────────────────────────────────
+  ICON_SRC="$SCRIPT_DIR/static/icon-logo-fablegear.png"
+  if [ -f "$ICON_SRC" ]; then
+    ICONSET="$(mktemp -d)/fg.iconset"
+    mkdir -p "$ICONSET"
+    for size in 16 32 64 128 256 512; do
+      sips -z "$size" "$size" "$ICON_SRC" \
+        --out "$ICONSET/icon_${size}x${size}.png" >/dev/null 2>&1
+      double=$((size * 2))
+      sips -z "$double" "$double" "$ICON_SRC" \
+        --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null 2>&1
+    done
+    iconutil -c icns "$ICONSET" \
+      -o "$APP_DEST/Contents/Resources/applet.icns" 2>/dev/null && \
+      ok "Icon applied" || info "Icon apply skipped (iconutil unavailable)"
+    rm -rf "$(dirname "$ICONSET")"
+  fi
+
   info "Drag it to your Dock for one-click access."
   info "Or double-click it from ~/Applications."
 else
