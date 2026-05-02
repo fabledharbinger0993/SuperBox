@@ -50,7 +50,7 @@ def _server_running() -> bool:
 def _start_server() -> None:
     from waitress import serve
     from app import app as flask_app
-    serve(flask_app, host=_HOST, port=_PORT, threads=8)
+    serve(flask_app, host=_HOST, port=_PORT, threads=16)
 
 
 def _wait_for_server(retries: int = 40, delay: float = 0.15) -> bool:
