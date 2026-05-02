@@ -14,9 +14,19 @@ app is open), the existing server is reused and a new window is opened.
 
 import os
 import sys
+import platform
 import threading
 import time
 from pathlib import Path
+
+# ── Arch guard ────────────────────────────────────────────────────────────
+# If launched via Rosetta (x86_64 Python on Apple Silicon), re-exec as arm64
+# so arm64-only compiled extensions (e.g. psutil) load correctly.  This is
+# a last-resort fallback; the launch scripts already use `arch -arm64`.
+if platform.machine() == "x86_64" and sys.platform == "darwin":
+    _arch_tool = "/usr/bin/arch"
+    if os.path.exists(_arch_tool):
+        os.execv(_arch_tool, [_arch_tool, "-arm64", sys.executable] + sys.argv)
 
 # ── Resource root — works in both dev and PyInstaller bundle ─────────────────
 # PyInstaller extracts everything to sys._MEIPASS at runtime.
