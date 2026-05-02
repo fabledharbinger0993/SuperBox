@@ -25,8 +25,9 @@ _setup_needed() {
   for formula in ffmpeg chromaprint; do
     _brew list --formula "$formula" &>/dev/null || return 0
   done
- # Python venv missing?
+  # Python venv missing or broken (hollow venv has no activate)?
   [ ! -d "$VENV" ] && return 0
+  [ ! -f "$VENV/bin/activate" ] && return 0
   # Sentinel not yet written by setup.sh?
   [ ! -f "$SENTINEL" ] && return 0
   return 1

@@ -105,13 +105,26 @@ ok "Python $("$PYTHON3" --version 2>&1 | awk '{print $2}')"
 # ── Python virtual environment ────────────────────────────────────────────
 step "Python virtual environment"
 
+# Remove a hollow venv left by Python 3.14 (no ensurepip → no activate/pip)
+if [ -d "$VENV" ] && [ ! -f "$VENV/bin/activate" ]; then
+  info "Broken venv detected (no activate script) — rebuilding..."
+  rm -rf "$VENV"
+fi
+
 if [ ! -d "$VENV" ]; then
   info "Creating venv at $VENV ..."
   "$PYTHON3" -m venv "$VENV"
-  ok "Virtual environment created"
-else
-  ok "Virtual environment already exists"
 fi
+
+# Sanity-check: if activate still missing, bail loudly before touching sentinel
+if [ ! -f "$VENV/bin/activate" ]; then
+  echo ""
+  echo "  ✗  Could not create a working Python venv with $PYTHON3."
+  echo "     Try: brew install python@3.13 then double-click FableGear again."
+  read -rp "     Press Return to close this window." _
+  exit 1
+fi
+ok "Virtual environment ready"
 
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
