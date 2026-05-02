@@ -4762,6 +4762,98 @@ footer {
 .le-mode-btn:hover  { background: rgba(200,130,240,.12); color: var(--accent); }
 .le-mode-active     { background: var(--accent) !important; color: #fff !important; }
 
+/* ── DB source picker toggle ─────────────────────────────────────────────── */
+
+.le-db-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(130,200,255,.15);
+  border-radius: 8px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.le-db-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: .70rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  padding: 4px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.le-db-btn:hover { background: rgba(130,200,255,.12); color: #8cc4f5; }
+.le-db-active    { background: rgba(130,200,255,.25) !important; color: #8cc4f5 !important; }
+
+#le-db-notice {
+  font-size: .68rem;
+  color: var(--caution);
+  margin-left: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+  align-self: center;
+}
+
+/* ── Volume picker cards (FS mode /Volumes root) ─────────────────────────── */
+
+.le-vol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  padding: 20px 16px;
+  align-content: start;
+}
+
+.le-vol-card {
+  background: rgba(30,25,50,.7);
+  border: 1px solid rgba(200,130,240,.18);
+  border-radius: 10px;
+  padding: 16px 14px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.le-vol-card:hover {
+  background: rgba(200,130,240,.1);
+  border-color: rgba(200,130,240,.4);
+  transform: translateY(-2px);
+}
+
+.le-vol-icon   { font-size: 1.6rem; line-height: 1; margin-bottom: 4px; }
+.le-vol-name   { font-size: .92rem; font-weight: 700; color: var(--text); word-break: break-word; }
+.le-vol-meta   { font-size: .72rem; color: var(--text-muted); }
+.le-vol-disk   { font-size: .69rem; color: var(--text-dim); }
+
+.le-vol-badge {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+.le-vol-badge--pioneer {
+  background: rgba(251,191,36,.15);
+  color: var(--caution);
+  border: 1px solid rgba(251,191,36,.3);
+}
+
+
 /* ══ Library header: make the left side flex to accommodate toggle ══════════ */
 
 .le-header-left {

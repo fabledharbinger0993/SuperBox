@@ -1357,6 +1357,7 @@ function openDriveInLibrary(mountpoint) {
 
 let _leMode           = 'db';     // 'db' | 'fs' | 'split'
 let _leFsCurrentPath  = null;     // current browsed path in filesystem mode
+let _leDbSource       = 'local';  // 'local' | 'device' — which Rekordbox DB to load
 
 function setLibraryMode(mode, fsRootPath = null) {
   _leMode = mode;
@@ -1395,7 +1396,7 @@ function setLibraryMode(mode, fsRootPath = null) {
     if (trackList)   trackList.style.display  = '';
     if (splitView)   splitView.style.display  = 'none';
     if (statusBar)   statusBar.style.display  = '';
-    leFsBrowse(_leFsCurrentPath || null);
+    leFsBrowse(_leFsCurrentPath || '/Volumes');
 
   } else if (mode === 'split') {
     if (filterBar)   filterBar.style.display = 'none';
@@ -1407,6 +1408,25 @@ function setLibraryMode(mode, fsRootPath = null) {
     if (statusBar)   statusBar.style.display  = 'none';
     leLoadSplitView();
   }
+}
+
+function setLeDbSource(source) {
+  if (source !== 'local' && source !== 'device') return;
+  _leDbSource = source;
+  document.querySelectorAll('.le-db-btn').forEach(b => {
+    b.classList.toggle('le-db-active', b.dataset.db === source);
+  });
+  // Device DB tracks have SoundCloud URIs — warn the user
+  const notice = document.getElementById('le-db-notice');
+  if (notice) {
+    notice.textContent = source === 'device'
+      ? 'Device DB: tracks use SoundCloud URIs and cannot be played here.'
+      : '';
+    notice.style.display = source === 'device' ? '' : 'none';
+  }
+  // Reload library data with the new source
+  _leTracksLoaded = false;
+  if (_leMode === 'db') leLoadLibrary();
 }
 
 /* ── Filesystem browse mode ──────────────────────────────────────────────── */
@@ -1435,7 +1455,30 @@ async function leFsBrowse(path) {
 
   _leFsCurrentPath = data.path;
 
-  // Update sidebar folder list — subdirs are still returned for non-recursive
+  // ── /Volumes root — render drive picker cards ──────────────────────────
+  if (data.is_volumes_root) {
+    if (folderList) folderList.innerHTML = '';
+    const vols = data.volumes || [];
+    if (!vols.length) {
+      trackList.innerHTML = '<div class="le-empty-state"><div class="le-empty-music-icon">💿</div><div>No volumes found under /Volumes</div></div>';
+      return;
+    }
+    trackList.innerHTML = '<div class="le-vol-grid">' + vols.map(v => {
+      const pioneer = v.has_pioneer_db ? '<span class="le-vol-badge le-vol-badge--pioneer" title="Pioneer DB found">Pioneer DB</span>' : '';
+      const freeStr = v.free_gb != null ? `${v.free_gb} GB free` : '';
+      const totalStr = v.total_gb != null ? `/ ${v.total_gb} GB` : '';
+      const countStr = v.audio_estimate > 0 ? `${v.audio_estimate}+ audio files` : 'No audio at root';
+      return `<div class="le-vol-card" onclick="leFsBrowse('${_escPath(v.path)}')" title="Browse ${_esc(v.name)}">
+        <div class="le-vol-icon">💿</div>
+        <div class="le-vol-name">${_esc(v.name)}</div>
+        <div class="le-vol-meta">${countStr}</div>
+        <div class="le-vol-disk">${freeStr}${freeStr && totalStr ? ' ' : ''}${totalStr}</div>
+        ${pioneer}
+      </div>`;
+    }).join('') + '</div>';
+    return;
+  }
+
   // shallow browsing, so navigation is always preserved.
   if (folderList) {
     let crumbHtml = '';
@@ -5406,7 +5449,7 @@ async function leLoadPlaylistsOnly() {
   }
 
   try {
-    const playlistsRes = await fetch('/api/library/playlists');
+    const playlistsRes = await fetch(`/api/library/playlists?db=${encodeURIComponent(_leDbSource)}`);
     if (!playlistsRes.ok) throw new Error('playlist load failed');
     const playlists = await playlistsRes.json();
     leRenderPlaylistTree(playlists);
@@ -5566,8 +5609,8 @@ async function leLoadLibrary() {
   document.getElementById('le-empty-state').innerHTML = '<div style="font-size:2rem;margin-bottom:10px;opacity:.4">⏳</div><div>Loading library…</div>';
   try {
     const [tracksRes, playlistsRes] = await Promise.all([
-      fetch('/api/library/tracks'),
-      fetch('/api/library/playlists')
+      fetch(`/api/library/tracks?db=${encodeURIComponent(_leDbSource)}`),
+      fetch(`/api/library/playlists?db=${encodeURIComponent(_leDbSource)}`)
     ]);
     if (!tracksRes.ok || !playlistsRes.ok) {
       throw new Error('library load failed');

@@ -268,10 +268,65 @@ def _fs_track_payload(path: Path) -> dict:
 
 # ── Library track routes ──────────────────────────────────────────────────────
 
+def _resolve_db(db_param):
+    """Return the DB path for a ?db= query param.  'device' → DJMT_DB, else LOCAL_DB."""
+    from config import LOCAL_DB, DJMT_DB  # noqa: PLC0415
+    if db_param and str(db_param).lower() in ("device", "djmt"):
+        return DJMT_DB
+    return LOCAL_DB
+
+
+@bp.route("/api/library/volumes")
+def api_library_volumes():
+    """Return all mounted volumes under /Volumes with audio-file estimates."""
+    import shutil  # noqa: PLC0415
+    volumes_root = Path("/Volumes")
+    _AUDIO = {".mp3", ".flac", ".aac", ".wav", ".aiff", ".aif", ".m4a", ".ogg", ".opus", ".wv", ".alac"}
+
+    results = []
+    try:
+        for vol in sorted(volumes_root.iterdir()):
+            if not vol.is_dir() or vol.name.startswith("."):
+                continue
+            # Fast depth-1 audio estimate (not recursive — keeps it instant)
+            audio_estimate = 0
+            try:
+                for entry in os.scandir(vol):
+                    if entry.is_file() and Path(entry.name).suffix.lower() in _AUDIO:
+                        audio_estimate += 1
+            except PermissionError:
+                pass
+
+            # Disk usage
+            total_gb = free_gb = None
+            try:
+                usage = shutil.disk_usage(vol)
+                total_gb = round(usage.total / 1e9, 1)
+                free_gb = round(usage.free / 1e9, 1)
+            except Exception:
+                pass
+
+            # Pioneer DB present?
+            has_pioneer_db = (vol / "PIONEER" / "rekordbox" / "master.db").exists()
+
+            results.append({
+                "name":          vol.name,
+                "mountpoint":    str(vol),
+                "audio_estimate": audio_estimate,
+                "total_gb":      total_gb,
+                "free_gb":       free_gb,
+                "has_pioneer_db": has_pioneer_db,
+            })
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify(results)
+
+
 @bp.route("/api/library/tracks")
 def api_library_tracks():
     from db_connection import read_db  # noqa: PLC0415
-    from config import LOCAL_DB as _DB  # noqa: PLC0415
+    _DB = _resolve_db(request.args.get("db"))
 
     try:
         with read_db(_DB) as db:
@@ -285,17 +340,65 @@ def api_library_tracks():
 def api_library_fs_browse():
     """Browse a directory for audio files — filesystem-first, no rekordbox needed.
     Returns subdirectories + audio tracks in the requested folder.
-    Falls back to MUSIC_ROOT when no path is given.
+    Falls back to /Volumes when no path is given.
 
     Query params:
-      path      – directory to browse (default: MUSIC_ROOT)
+      path      – directory to browse (default: /Volumes → volume picker)
       recursive – if "1" or "true", walk all subdirectories and return every
                   audio file at any depth.  Subdirs list is omitted in this mode.
                   Capped at _FS_RECURSIVE_LIMIT tracks; truncated=true when hit.
     """
     from config import MUSIC_ROOT as _MR  # noqa: PLC0415
-    path_str = request.args.get("path", str(_MR))
+    import shutil  # noqa: PLC0415
+
+    path_str = request.args.get("path", "")
     recursive = request.args.get("recursive", "0").lower() in ("1", "true", "yes")
+
+    # ── /Volumes sentinel — return volume picker payload ────────────────────
+    volumes_root = Path("/Volumes")
+    if not path_str or Path(path_str).resolve() == volumes_root:
+        _AUDIO = {".mp3", ".flac", ".aac", ".wav", ".aiff", ".aif", ".m4a", ".ogg", ".opus", ".wv", ".alac"}
+        volumes = []
+        try:
+            for vol in sorted(volumes_root.iterdir()):
+                if not vol.is_dir() or vol.name.startswith("."):
+                    continue
+                audio_estimate = 0
+                try:
+                    for entry in os.scandir(vol):
+                        if entry.is_file() and Path(entry.name).suffix.lower() in _AUDIO:
+                            audio_estimate += 1
+                except PermissionError:
+                    pass
+                total_gb = free_gb = None
+                try:
+                    usage = shutil.disk_usage(vol)
+                    total_gb = round(usage.total / 1e9, 1)
+                    free_gb = round(usage.free / 1e9, 1)
+                except Exception:
+                    pass
+                has_pioneer_db = (vol / "PIONEER" / "rekordbox" / "master.db").exists()
+                volumes.append({
+                    "name": vol.name,
+                    "path": str(vol),
+                    "audio_estimate": audio_estimate,
+                    "total_gb": total_gb,
+                    "free_gb": free_gb,
+                    "has_pioneer_db": has_pioneer_db,
+                })
+        except Exception as exc:
+            return jsonify({"error": str(exc)}), 500
+        return jsonify({
+            "path":           str(volumes_root),
+            "is_volumes_root": True,
+            "music_root":     str(_MR),
+            "parent":         None,
+            "volumes":        volumes,
+            "subdirs":        [],
+            "tracks":         [],
+        })
+
+    # ── Normal path browse ───────────────────────────────────────────────────
     try:
         p = Path(path_str).resolve()
     except Exception:
@@ -560,7 +663,7 @@ def api_library_track_stream(track_id):
 @bp.route("/api/library/playlists", methods=["GET"])
 def api_library_playlists():
     from db_connection import read_db  # noqa: PLC0415
-    from config import LOCAL_DB as _DB  # noqa: PLC0415
+    _DB = _resolve_db(request.args.get("db"))
 
     try:
         with read_db(_DB) as db:

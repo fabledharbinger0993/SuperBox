@@ -267,15 +267,6 @@
   <div id="session-pills-container"></div>
 </div>
 
-<div id="owl-hover-panel"
-     onmouseenter="owlHoverIn()" onmouseleave="owlHoverOut()">
-  <div class="owl-panel-head">
-    Glossary &amp; Concepts
-    <em>click term to pin</em>
-  </div>
-  <div class="owl-panel-list" id="owl-panel-list"></div>
-</div>
-
 <!-- ══ Settings modal ═══════════════════════════════════════════════════════ -->
 <div id="settings-backdrop" class="hidden">
   <div id="settings-modal">
@@ -536,7 +527,6 @@
         <p><strong>Drag and drop</strong> — every path input on every card and in the Pipeline Builder accepts a file or folder dragged directly from Finder. Drop anything onto the field. A faint purple dashed ring marks each drop target; it glows neon on hover. The full path populates instantly and the field flashes green to confirm.</p>
         <p><strong>Session pills</strong> — completed operations are tracked as pills in the bottom-right corner for the duration of your session. Click any pill to re-open that step's full output log.</p>
         <p><strong>Report viewer</strong> — after any tool run, a report card appears inside the card showing a summary of what happened. Click <em>View Full Report</em> to open the complete output in a scrollable modal.</p>
-        <p><strong>Owl / Glossary</strong> — the owl icon (bottom right) opens a floating glossary of every technical term used in FableGear. Click any term in the glossary for a full explanation card. Useful if you're not sure what a Camelot key, an orphaned entry, or EBU R128 means.</p>
         <p><strong>Settings</strong> — the ⚙ gear icon (top right) controls archive mode (which drive FableGear writes backups to), log retention, and scan exclusions. Changes take effect immediately.</p>
       </div>
 
@@ -713,6 +703,14 @@
           <button type="button" class="le-mode-btn" data-mode="split"
                   onclick="setLibraryMode('split')" title="3-way comparison: canonical / scattered / unimported">Split View</button>
         </div>
+        <!-- DB source picker (only relevant when mode=db) -->
+        <div class="le-db-toggle" id="le-db-toggle" role="group" aria-label="Database source">
+          <button type="button" class="le-db-btn le-db-active" data-db="local"
+                  onclick="setLeDbSource('local')" title="Desktop Rekordbox database">Local DB</button>
+          <button type="button" class="le-db-btn" data-db="device"
+                  onclick="setLeDbSource('device')" title="Pioneer device database (DJMT drive)">Device DB</button>
+        </div>
+        <div id="le-db-notice" style="display:none"></div>
       </div>
       <div class="le-header-center">
         <input type="text" id="le-search" placeholder="Search tracks…" autocomplete="off">
